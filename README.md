@@ -21,10 +21,13 @@
 因为使用的是前后端分离模式，所以运行这个项目需要同时运行两个cmd窗口
 
 
-如何运行？
-运行前端：cd到frontend文件夹，conda activate myenv，python server.py
-运行后端：cd到backend文件夹，npm run dev
+backend文件夹里是后端代码
+frontend文件夹里是前端代码
 
+
+如何运行？
+运行后端：cd到backend文件夹，npm run dev
+运行前端：cd到frontend文件夹，conda activate myenv，python server.py
 
 
 
