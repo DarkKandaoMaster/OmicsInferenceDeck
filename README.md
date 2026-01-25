@@ -22,8 +22,8 @@
 
 
 如何运行？
-运行前端：cd到frontend文件夹
-运行后端：cd到backend文件夹
+运行前端：cd到frontend文件夹，conda activate myenv，python server.py
+运行后端：cd到backend文件夹，npm run dev
 
 
 
