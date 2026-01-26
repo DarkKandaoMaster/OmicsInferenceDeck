@@ -26,8 +26,8 @@ frontend文件夹里是前端代码
 
 
 如何运行？
-运行后端：cd到backend文件夹，npm run dev
-运行前端：cd到frontend文件夹，conda activate myenv，python server.py
+运行后端：cd到backend文件夹，conda activate myenv，python server.py
+运行前端：cd到frontend文件夹，npm run dev
 
 
 
