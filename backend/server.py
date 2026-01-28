@@ -9,7 +9,7 @@ import datetime
 # FastAPI 是一个现代、高性能的 Web 框架，用于构建 API。
 # 这里实例化了一个 app 对象，它是整个后端服务的核心，负责路由分发和请求处理。
 # title, description, version 参数用于生成自动化的交互式 API 文档 (Swagger UI)。
-app = FastAPI(
+app=FastAPI(
     title="InferenceDeck API Platform",
     description="Backend for Multi-Omics Cancer Subtyping Platform", # 对应论文中 OmiCaR 平台的后端概念
     version="0.1.0"
@@ -21,7 +21,7 @@ app = FastAPI(
 # 在前后端分离架构中（如 README.md 提到的 Vue + FastAPI），前端通常运行在 5173 端口，后端在 8000 端口。
 # 浏览器出于安全策略（同源策略），默认禁止这种跨端口请求，因此必须配置 CORS 中间件来显式允许。
 # 如果不配置这个，前端 Vue (localhost:5173) 无法访问 后端 (localhost:8000)
-origins = [
+origins=[
     "http://localhost:5173", # Vue 开发服务器的默认地址
     "http://127.0.0.1:5173", # 本地回环地址
     "*"                      # 通配符，表示允许任何来源访问（仅在开发调试阶段使用，生产环境需严格限制）
@@ -77,24 +77,24 @@ async def run_analysis(request: AnalysisRequest):
     time.sleep(1.5) # 模拟计算耗时 1.5秒
 
     # 根据选择的算法返回不同的模拟数据
-    mock_result_data = {}    # 初始化模拟的返回数据字典
+    mock_result_data={}    # 初始化模拟的返回数据字典
     
-    if request.algorithm == "PIntMF": # 根据请求中的 algorithm 字段进行条件分支处理
+    if request.algorithm=="PIntMF": # 根据请求中的 algorithm 字段进行条件分支处理
         # PIntMF (Penalized Integrative Matrix Factorization)
         # 论文中提到这是一种基于矩阵分解的方法，在 BRCA 和 STAD 数据集上表现不同。
         # 这里的返回数据模拟了算法输出的关键指标。
-        mock_result_data = {
+        mock_result_data={
             "method": "PIntMF (Matrix Factorization)",
             "clusters_found": 3, # 模拟识别出的亚型数量
             "accuracy_score": 0.88, # 模拟的聚类准确性评分 (如 AWA 指数)
             "top_genes": ["TP53", "BRCA1", "EGFR"] # 模拟提取的差异表达基因
         }
-    elif request.algorithm == "Subtype-GAN":
+    elif request.algorithm=="Subtype-GAN":
         # 这里未来可以接入您 server.py 里的 CancerSubtypePredictor
         # Subtype-GAN (Deep Adversarial Learning)
         # 这是一个基于深度学习的生成对抗网络模型。
         # 这里的 convergence_epoch 模拟了神经网络训练收敛的轮数。
-        mock_result_data = {
+        mock_result_data={
             "method": "Subtype-GAN (Deep Learning)",
             "clusters_found": 5,
             "convergence_epoch": 600,
@@ -102,7 +102,7 @@ async def run_analysis(request: AnalysisRequest):
         }
     else:
         # 处理未定义的算法请求，返回状态提示
-        mock_result_data = {
+        mock_result_data={
             "info": f"算法 {request.algorithm} 的接口尚未完全实现",
             "status": "pending"
         }
@@ -111,7 +111,7 @@ async def run_analysis(request: AnalysisRequest):
     # --- 构建 HTTP 响应 ---
     # FastAPI 会自动将此字典序列化为 JSON 格式返回给前端。
     # 包含状态码、消息、服务器时间和具体的数据载荷 (data)。
-    response = {
+    response={
         "status": "success",
         "message": f"算法 {request.algorithm} 调用成功！",
         "server_time": datetime.datetime.now().isoformat(), # 返回 ISO 8601 格式的时间字符串
@@ -126,7 +126,7 @@ async def run_analysis(request: AnalysisRequest):
 # 如果此文件被作为模块导入，则不执行。
 # 5. 启动服务器的入口
 # 运行命令: python main.py
-if __name__ == "__main__":
+if __name__=="__main__":
     # 使用 uvicorn 启动 ASGI 服务器。
     # app: 对应上面实例化的 FastAPI 对象。
     # host="127.0.0.1": 绑定到本地回环地址，仅允许本机访问。若需局域网访问需改为 "0.0.0.0"。
