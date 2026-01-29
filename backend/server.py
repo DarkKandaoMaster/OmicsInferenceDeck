@@ -1,16 +1,18 @@
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI,HTTPException,File,UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import time
 import datetime
+import shutil
+import os
 
 #实例化FastAPI类，创建一个Web应用程序对象，它是整个后端服务的核心，负责路由分发和请求处理
 # title、description、version参数用于生成自动化的交互式API文档
 app=FastAPI(
     title="InferenceDeck API Platform", #设置API文档的标题，方便前端开发者查看
     description="Backend for Multi-Omics Cancer Subtyping Platform", #设置API的描述信息
-    version="0.1.0" #设置版本号，用于接口版本管理
+    version="1.0.0" #设置版本号，用于接口版本管理
 )
 
 #配置CORS（跨域资源共享）
@@ -40,6 +42,9 @@ async def run_analysis(request: AnalysisRequest): #FastAPI 会自动读取 HTTP 
     print(f"\n[后端日志] 收到分析请求:")
     print(f"   - 算法: {request.algorithm}")
     print(f"   - 时间戳: {request.timestamp}")
+
+    # 在实际项目中，这里应该去 UPLOAD_DIR 读取刚才上传的文件
+    # data = load_data(os.path.join(UPLOAD_DIR, '用户上传的文件名.csv'))
 
     # --- 算法运行过程 ---
     # 在实际的生产代码中，此处是集成的关键点。
@@ -97,6 +102,32 @@ async def run_analysis(request: AnalysisRequest): #FastAPI 会自动读取 HTTP 
     
     print(f"[后端日志] 返回结果: {response['status']}")
     return response
+
+#处理用户上传文件的接口，将用户上传文件保存到本地
+@app.post("/api/upload")
+async def upload_file(file: UploadFile = File(...)):
+    print(f"\n[后端日志] 收到文件上传请求: {file.filename}")
+
+    UPLOAD_PATH="upload" #用户上传文件的保存路径
+    if not os.path.exists(UPLOAD_PATH): #如果路径不存在，则创建该目录
+        os.makedirs(UPLOAD_PATH)
+    file_location=os.path.join(UPLOAD_PATH,file.filename) #定义用户上传文件的保存路径
+
+    try:
+        #将用户上传文件保存到本地
+        with open(file_location,"wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        print(f"[后端日志] 文件已保存至: {file_location}")
+
+        return {
+            "status": "success",
+            "filename": file.filename,
+            "filepath": file_location,
+            "message": f"文件 {file.filename} 上传成功"
+        }
+    except Exception as e:
+        print(f"[后端日志] 上传失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"文件保存失败: {str(e)}")
 
 if __name__=="__main__": #这是Python的标准入口判断。只有当这个文件被直接运行（而不是作为模块被导入）（即python server.py）时，下面的代码才会执行
     #启动Uvicorn服务器
