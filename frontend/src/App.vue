@@ -11,6 +11,54 @@ const errorMessage = ref('')
 const selectedAlgorithm = ref('PIntMF') 
 const algorithms = ['PIntMF', 'Subtype-GAN', 'NEMO', 'SNF']
 
+const selectedFile = ref(null) // 用于存储用户在输入框中选中的文件对象
+const uploadStatus = ref('')   // 用于存储上传状态的提示信息（如“上传成功”）
+
+// 新增：处理文件选择框改变的事件
+const handleFileChange = (event) => {
+  // 获取当前输入框中选中的第一个文件
+  selectedFile.value = event.target.files[0] 
+  // 当用户重新选择了文件，清空之前的状态提示，避免混淆
+  uploadStatus.value = '' 
+}
+
+// 新增：执行文件上传的函数
+const uploadFile = async () => {
+  // 防御性编程：如果没有选择文件，直接返回并提示
+  if (!selectedFile.value) {
+    alert("请先选择一个文件！")
+    return
+  }
+
+  // 创建 FormData 对象，这是 HTML5 中用于异步上传文件的标准方式
+  const formData = new FormData()
+  // 将选中的文件追加到表单数据中，键名为 'file'，需与后端接口参数名一致
+  formData.append('file', selectedFile.value)
+
+  try {
+    // 设置上传状态为“上传中...”
+    uploadStatus.value = "正在上传..."
+    
+    // 发送 POST 请求到后端的上传接口 /api/upload
+    // 注意：必须设置 Content-Type 为 multipart/form-data，但在 axios 中传输 FormData 时通常会自动设置
+    const res = await axios.post('http://127.0.0.1:8000/api/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data' // 显式指定请求头，确保后端正确解析文件流
+      }
+    })
+    
+    // 上传成功，显示后端返回的消息
+    uploadStatus.value = `✅ 上传成功: ${res.data.filename}`
+    console.log('上传结果:', res.data)
+
+  } catch (error) {
+    // 捕获错误并打印日志
+    console.error('上传出错:', error)
+    // 在界面上显示错误提示
+    uploadStatus.value = "❌ 上传失败，请检查后端服务是否启动"
+  }
+}
+
 // 核心功能：点击按钮触发的函数
 const runAnalysis = async () => {
   // 重置状态
@@ -60,7 +108,23 @@ const runAnalysis = async () => {
           <br>请选择算法并点击运行以测试后端连接。
         </p>
 
-        <div class="control-group">
+        <div class="step-section upload-section">
+          <h3>1. 数据上传 (Data Upload)</h3>
+          <div class="upload-controls">
+            <input type="file" @change="handleFileChange" accept=".csv,.txt,.xlsx" />
+            
+            <button 
+              @click="uploadFile" 
+              :disabled="!selectedFile"
+              class="upload-btn"
+            >
+              上传文件
+            </button>
+          </div>
+          <p class="status-message">{{ uploadStatus }}</p>
+        </div>
+        <div class="step-section control-group">
+          <h3>2. 算法选择 (Clustering Method)</h3>
           <label>选择聚类算法：</label>
           <select v-model="selectedAlgorithm">
             <option v-for="algo in algorithms" :key="algo" :value="algo">
@@ -69,7 +133,8 @@ const runAnalysis = async () => {
           </select>
         </div>
 
-        <div class="action-area">
+        <div class="step-section action-area">
+          <h3>3. 运行分析 (Execution)</h3>
           <button 
             @click="runAnalysis" 
             :disabled="isLoading"
@@ -94,6 +159,7 @@ const runAnalysis = async () => {
             {{ errorMessage }}
           </div>
         </div>
+
       </div>
     </main>
   </div>
@@ -166,7 +232,61 @@ h1 {
   line-height: 1.6;
 }
 
-/* 控制组件样式 */
+/* 步骤模块的通用样式，使界面看起来像分步骤操作 */
+.step-section {
+  text-align: left; /* 内容左对齐 */
+  background-color: #f8f9fa; /* 浅灰色背景区分模块 */
+  padding: 20px; /* 内边距 */
+  margin-bottom: 20px; /* 底部间距 */
+  border-radius: 8px; /* 圆角 */
+  border: 1px solid #e9ecef; /* 细边框 */
+}
+
+.step-section h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 16px;
+  color: #2c3e50;
+  border-bottom: 2px solid #42b983; /* 标题下划线 */
+  padding-bottom: 5px;
+  display: inline-block;
+}
+
+/* 新增：上传控件布局 */
+.upload-controls {
+  display: flex; /* 弹性布局 */
+  gap: 15px; /* 控件之间的间距 */
+  align-items: center; /* 垂直居中 */
+}
+
+/* 新增：上传按钮样式 */
+.upload-btn {
+  background-color: #3498db; /* 蓝色背景 */
+  color: white; /* 白色文字 */
+  border: none; /* 无边框 */
+  padding: 8px 16px; /* 内边距 */
+  border-radius: 4px; /* 圆角 */
+  cursor: pointer; /* 鼠标悬停手势 */
+  transition: background-color 0.3s; /* 颜色渐变动画 */
+}
+
+.upload-btn:hover:not(:disabled) {
+  background-color: #2980b9; /* 悬停深蓝色 */
+}
+
+.upload-btn:disabled {
+  background-color: #bdc3c7; /* 禁用时灰色 */
+  cursor: not-allowed; /* 禁用鼠标手势 */
+}
+
+/* 新增：状态消息文本样式 */
+.status-message {
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #27ae60; /* 绿色文字 */
+}
+
 .control-group {
   margin-bottom: 20px;
 }
