@@ -15,10 +15,10 @@ const selectedFile = ref(null) // 用于存储用户在输入框中选中的文�
 const uploadStatus = ref('')   // 用于存储上传状态的提示信息（如“上传成功”）
 
 const uploadedFilename = ref('') // 新增：用于存储上传成功后的文件名，以便发送给分析接口
-// 新增：K-means 算法的参数变量
-const kValue = ref(3)         // 聚类簇数，默认3
-const randomSeed = ref(42)    // 随机种子，默认42
-const maxIter = ref(300)      // 最大迭代次数，默认300
+// K-means 算法的参数变量，将与前端输入框进行双向绑定
+const kValue = ref(3)         //定义聚类簇数，初始值设为3
+const randomSeed = ref(42)    //定义随机种子，用于保证结果可复现，初始值42
+const maxIter = ref(300)      //定义最大迭代次数，初始值300
 
 // 新增：处理文件选择框改变的事件
 const handleFileChange = (event) => {
@@ -84,12 +84,12 @@ const runAnalysis = async () => {
     // 假设后端地址是 http://127.0.0.1:8000
     // 这里的 '/api/run' 是我们要和后端约定的接口路径
     const res = await axios.post('http://127.0.0.1:8000/api/run', {
-      algorithm: selectedAlgorithm.value,
-      timestamp: new Date().toISOString(),
-      filename: uploadedFilename.value, //告诉后端用哪个文件
-      n_clusters: kValue.value,         //传入K值
-      random_state: randomSeed.value,   //传入随机种子
-      max_iter: maxIter.value           //传入最大迭代
+      algorithm: selectedAlgorithm.value, // 发送选中的算法名称
+      timestamp: new Date().toISOString(), // 发送当前时间戳
+      filename: uploadedFilename.value,    // 发送要处理的文件名
+      n_clusters: kValue.value,            // 新增：发送用户自定义的 K 值
+      random_state: randomSeed.value,      // 新增：发送用户自定义的随机种子
+      max_iter: maxIter.value              // 新增：发送用户自定义的最大迭代次数
     })
 
     // 请求成功，将后端返回的数据保存到 backendResponse
@@ -148,6 +148,25 @@ const runAnalysis = async () => {
               {{ algo }}
             </option>
           </select>
+
+          <div v-if="selectedAlgorithm === 'K-means'" class="params-box">
+            <h4>K-means 参数配置：</h4>
+            
+            <div class="param-item">
+              <label>簇数 (K):</label>
+              <input type="number" v-model="kValue" min="2" max="20" />
+            </div>
+
+            <div class="param-item">
+              <label>随机种子:</label>
+              <input type="number" v-model="randomSeed" />
+            </div>
+
+            <div class="param-item">
+              <label>最大迭代:</label>
+              <input type="number" v-model="maxIter" step="50" />
+            </div>
+          </div>
         </div>
 
         <div class="step-section action-area">
@@ -308,15 +327,16 @@ h1 {
   margin-bottom: 20px;
 }
 
-/* 新增：参数配置区域的样式 */
+/* 参数配置区域的样式 */
 .params-box {
-  margin-top: 15px;
-  padding: 15px;
-  background-color: #fff;
-  border: 1px dashed #bbb;
-  border-radius: 6px;
+  margin-top: 15px;       /* 与上方下拉框保持距离 */
+  padding: 15px;          /* 内部留白 */
+  background-color: #fff; /* 白色背景 */
+  border: 1px dashed #bbb;/* 虚线边框，表示这是可选配置区 */
+  border-radius: 6px;     /* 圆角 */
 }
 
+/* 标题样式 */
 .params-box h4 {
   margin-top: 0;
   margin-bottom: 10px;
@@ -324,20 +344,23 @@ h1 {
   color: #555;
 }
 
+/* 单个参数项的布局：使用 inline-block 让它们横向排列 */
 .param-item {
   display: inline-block; /* 让输入框在一行显示 */
-  margin-right: 20px;
+  margin-right: 20px; /*这一项与下一项的间距 */
   margin-bottom: 5px;
 }
 
+/* 参数标签样式 */
 .param-item label {
   font-size: 14px;
-  margin-right: 8px;
+  margin-right: 8px; /* 标签与输入框的距离 */
   color: #666;
 }
 
+/* 输入框样式 */
 .param-item input {
-  width: 60px;
+  width: 60px; /* 限制输入框宽度 */
   padding: 5px;
   border: 1px solid #ddd;
   border-radius: 4px;
