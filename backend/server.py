@@ -6,6 +6,8 @@ import time
 import datetime
 import shutil
 import os
+import pandas as pd
+from sklearn.cluster import KMeans
 
 #实例化FastAPI类，创建一个Web应用程序对象，它是整个后端服务的核心，负责路由分发和请求处理
 # title、description、version参数用于生成自动化的交互式API文档
@@ -33,6 +35,13 @@ class AnalysisRequest(BaseModel): #定义一个类，在这个类里声明两个
     #虽然在普通Python代码中类型提示通常只是像注释一样给人看的，但在pydantic.BaseModel中，冒号具有强制性，Pydantic库会读取冒号后面的类型，并像C语言那样执行强制类型转换和验证
     algorithm: str #用户选择的算法名称，如“PIntMF”、“Subtype-GAN”等
     timestamp: str #请求发起的时间戳，用于日志记录或任务追踪
+    # ===============================================
+    filename: str # 新增：前端需要告诉后端处理哪个文件（文件名）
+    # 以下参数设置默认值，以便其他算法如果不传这些参数也不会报错
+    n_clusters: int = 3 # 新增：K-means的聚类簇数，默认值为3
+    random_state: int = 42 # 新增：随机种子，保证结果可复现，默认42
+    max_iter: int = 300 # 新增：最大迭代次数，防止死循环，默认300
+    # ===============================================
 
 #@app.post是一个装饰器，它的作用是将下面的run_analysis函数注册到Web服务器的路由表中，当用户发送 POST 方法到“/api/run”这个网址时，服务器会自动调用下面的run_analysis函数来处理
 #async可以定义异步函数，允许在等待I/O操作（如模型推理、数据库查询）时不阻塞服务器主线程
@@ -42,6 +51,10 @@ async def run_analysis(request: AnalysisRequest): #FastAPI 会自动读取 HTTP 
     print(f"\n[后端日志] 收到分析请求:")
     print(f"   - 算法: {request.algorithm}")
     print(f"   - 时间戳: {request.timestamp}")
+    # ===============================================
+    print(f"   - 处理文件: {request.filename}")
+    print(f"   - 参数: K={request.n_clusters}, Seed={request.random_state}, Iter={request.max_iter}")
+    # ===============================================
 
     # 在实际项目中，这里应该去 UPLOAD_DIR 读取刚才上传的文件
     # data = load_data(os.path.join(UPLOAD_DIR, '用户上传的文件名.csv'))
@@ -54,11 +67,70 @@ async def run_analysis(request: AnalysisRequest): #FastAPI 会自动读取 HTTP 
     #    - 如果是 'PIntMF' (R语言实现)，此处应使用 rpy2 库调用 'analysis.R' 脚本。
     #    - 如果是 'Subtype-GAN' (Python实现)，此处应加载 PyTorch 模型并执行预测逻辑。
     # 3. 生成结果：计算 p-value, 生成生存曲线 (survival.py) 等。
-    time.sleep(1.5) #强制挂起当前协程 1.5 秒，用于模拟计算耗时1.5秒
+    # time.sleep(1.5) #强制挂起当前协程 1.5 秒，用于模拟计算耗时1.5秒
 
     # 根据选择的算法返回不同的模拟数据
-    mock_result_data={} #初始化模拟的返回数据字典
-    if request.algorithm=="PIntMF": #根据请求中的 algorithm 字段进行条件分支处理
+    # mock_result_data={} #初始化模拟的返回数据字典
+    # ===============================================
+    # --- 算法运行过程 (修改为真实逻辑) ---
+    mock_result_data = {} # 初始化结果字典
+
+    if request.algorithm == "K-means":
+        try:
+            # 1. 构建文件路径
+            file_path = os.path.join("upload", request.filename)
+
+            # 2. 检查文件是否存在
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"找不到文件: {request.filename}")
+
+            # 3. 读取CSV文件
+            #期望CSV文件格式为：
+            # ,特征名称1,特征名称2
+            # 样本名称1,10,20
+            # 样本名称2,30,40
+            df=pd.read_csv(file_path, header=0, index_col=0, sep=',') #使用Pandas读取CSV格式的特征文件
+            # header=0: 指定第一行作为列名。于是第一行数据不会参与到运算中
+            # index_col=0: 指定第一列作为行索引。于是第一列数据不会参与到运算中
+            # sep=',': 指定文件分隔符为逗号
+
+            print(f"[算法日志] 数据加载成功，形状为: {df.shape}")
+
+            # 4. 初始化KMeans模型
+            # 将前端传来的参数传入模型
+            kmeans = KMeans(
+                n_clusters=request.n_clusters,
+                random_state=request.random_state,
+                max_iter=request.max_iter
+            )
+
+            # 5. 执行聚类并获取标签
+            # df直接传入即可，因为每一行是一个样本，每一列是一个基因特征
+            labels=kmeans.fit_predict(df) #按用户设置的参数训练了模型，训练结束后返回最后一次聚类结果
+
+            # 6. 构建返回结果
+            mock_result_data = {
+                "method": "K-means (Real Run)",
+                "n_samples": df.shape[0], # 样本数量
+                "n_features": df.shape[1], # 特征数量
+                "inertia": float(kmeans.inertia_), # 簇内误差平方和，评估聚类效果的指标
+                "labels": labels.tolist(), # 将numpy数组转换为python列表，否则无法序列化为JSON
+                # 简单统计一下每个类别的样本数，方便前端展示
+                "cluster_counts": pd.Series(labels).value_counts().to_dict() 
+            }
+            print("[算法日志] K-means 计算完成")
+
+        except Exception as e:
+            # 如果在计算过程中出错（如文件格式不对），捕获异常并返回错误信息
+            print(f"[算法错误] {str(e)}")
+            return {
+                "status": "error", 
+                "message": f"算法运行失败: {str(e)}",
+                "server_time": datetime.datetime.now().isoformat()
+            }
+    # ===============================================
+
+    elif request.algorithm=="PIntMF": #根据请求中的 algorithm 字段进行条件分支处理
         # PIntMF
         # 论文中提到这是一种基于矩阵分解的方法，在 BRCA 和 STAD 数据集上表现不同
         # 这里的返回数据模拟了算法输出的关键指标

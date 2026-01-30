@@ -8,11 +8,17 @@ const isLoading = ref(false)
 const errorMessage = ref('')
 
 // 模拟的算法选项（模仿论文中的算法选择功能，目前仅作展示）
-const selectedAlgorithm = ref('PIntMF') 
-const algorithms = ['PIntMF', 'Subtype-GAN', 'NEMO', 'SNF']
+const selectedAlgorithm = ref('K-means') // 将默认算法改为我们正在测试的 K-means
+const algorithms = ['K-means', 'PIntMF', 'Subtype-GAN', 'NEMO', 'SNF'] // 添加 K-means 到列表
 
 const selectedFile = ref(null) // 用于存储用户在输入框中选中的文件对象
 const uploadStatus = ref('')   // 用于存储上传状态的提示信息（如“上传成功”）
+
+const uploadedFilename = ref('') // 新增：用于存储上传成功后的文件名，以便发送给分析接口
+// 新增：K-means 算法的参数变量
+const kValue = ref(3)         // 聚类簇数，默认3
+const randomSeed = ref(42)    // 随机种子，默认42
+const maxIter = ref(300)      // 最大迭代次数，默认300
 
 // 新增：处理文件选择框改变的事件
 const handleFileChange = (event) => {
@@ -50,6 +56,7 @@ const uploadFile = async () => {
     // 上传成功，显示后端返回的消息
     uploadStatus.value = `✅ 上传成功: ${res.data.filename}`
     console.log('上传结果:', res.data)
+    uploadedFilename.value = res.data.filename // 关键：保存后端返回的文件名，下一步分析要用
 
   } catch (error) {
     // 捕获错误并打印日志
@@ -61,6 +68,12 @@ const uploadFile = async () => {
 
 // 核心功能：点击按钮触发的函数
 const runAnalysis = async () => {
+  // 检查是否已经上传了文件
+  if (!uploadedFilename.value) {
+    alert("请先上传数据文件！")
+    return
+  }
+
   // 重置状态
   isLoading.value = true
   errorMessage.value = ''
@@ -72,7 +85,11 @@ const runAnalysis = async () => {
     // 这里的 '/api/run' 是我们要和后端约定的接口路径
     const res = await axios.post('http://127.0.0.1:8000/api/run', {
       algorithm: selectedAlgorithm.value,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      filename: uploadedFilename.value, //告诉后端用哪个文件
+      n_clusters: kValue.value,         //传入K值
+      random_state: randomSeed.value,   //传入随机种子
+      max_iter: maxIter.value           //传入最大迭代
     })
 
     // 请求成功，将后端返回的数据保存到 backendResponse
@@ -289,6 +306,41 @@ h1 {
 
 .control-group {
   margin-bottom: 20px;
+}
+
+/* 新增：参数配置区域的样式 */
+.params-box {
+  margin-top: 15px;
+  padding: 15px;
+  background-color: #fff;
+  border: 1px dashed #bbb;
+  border-radius: 6px;
+}
+
+.params-box h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #555;
+}
+
+.param-item {
+  display: inline-block; /* 让输入框在一行显示 */
+  margin-right: 20px;
+  margin-bottom: 5px;
+}
+
+.param-item label {
+  font-size: 14px;
+  margin-right: 8px;
+  color: #666;
+}
+
+.param-item input {
+  width: 60px;
+  padding: 5px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
 }
 
 select {
