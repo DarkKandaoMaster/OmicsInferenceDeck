@@ -20,14 +20,6 @@ const kValue = ref(3)         //定义聚类簇数，初始值设为3
 const randomSeed = ref(42)    //定义随机种子，用于保证结果可复现，初始值42
 const maxIter = ref(300)      //定义最大迭代次数，初始值300
 
-// 新增：处理文件选择框改变的事件
-const handleFileChange = (event) => {
-  // 获取当前输入框中选中的第一个文件
-  selectedFile.value = event.target.files[0] 
-  // 当用户重新选择了文件，清空之前的状态提示，避免混淆
-  uploadStatus.value = '' 
-}
-
 // 新增：执行文件上传的函数
 const uploadFile = async () => {
   // 防御性编程：如果没有选择文件，直接返回并提示
@@ -63,6 +55,21 @@ const uploadFile = async () => {
     console.error('上传出错:', error)
     // 在界面上显示错误提示
     uploadStatus.value = "❌ 上传失败，请检查后端服务是否启动"
+  }
+}
+
+// 修改：处理文件选择框改变的事件
+const handleFileChange = (event) => {
+  // 获取当前输入框中选中的第一个文件
+  const file = event.target.files[0]
+  
+  // 只有当用户确实选择了文件时才执行（防止用户打开文件框后取消，导致报错）
+  if (file) {
+    selectedFile.value = file // 更新响应式变量
+    uploadStatus.value = ''   // 清空旧的状态提示
+    
+    // 新增：一旦选中文件，直接触发上传函数，无需用户点击按钮
+    uploadFile() 
   }
 }
 
@@ -129,14 +136,6 @@ const runAnalysis = async () => {
           <h3>1. 数据上传 (Data Upload)</h3>
           <div class="upload-controls">
             <input type="file" @change="handleFileChange" accept=".csv,.txt,.xlsx" />
-            
-            <button 
-              @click="uploadFile" 
-              :disabled="!selectedFile"
-              class="upload-btn"
-            >
-              上传文件
-            </button>
           </div>
           <p class="status-message">{{ uploadStatus }}</p>
         </div>
