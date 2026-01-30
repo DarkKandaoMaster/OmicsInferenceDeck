@@ -54,7 +54,18 @@ const uploadFile = async () => {
     // 捕获错误并打印日志
     console.error('上传出错:', error)
     // 在界面上显示错误提示
-    uploadStatus.value = "❌ 上传失败，请检查后端服务是否启动"
+    // 修改：增强错误处理，显示后端返回的具体校验失败原因
+    if (error.response && error.response.data && error.response.data.detail) {
+      // 如果后端返回了详细错误信息（比如我们在server.py里写的那些ValueError）
+      // 使用 HTML 换行符让长错误信息更好读，或者直接显示
+      uploadStatus.value = `❌ 数据不合规: ${error.response.data.detail}`
+    } else {
+      // 网络错误或其他未知错误
+      uploadStatus.value = "❌ 上传失败，请检查后端服务是否启动"
+    }
+    
+    // 上传失败后，清空已保存的文件名，防止用户用上一个合法文件的名义去跑这个非法文件的名字（虽然文件已经被后端删了）
+    uploadedFilename.value = ''
   }
 }
 
@@ -135,9 +146,11 @@ const runAnalysis = async () => {
         <div class="step-section upload-section">
           <h3>1. 数据上传 (Data Upload)</h3>
           <div class="upload-controls">
-            <input type="file" @change="handleFileChange" accept=".csv,.txt,.xlsx" />
+            <input type="file" @change="handleFileChange" />
           </div>
-          <p class="status-message">{{ uploadStatus }}</p>
+          <p class="status-message" :class="{ 'error-text': uploadStatus.startsWith('❌') }">
+            {{ uploadStatus }}
+          </p>
         </div>
         <div class="step-section control-group">
           <h3>2. 算法选择 (Clustering Method)</h3>
@@ -320,6 +333,13 @@ h1 {
   font-size: 14px;
   font-weight: bold;
   color: #27ae60; /* 绿色文字 */
+  white-space: pre-wrap; /* 新增：允许错误信息自动换行，防止太长溢出 */
+  word-break: break-all; /* 新增：允许在单词内换行 */
+}
+
+/* 新增：错误文本的红色样式 */
+.error-text {
+  color: #e74c3c !important; /* 强制使用红色 */
 }
 
 .control-group {

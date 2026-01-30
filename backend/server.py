@@ -7,6 +7,7 @@ import datetime
 import shutil
 import os
 import pandas as pd
+import numpy as np
 from sklearn.cluster import KMeans
 
 #实例化FastAPI类，创建一个Web应用程序对象，它是整个后端服务的核心，负责路由分发和请求处理
@@ -181,9 +182,92 @@ async def upload_file(file: UploadFile = File(...)):
 
     try:
         #将用户上传文件保存到本地
+        # 步骤 1: 先把文件老老实实保存到硬盘（作为原始记录）
         with open(file_location,"wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         print(f"[后端日志] 文件已保存至: {file_location}")
+
+        # 新增：智能读取逻辑 (Smart Loader)
+        # 借鉴了“另一个AI”的策略，不看后缀名，而是尝试不同的读取方式
+        df = None
+        load_error = ""
+
+        # 策略 A: 尝试作为灵活的文本表格读取 (CSV/TXT/TSV/FEA)
+        try:
+            # sep=None: 让Pandas自动嗅探分隔符（逗号、Tab、空格等）
+            # engine='python': 只有Python引擎支持自动嗅探
+            # index_col=0: 坚持第一列是样本名
+            df = pd.read_csv(file_location, sep=None, engine='python', header=0, index_col=0)
+            print("[后端日志] 通过文本模式(CSV)读取成功")
+        except Exception as e_csv:
+            load_error += f"文本读取失败: {str(e_csv)}; "
+            
+            # 策略 B: 如果文本读取失败，尝试作为 Excel 读取
+            # 应对用户把 .xlsx 强行改名为 .csv 的情况
+            try:
+                df = pd.read_excel(file_location, index_col=0)
+                print("[后端日志] 通过 Excel 模式读取成功")
+            except Exception as e_excel:
+                load_error += f"Excel读取失败: {str(e_excel)}"
+
+        # 如果两种策略都失败了，抛出异常
+        if df is None:
+            # 删除无法识别的文件
+            os.remove(file_location)
+            raise ValueError(f"无法解析文件内容。请确保是标准的 CSV文本 或者 Excel表格 。\n详细报错: {load_error}")
+
+        # 步骤 2: 数据完整性校验 (Data Validator)
+        # 读取成功只是第一步，现在要检查内容合不合规
+        # 新增：数据完整性与格式校验逻辑
+        # 目的：在算法运行前拦截“脏数据”，保证科研结果的严肃性
+        try:
+            # 1. 尝试读取文件
+            # 这里的 sep=',' 假设用户上传的是标准CSV。如果支持制表符分隔，可以改用 sep=None, engine='python'
+            # index_col=0 表示第一列是样本名（行索引），header=0 表示第一行是特征名（列索引）
+
+
+            # 检查1：是不是读到了空表格（例如 README.md）
+            # 2. 【新增修复】检查数据列数
+            # 如果文件被解析为只有索引而没有特征列（比如 README.md），df.shape[1] 会是 0
+            if df.shape[1] < 1:
+                raise ValueError("未检测到有效的数据列。请检查分隔符是否正确（当前仅支持逗号分隔），或文件是否包含特征数据。")
+
+            # 2. 检查是否有重复的样本名（第一列）
+            # df.index 存储了第一列的所有值
+            if df.index.has_duplicates:
+                # 获取重复的具体名称
+                duplicated_samples = df.index[df.index.duplicated()].unique().tolist()
+                raise ValueError(f"数据第一列（样本名称）发现重复值: {duplicated_samples}。请确保每个样本只有一行。")
+
+            # 3. 检查是否有重复的特征名（第一行）
+            # df.columns 存储了第一行的所有值
+            if df.columns.has_duplicates:
+                duplicated_features = df.columns[df.columns.duplicated()].unique().tolist()
+                raise ValueError(f"数据第一行（特征名称）发现重复值: {duplicated_features}。请确保特征名称不重复。")
+
+            # 4. 检查是否有空值 (NaN/Null)
+            # df.isnull().sum().sum() 计算整个表格中空值的总数
+            if df.isnull().sum().sum() > 0:
+                # 这是一个简单的检查。如果需要更友好的提示，可以遍历找出具体是哪一行哪一列空了
+                raise ValueError("数据中包含空值（NaN/空单元格）。科研数据要求完整，请手动清理或补全数据。")
+
+            # 5. 检查内容是否全为数值
+            # 排除第一行第一列后，剩下的 df 应该全部是数字。
+            # 我们尝试将所有列转换为数字，如果某一列包含无法转换的字符（如字符串），Pandas会将该列类型识别为 object
+            # select_dtypes(exclude=[np.number]) 会筛选出所有非数字类型的列
+            non_numeric_cols = df.select_dtypes(exclude=[np.number]).columns.tolist()
+            if len(non_numeric_cols) > 0:
+                # 如果存在非数字列，说明表格主体里混入了字符串
+                raise ValueError(f"以下列包含非数值内容: {non_numeric_cols}。请确保除行列头外，所有单元格均为数字。")
+
+            print(f"[后端日志] 数据校验全部通过！最终形状: {df.shape}")
+
+        except Exception as e:
+            # 如果校验失败，必须删除刚才上传的脏文件，防止垃圾堆积
+            os.remove(file_location)
+            print(f"[后端日志] 校验不通过，文件已清理: {str(e)}")
+            # 返回 400 Bad Request 状态码，并携带具体的错误信息给前端
+            raise HTTPException(status_code=400, detail=f"数据格式错误: {str(e)}")
 
         return {
             "status": "success",
@@ -191,9 +275,17 @@ async def upload_file(file: UploadFile = File(...)):
             "filepath": file_location,
             "message": f"文件 {file.filename} 上传成功"
         }
+
+    # 修改：分别捕获 HTTPException (我们自己抛出的校验错误) 和其他未知错误
+    except HTTPException as he:
+        raise he # 直接抛出校验错误给前端
+
     except Exception as e:
-        print(f"[后端日志] 上传失败: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"文件保存失败: {str(e)}")
+        print(f"[后端日志] 严重错误: {str(e)}")
+        # 发生未知错误也要清理文件，防止垃圾堆积
+        if os.path.exists(file_location):
+            os.remove(file_location)
+        raise HTTPException(status_code=500, detail=f"服务器内部错误: {str(e)}")
 
 if __name__=="__main__": #这是Python的标准入口判断。只有当这个文件被直接运行（而不是作为模块被导入）（即python server.py）时，下面的代码才会执行
     #启动Uvicorn服务器
