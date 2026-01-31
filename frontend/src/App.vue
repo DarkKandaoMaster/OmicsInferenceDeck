@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref,computed } from 'vue'
 import axios from 'axios'
 
 // 定义响应式数据，用于存储后端返回的信息
@@ -15,6 +15,56 @@ const selectedFile = ref(null) // 用于存储用户在输入框中选中的文�
 const uploadStatus = ref('')   // 用于存储上传状态的提示信息（如“上传成功”）
 
 const uploadedFilename = ref('') // 新增：用于存储上传成功后的文件名，以便发送给分析接口
+
+// =============================================== 新增：数据格式相关变量
+const dataFormat = ref('row_feat_col_sample') // 默认值
+
+// 定义所有选项
+const dataFormatOptions = [
+  { label: '第一行为特征名称，第一列为样本名称', value: 'row_feat_col_sample' },
+  { label: '第一行为样本名称，第一列为特征名称', value: 'row_sample_col_feat' },
+  { label: '第一行为特征名称 (无样本名列)', value: 'row_feat' },
+  { label: '第一行为样本名称 (无特征名列)', value: 'row_sample' },
+  { label: '第一列为特征名称 (无表头)', value: 'col_feat' },
+  { label: '第一列为样本名称 (无表头)', value: 'col_sample' },
+  { label: '纯数据：每一行是特征 (无行列名)', value: 'no_name_row_feat' },
+  { label: '纯数据：每一行是样本 (无行列名)', value: 'no_name_row_sample' },
+]
+
+// 计算属性：根据当前选择的格式，生成示例文本
+const exampleText = computed(() => {
+  switch (dataFormat.value) {
+    case 'row_feat_col_sample':
+      return `,特征名称1,特征名称2\n样本名称1,10,20\n样本名称2,30,40`
+    case 'row_sample_col_feat':
+      return `,样本名称1,样本名称2\n特征名称1,10,30\n特征名称2,20,40`
+    case 'row_feat':
+      return `特征名称1,特征名称2\n10,20\n30,40`
+    case 'row_sample':
+      return `样本名称1,样本名称2\n10,30\n20,40`
+    case 'col_feat':
+      return `特征名称1,10,20\n特征名称2,30,40`
+    case 'col_sample':
+      return `样本名称1,10,20\n样本名称2,30,40`
+    case 'no_name_row_feat':
+      // 行是特征，列是样本。
+      // 第一行代表特征1在各个样本的值：10, 30【【【【【这里的提示能不能优化一下？
+      // 第二行代表特征2在各个样本的值：20, 40
+      return `10,30\n20,40` 
+      
+    case 'no_name_row_sample':
+      // 行是样本，列是特征。
+      // 第一行代表样本1的特征值：10, 20
+      // 第二行代表样本2的特征值：30, 40
+      return `10,20\n30,40`
+    default:
+      return ''
+  }
+})
+// ===============================================
+
+
+
 // K-means 算法的参数变量，将与前端输入框进行双向绑定
 const kValue = ref(3)         //定义聚类簇数，初始值设为3
 const randomSeed = ref(42)    //定义随机种子，用于保证结果可复现，初始值42
@@ -32,6 +82,9 @@ const uploadFile = async () => {
   const formData = new FormData()
   // 将选中的文件追加到表单数据中，键名为 'file'，需与后端接口参数名一致
   formData.append('file', selectedFile.value)
+  // =============================================== 新增：将用户选择的格式传给后端
+  formData.append('data_format', dataFormat.value) 
+  // ===============================================
 
   try {
     // 设置上传状态为“上传中...”
@@ -44,9 +97,16 @@ const uploadFile = async () => {
         'Content-Type': 'multipart/form-data' // 显式指定请求头，确保后端正确解析文件流
       }
     })
-    
+
     // 上传成功，显示后端返回的消息
-    uploadStatus.value = `✅ 上传成功: ${res.data.filename}`
+    // =============================================== 修改：显示后端返回的文件形状
+    // res.data.original_shape 是后端返回的一个数组 [行数, 列数]
+    const shapeStr = res.data.original_shape ? `(行=${res.data.original_shape[0]}, 列=${res.data.original_shape[1]})` : ''
+    
+    uploadStatus.value = `✅ 上传成功: ${res.data.filename} \n📊 文件原始形状: ${shapeStr}`
+    // ===============================================
+
+    // uploadStatus.value = `✅ 上传成功: ${res.data.filename}`
     console.log('上传结果:', res.data)
     uploadedFilename.value = res.data.filename // 关键：保存后端返回的文件名，下一步分析要用
 
@@ -83,6 +143,16 @@ const handleFileChange = (event) => {
     uploadFile() 
   }
 }
+
+// =============================================== 新增：处理格式下拉框变化的函数
+const handleFormatChange = () => {
+  // 如果当前已经选择了文件，说明用户想用新格式重新解析这个文件
+  if (selectedFile.value) {
+    console.log("格式已变更，正在重新校验文件...")
+    uploadFile() // 直接复用上传函数，它会读取最新的 dataFormat.value
+  }
+}
+// ===============================================
 
 // 核心功能：点击按钮触发的函数
 const runAnalysis = async () => {
@@ -145,6 +215,23 @@ const runAnalysis = async () => {
 
         <div class="step-section upload-section">
           <h3>1. 数据上传 (Data Upload)</h3>
+
+          <div class="upload-config">
+            <div class="config-item">
+               <label>我的数据格式是：</label>
+               <select v-model="dataFormat" @change="handleFormatChange" class="format-select">
+                 <option v-for="opt in dataFormatOptions" :key="opt.value" :value="opt.value">
+                   {{ opt.label }}
+                 </option>
+               </select>
+            </div>
+
+            <div class="example-box">
+                <span class="example-label">示例CSV文本：</span>
+                <pre class="example-content">{{ exampleText }}</pre>
+            </div>
+          </div>
+
           <div class="upload-controls">
             <input type="file" @change="handleFileChange" />
           </div>
@@ -299,6 +386,56 @@ h1 {
   padding-bottom: 5px;
   display: inline-block;
 }
+
+/* =============================================== 新增样式：上传配置区 */
+.upload-config {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px dashed #ddd; /* 加个虚线分割线，区分配置和文件选择 */
+}
+
+.config-item {
+  margin-bottom: 15px;
+  text-align: left;
+}
+
+.format-select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 100%; /* 下拉框占满宽度 */
+  max-width: 400px;
+  font-size: 14px;
+}
+
+.example-box {
+  background-color: #fff;
+  border: 1px solid #eee;
+  padding: 10px;
+  border-radius: 4px;
+  text-align: left;
+  display: flex;
+  align-items: flex-start;
+}
+
+.example-label {
+  font-weight: bold;
+  color: #555;
+  margin-right: 10px;
+  white-space: nowrap; /* 防止标签换行 */
+}
+
+.example-content {
+  margin: 0;
+  background: none; /* 去掉 pre 默认的灰色背景，融合进 box */
+  padding: 0;
+  font-family: Consolas, Monaco, 'Courier New', monospace;
+  color: #2c3e50;
+  font-size: 13px;
+  border: none;
+}
+/* =============================================== */
+
 
 /* 新增：上传控件布局 */
 .upload-controls {

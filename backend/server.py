@@ -1,5 +1,5 @@
 import uvicorn
-from fastapi import FastAPI,HTTPException,File,UploadFile
+from fastapi import FastAPI,HTTPException,File,UploadFile,Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import time
@@ -172,8 +172,11 @@ async def run_analysis(request: AnalysisRequest): #FastAPI 会自动读取 HTTP 
 
 #处理用户上传文件的接口，将用户上传文件保存到本地
 @app.post("/api/upload")
-async def upload_file(file: UploadFile = File(...)):
+#修改函数签名，增加 data_format 参数
+# 使用 Form(...) 表示这是一个必填的表单字段，前端 FormData 中必须包含这个 key
+async def upload_file(file: UploadFile = File(...), data_format: str = Form(...) ):
     print(f"\n[后端日志] 收到文件上传请求: {file.filename}")
+    print(f"[后端日志] 用户指定的数据格式: {data_format}") #打印日志方便调试
 
     UPLOAD_PATH="upload" #用户上传文件的保存路径
     if not os.path.exists(UPLOAD_PATH): #如果路径不存在，则创建该目录
@@ -189,32 +192,192 @@ async def upload_file(file: UploadFile = File(...)):
 
         # 新增：智能读取逻辑 (Smart Loader)
         # 借鉴了“另一个AI”的策略，不看后缀名，而是尝试不同的读取方式
+        # =============================================== 重写：根据用户选择的格式读取数据
         df = None
-        load_error = ""
+        # load_error = ""
+        original_shape = (0, 0) # 用于记录转置前的形状
 
-        # 策略 A: 尝试作为灵活的文本表格读取 (CSV/TXT/TSV/FEA)
+
+
+
+
+
+
         try:
-            # sep=None: 让Pandas自动嗅探分隔符（逗号、Tab、空格等）
-            # engine='python': 只有Python引擎支持自动嗅探
-            # index_col=0: 坚持第一列是样本名
-            df = pd.read_csv(file_location, sep=None, engine='python', header=0, index_col=0)
-            print("[后端日志] 通过文本模式(CSV)读取成功")
-        except Exception as e_csv:
-            load_error += f"文本读取失败: {str(e_csv)}; "
+            # 定义读取参数的默认值
+            read_params = {
+                "sep": None,         # 自动嗅探分隔符
+                "engine": "python",  # Python引擎支持自动嗅探
+                "header": 0,         # 默认第一行为表头
+                "index_col": 0       # 默认第一列为索引
+            }
             
-            # 策略 B: 如果文本读取失败，尝试作为 Excel 读取
-            # 应对用户把 .xlsx 强行改名为 .csv 的情况
-            try:
-                df = pd.read_excel(file_location, index_col=0)
-                print("[后端日志] 通过 Excel 模式读取成功")
-            except Exception as e_excel:
-                load_error += f"Excel读取失败: {str(e_excel)}"
+            # 是否需要转置的标记（机器学习通常要求：行=样本，列=特征）
+            # 如果用户上传的是：行=特征，列=样本，则我们需要转置
+            need_transpose = False 
 
-        # 如果两种策略都失败了，抛出异常
-        if df is None:
-            # 删除无法识别的文件
-            os.remove(file_location)
-            raise ValueError(f"无法解析文件内容。请确保是标准的 CSV文本 或者 Excel表格 。\n详细报错: {load_error}")
+            # 根据用户选择调整读取参数
+            # 选项对应前端的 value 值
+            if data_format == "row_feat_col_sample":
+                # 第一行为特征名称，第一列为样本名称 (标准格式)
+                # 示例:
+                # ,Feature1,Feature2
+                # Sample1,10,20
+                pass # 使用默认参数即可: header=0, index_col=0
+
+            elif data_format == "row_sample_col_feat":
+                # 第一行为样本名称，第一列为特征名称 (常见于生物信息学表达谱)
+                # 示例:
+                # ,Sample1,Sample2
+                # Feature1,10,20
+                # 读入后，Index是特征，Columns是样本。需要转置。
+                need_transpose = True 
+
+            elif data_format == "row_feat":
+                # 第一行为特征名称 (没有样本名列，或者样本名就是普通的第0列数据)
+                # 示例:
+                # Feature1,Feature2
+                # 10,20
+                read_params["index_col"] = None # 不指定索引列，pandas会自动生成0,1,2...索引
+
+            elif data_format == "row_sample":
+                # 第一行为样本名称 (即每一列代表一个样本)
+                # 示例:
+                # Sample1,Sample2
+                # 10,20
+                read_params["index_col"] = None
+                need_transpose = True # 因为列是样本，所以要转置
+
+            elif data_format == "col_feat":
+                # 第一列为特征名称 (即每一行是一个特征)
+                # 示例:
+                # Feature1,10,20
+                # Feature2,30,40
+                read_params["header"] = None # 没有表头行
+                read_params["index_col"] = 0 # 第一列做索引
+                need_transpose = True # 因为行是特征，所以要转置
+
+            elif data_format == "col_sample":
+                # 第一列为样本名称 (即每一行是一个样本)
+                # 示例:
+                # Sample1,10,20
+                # Sample2,30,40
+                read_params["header"] = None # 没有表头行
+                read_params["index_col"] = 0 # 第一列做索引
+
+            # elif data_format == "no_header_no_index":
+            #     # 没有样本名称或者特征名称 (纯数字矩阵)
+            #     # 示例:
+            #     # 10,20
+            #     # 30,40
+            #     read_params["header"] = None # 告诉pandas没有表头
+            #     read_params["index_col"] = None # 告诉pandas没有索引列
+            #     # 默认假设：行是样本，列是特征。如果是标准机器学习数据，不需要转置。
+
+            elif data_format == "no_name_row_feat":
+                # 没有样本名称或者特征名称，但是每一行是特征，每一列是样本
+                # Pandas读取行为：如果不指定header=None，它会把第一行数据当成列名，这不对。
+                # 必须显式告诉它：没有表头，也没有索引列。
+                read_params["header"] = None
+                read_params["index_col"] = None
+                # 因为行是特征，我们需要转置成 (样本x特征)
+                need_transpose = True
+
+            elif data_format == "no_name_row_sample":
+                # 没有样本名称或者特征名称，但是每一行是样本，每一列是特征
+                # 这是最标准的机器学习矩阵格式，只是没有名字
+                read_params["header"] = None
+                read_params["index_col"] = None
+                # 行就是样本，不需要转置
+                need_transpose = False
+
+            # 执行读取
+            # 先尝试 CSV
+            try:
+                df = pd.read_csv(file_location, **read_params) 
+                #**是Python中非常强大的字典解包语法，可以把字典里的“键值对”，自动拆解成函数的“关键字参数”
+                #假设有一个函数需要两个参数：def my_func(a, b)
+                #普通调用方式：my_func(a=1, b=2)
+                #使用**的调用方式：my_func(**{"a": 1, "b": 2})
+            except:
+                # CSV失败则尝试 Excel (注意Excel不支持 engine='python' 和 sep 参数)
+                # 移除不兼容参数
+                excel_params = read_params.copy()
+                del excel_params["sep"]
+                del excel_params["engine"]
+                df = pd.read_excel(file_location, **excel_params) #在代码的逻辑中，如果 pd.read_csv 失败了，程序会尝试 pd.read_excel。如果连 pd.read_excel 也失败了（比如用户上传了一张图片或者损坏的文件），程序会触发外层try的异常捕获机制。
+
+            # 记录原始形状（转置前，即用户文件里的样子）
+            original_shape = df.shape
+            print(f"[后端日志] 原始数据形状: {original_shape}")
+
+            # 如果需要转置，执行转置操作
+            if need_transpose:
+                df = df.T 
+                print(f"[后端日志] 数据已转置，当前形状: {df.shape}")
+
+            # 现在的 df 应该是标准的 (N_samples, N_features) 格式了
+            # 我们可以保存处理后的这个 df 到临时文件，或者只是用它来做校验
+            # 为了后续算法方便，这里我们简单地覆盖保存一下标准化后的 CSV (可选)
+            # df.to_csv(file_location) 
+
+            # =============================================== 补充说明：自动生成索引
+            # 如果是纯数据模式，转置或读取后，DataFrame 的索引和列名默认是 0,1,2...
+            # 为了后续算法（如K-means结果展示）好看一点，我们可以给它们补上默认名字（可选）
+            # 比如：Sample_0, Sample_1... Feature_0, Feature_1...
+            # 这里简单起见，保持默认的数字索引即可，不影响计算。
+            # ===============================================
+
+        except Exception as e_read:
+             raise ValueError(f"文件解析失败，请检查格式选项是否正确。错误信息: {str(e_read)}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+        # # 执行读取
+        # # 先尝试 CSV
+        # # 策略 A: 尝试作为灵活的文本表格读取 (CSV/TXT/TSV/FEA)
+        # try:
+        #     # sep=None: 让Pandas自动嗅探分隔符（逗号、Tab、空格等）
+        #     # engine='python': 只有Python引擎支持自动嗅探
+        #     # index_col=0: 坚持第一列是样本名
+        #     df = pd.read_csv(file_location, sep=None, engine='python', header=0, index_col=0)
+        #     print("[后端日志] 通过文本模式(CSV)读取成功")
+        # except Exception as e_csv:
+        #     load_error += f"文本读取失败: {str(e_csv)}; "
+            
+        #     # 策略 B: 如果文本读取失败，尝试作为 Excel 读取
+        #     # 应对用户把 .xlsx 强行改名为 .csv 的情况
+        #     try:
+        #         df = pd.read_excel(file_location, index_col=0)
+        #         print("[后端日志] 通过 Excel 模式读取成功")
+        #     except Exception as e_excel:
+        #         load_error += f"Excel读取失败: {str(e_excel)}"
+
+        # # 如果两种策略都失败了，抛出异常
+        # if df is None:
+        #     # 删除无法识别的文件
+        #     os.remove(file_location)
+        #     raise ValueError(f"无法解析文件内容。请确保是标准的 CSV文本 或者 Excel表格 。\n详细报错: {load_error}")
+
+
+
+
+
+
+
+
+
+
 
         # 步骤 2: 数据完整性校验 (Data Validator)
         # 读取成功只是第一步，现在要检查内容合不合规
@@ -260,7 +423,7 @@ async def upload_file(file: UploadFile = File(...)):
                 # 如果存在非数字列，说明表格主体里混入了字符串
                 raise ValueError(f"以下列包含非数值内容: {non_numeric_cols}。请确保除行列头外，所有单元格均为数字。")
 
-            print(f"[后端日志] 数据校验全部通过！最终形状: {df.shape}")
+            print(f"[后端日志] 数据校验全部通过！最终用于分析的形状: {df.shape}")
 
         except Exception as e:
             # 如果校验失败，必须删除刚才上传的脏文件，防止垃圾堆积
@@ -273,7 +436,10 @@ async def upload_file(file: UploadFile = File(...)):
             "status": "success",
             "filename": file.filename,
             "filepath": file_location,
-            "message": f"文件 {file.filename} 上传成功"
+            "original_shape": original_shape, # 返回给前端展示
+            "final_shape": df.shape, # 返回标准化后的形状（供参考）
+            "message": f"文件上传成功"
+            # "message": f"文件 {file.filename} 上传成功"
         }
 
     # 修改：分别捕获 HTTPException (我们自己抛出的校验错误) 和其他未知错误
