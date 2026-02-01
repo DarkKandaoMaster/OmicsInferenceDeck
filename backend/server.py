@@ -197,7 +197,7 @@ async def upload_file(file: UploadFile = File(...), data_format: str = Form(...)
         # =============================================== 重写：根据用户选择的格式读取数据
         df = None
         # load_error = ""
-        original_shape = (0, 0) # 用于记录转置前的形状
+        original_shape = (0, 0) # 用于记录文件原始形状
 
 
 
@@ -310,9 +310,8 @@ async def upload_file(file: UploadFile = File(...), data_format: str = Form(...)
                 df = pd.read_excel(file_location, **excel_params) #在代码的逻辑中，如果 pd.read_csv 失败了，程序会尝试 pd.read_excel。如果连 pd.read_excel 也失败了（比如用户上传了一张图片或者损坏的文件），程序会触发外层try的异常捕获机制。
                 #如果read_excel也失败了，那么文件会被删除（安全），但前端收到的会是 500 状态码。这个 ValueError 会向外层“冒泡”，最终被函数最底部的全局 except Exception as e 捕获
 
-            # 记录原始形状（转置前，即用户文件里的样子）
-            original_shape = df.shape
-            print(f"[后端日志] 原始数据形状: {original_shape}")
+            original_shape = df.shape #记录文件原始形状
+            print(f"[后端日志] 文件原始形状: {original_shape}")
 
             # 如果需要转置，执行转置操作
             if need_transpose:
