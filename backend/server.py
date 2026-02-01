@@ -192,6 +192,8 @@ async def upload_file(file: UploadFile = File(...), data_format: str = Form(...)
 
         # 新增：智能读取逻辑 (Smart Loader)
         # 借鉴了“另一个AI”的策略，不看后缀名，而是尝试不同的读取方式
+        # 不需要检查文件后缀名，因为用户可能会把后缀名改为.fea之类的。所以不管后缀名是什么，我们都先尝试把文件当成表格读取
+
         # =============================================== 重写：根据用户选择的格式读取数据
         df = None
         # load_error = ""
@@ -302,10 +304,11 @@ async def upload_file(file: UploadFile = File(...), data_format: str = Form(...)
             except:
                 # CSV失败则尝试 Excel (注意Excel不支持 engine='python' 和 sep 参数)
                 # 移除不兼容参数
-                excel_params = read_params.copy()
+                excel_params = read_params.copy() #虽然read_params的生命周期非常短，这句copy()完全是多余的，但为了防止未来我改动什么内容，所以这里还是copy()一下吧
                 del excel_params["sep"]
                 del excel_params["engine"]
                 df = pd.read_excel(file_location, **excel_params) #在代码的逻辑中，如果 pd.read_csv 失败了，程序会尝试 pd.read_excel。如果连 pd.read_excel 也失败了（比如用户上传了一张图片或者损坏的文件），程序会触发外层try的异常捕获机制。
+                #如果read_excel也失败了，那么文件会被删除（安全），但前端收到的会是 500 状态码。这个 ValueError 会向外层“冒泡”，最终被函数最底部的全局 except Exception as e 捕获
 
             # 记录原始形状（转置前，即用户文件里的样子）
             original_shape = df.shape
@@ -438,8 +441,8 @@ async def upload_file(file: UploadFile = File(...), data_format: str = Form(...)
             "filepath": file_location,
             "original_shape": original_shape, # 返回给前端展示
             "final_shape": df.shape, # 返回标准化后的形状（供参考）
-            "message": f"文件上传成功"
-            # "message": f"文件 {file.filename} 上传成功"
+            # "message": f"文件上传成功"
+            "message": f"文件 {file.filename} 上传成功"
         }
 
     # 修改：分别捕获 HTTPException (我们自己抛出的校验错误) 和其他未知错误

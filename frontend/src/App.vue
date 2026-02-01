@@ -171,6 +171,7 @@ const runAnalysis = async () => {
     // 发送 POST 请求给后端 FastAPI
     // 假设后端地址是 http://127.0.0.1:8000
     // 这里的 '/api/run' 是我们要和后端约定的接口路径
+    //就是我们在后端定义的请求体模型
     const res = await axios.post('http://127.0.0.1:8000/api/run', {
       algorithm: selectedAlgorithm.value, // 发送选中的算法名称
       timestamp: new Date().toISOString(), // 发送当前时间戳
