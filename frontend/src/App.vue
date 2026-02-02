@@ -10,7 +10,7 @@ const isLoading=ref(false) //定义布尔类型的响应式变量，用于控制
 
 const errorMessage=ref('') //定义字符串变量，用于存储请求失败时的错误描述信息，以便在前端界面显示错误提示
 
-const selectedAlgorithm=ref('K-means') //定义当前选中的聚类算法，默认值为 'K-means' //双向绑定到界面的下拉选择框
+const selectedAlgorithm=ref('') //定义当前选中的聚类算法，默认值为空 //双向绑定到界面的下拉选择框
 
 const algorithms=['K-means', 'PIntMF', 'Subtype-GAN', 'NEMO', 'SNF'] //定义算法候选列表，供下拉框渲染使用 //这些算法对应论文表3和表5中提到的 "11种前沿多组学聚类算法" 及基础算法
 
@@ -28,29 +28,29 @@ const dataFormat=ref('row_feat_col_sample') //定义数据矩阵的格式选项�
 const dataFormatOptions=[
   { label: '第一行为特征名称，第一列为样本名称', value: 'row_feat_col_sample' },
   { label: '第一行为样本名称，第一列为特征名称', value: 'row_sample_col_feat' },
-  { label: '第一行为特征名称（无样本名列）', value: 'row_feat' },
-  { label: '第一行为样本名称（无特征名列）', value: 'row_sample' },
-  { label: '第一列为特征名称（无表头）', value: 'col_feat' },
-  { label: '第一列为样本名称（无表头）', value: 'col_sample' },
-  { label: '纯数据：每一行是特征（无行列名）', value: 'no_name_row_feat' },
-  { label: '纯数据：每一行是样本（无行列名）', value: 'no_name_row_sample' },
+  { label: '第一行为特征名称', value: 'row_feat' },
+  { label: '第一行为样本名称', value: 'row_sample' },
+  { label: '第一列为特征名称', value: 'col_feat' },
+  { label: '第一列为样本名称', value: 'col_sample' },
+  { label: '纯数据：每一行是样本', value: 'no_name_row_sample' },
+  { label: '纯数据：每一行是特征', value: 'no_name_row_feat' },
 ]
 
 //定义计算属性，根据当前选中的 dataFormat 动态生成 CSV 文本示例 //帮助用户校验自己的数据格式是否符合预期
 const exampleText=computed(()=>{
   switch(dataFormat.value){ //根据 dataFormat.value 的不同值，返回对应的字符串模板
     case 'row_feat_col_sample':
-      return `,特征名称1,特征名称2\n样本名称1,10,20\n样本名称2,30,40`
+      return `,特征1,特征2\n样本1,10,20\n样本2,30,40`
     case 'row_sample_col_feat':
-      return `,样本名称1,样本名称2\n特征名称1,10,30\n特征名称2,20,40`
+      return `,样本1,样本2\n特征1,10,30\n特征2,20,40`
     case 'row_feat':
-      return `特征名称1,特征名称2\n10,20\n30,40`
+      return `特征1,特征2\n10,20\n30,40`
     case 'row_sample':
-      return `样本名称1,样本名称2\n10,30\n20,40`
+      return `样本1,样本2\n10,30\n20,40`
     case 'col_feat':
-      return `特征名称1,10,20\n特征名称2,30,40`
+      return `特征1,10,20\n特征2,30,40`
     case 'col_sample':
-      return `样本名称1,10,20\n样本名称2,30,40`
+      return `样本1,10,20\n样本2,30,40`
     case 'no_name_row_feat':
       return `10,30\n20,40`
     case 'no_name_row_sample':
@@ -138,6 +138,10 @@ const runAnalysis= async ()=>{
     alert("请先上传数据文件！")
     return
   }
+  if(!selectedAlgorithm.value){ //判断用户是否已经选择了算法
+    alert("请先选择一种聚类算法！")
+    return
+  }
 
   //初始化请求状态：开启加载动画，清空旧错误信息和旧结果
   isLoading.value=true
@@ -193,6 +197,14 @@ const runAnalysis= async ()=>{
         <div class="step-section upload-section">
           <h3>1. 数据上传 (Data Upload)</h3>
 
+          <div class="upload-controls">
+            <input type="file" @change="handleFileChange" />
+          </div>
+
+          <p class="status-message" :class="{ 'error-text': uploadStatus.startsWith('❌') }">
+            {{ uploadStatus }}
+          </p>
+
           <div class="upload-config">
             <div class="config-item">
                <label>我的数据格式是：</label>
@@ -208,19 +220,11 @@ const runAnalysis= async ()=>{
                 <pre class="example-content">{{ exampleText }}</pre>
             </div>
           </div>
-
-          <div class="upload-controls">
-            <input type="file" @change="handleFileChange" />
-          </div>
-
-          <p class="status-message" :class="{ 'error-text': uploadStatus.startsWith('❌') }">
-            {{ uploadStatus }}
-          </p>
         </div>
 
         <div class="step-section control-group">
           <h3>2. 算法选择 (Clustering Method)</h3>
-          <label>选择聚类算法：</label>
+          <label>选择算法：</label>
           <select v-model="selectedAlgorithm">
             <option v-for="algo in algorithms" :key="algo" :value="algo">
               {{ algo }}
