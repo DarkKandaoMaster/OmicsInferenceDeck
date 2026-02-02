@@ -10,7 +10,7 @@ const isLoading=ref(false) //定义布尔类型的响应式变量，用于控制
 
 const errorMessage=ref('') //定义字符串变量，用于存储请求失败时的错误描述信息，以便在前端界面显示错误提示
 
-const selectedAlgorithm=ref('') //定义当前选中的聚类算法，默认值为空 //双向绑定到界面的下拉选择框
+const selectedAlgorithm=ref('') //定义当前选中的算法，默认值为空 //双向绑定到界面的下拉选择框
 
 const algorithms=['K-means', 'PIntMF', 'Subtype-GAN', 'NEMO', 'SNF'] //定义算法候选列表，供下拉框渲染使用 //这些算法对应论文表3和表5中提到的 "11种前沿多组学聚类算法" 及基础算法
 
@@ -51,10 +51,10 @@ const exampleText=computed(()=>{
       return `特征1,10,20\n特征2,30,40`
     case 'col_sample':
       return `样本1,10,20\n样本2,30,40`
-    case 'no_name_row_feat':
-      return `10,30\n20,40`
     case 'no_name_row_sample':
       return `10,20\n30,40`
+    case 'no_name_row_feat':
+      return `10,30\n20,40`
     default:
       return ''
   }
@@ -72,7 +72,7 @@ const randomSeed=ref(42) //定义随机种子，初始值42 //确保算法结果
 
 //定义异步函数，处理文件上传逻辑
 const uploadFile= async ()=>{
-  if(!selectedFile.value){ //防御性编程：检查 selectedFile 是否为空，若为空则弹出浏览器原生警告并中断执行。正常情况下，因为handleFileChange函数中有个if(file)，所以这里的if语句是执行不到的
+  if(!selectedFile.value){ //防御性编程：检查 selectedFile 是否为空，若为空则弹出浏览器原生警告并中断执行。正常情况下，因为handleFileChange函数中有个if(file)，所以不可能触发这个if
     alert("请先选择一个文件！")
     return
   }
@@ -139,7 +139,7 @@ const runAnalysis= async ()=>{
     return
   }
   if(!selectedAlgorithm.value){ //判断用户是否已经选择了算法
-    alert("请先选择一种聚类算法！")
+    alert("请先选择一种算法！")
     return
   }
 
@@ -154,7 +154,7 @@ const runAnalysis= async ()=>{
     // 参数2：请求体
     const res= await axios.post('http://127.0.0.1:8000/api/run',{
       algorithm: selectedAlgorithm.value, //用户选中的算法名称
-      timestamp: new Date().toISOString(), //当前时间戳，格式为ISO 8601【【【【【这是啥？
+      timestamp: new Date().toISOString(), //当前时间戳，格式为ISO 8601
       filename: uploadedFilename.value, //要处理的文件名
       n_clusters: kValue.value, //用户自定义的K值
       random_state: randomSeed.value, //用户自定义的随机种子
@@ -235,7 +235,7 @@ const runAnalysis= async ()=>{
             <h4>K-means 参数配置：</h4>
 
             <div class="param-item">
-              <label>簇数 (K):</label>
+              <label>聚类簇数 (K值):</label>
               <input type="number" v-model="kValue" min="2" max="20" />
             </div>
 
