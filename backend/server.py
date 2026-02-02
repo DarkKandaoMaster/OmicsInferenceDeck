@@ -75,16 +75,7 @@ async def run_analysis(request: AnalysisRequest): #指定record的类型为Analy
             file_path=os.path.join("upload",request.filename) #需要处理的文件的所在路径
             if not os.path.exists(file_path): #检查该路径是否存在（检查文件是否存在）
                 raise FileNotFoundError(f"找不到文件: {request.filename}")
-
-            # 3. 读取CSV文件
-            #期望CSV文件格式为：
-            # ,特征名称1,特征名称2
-            # 样本名称1,10,20
-            # 样本名称2,30,40
-            df=pd.read_csv(file_path, header=0, index_col=0, sep=',') #尝试使用Pandas读取CSV格式的文件【【【【【
-            # header=0: 指定第一行作为列名。于是第一行数据不会参与到运算中
-            # index_col=0: 指定第一列作为行索引。于是第一列数据不会参与到运算中
-            # sep=',': 指定文件分隔符为逗号
+            df=pd.read_csv(file_path,header=0,index_col=0,sep=',') #因为"/api/upload"已经处理好文件了，所以这里可以直接这么读取输入数据
 
             print(f"[算法日志] 数据加载成功，形状为: {df.shape}")
 
@@ -110,7 +101,7 @@ async def run_analysis(request: AnalysisRequest): #指定record的类型为Analy
 
         except Exception as e: #处理用户参数设置不合理，或者上传了一个非常大的CSV文件并且上传时硬盘存得下但处理时硬盘存不下，等情况
             print(f"[算法错误] {str(e)}")
-            return {
+            return{
                 "status": "error", 
                 "message": f"算法运行失败: {str(e)}",
                 "server_time": datetime.datetime.now().isoformat()
@@ -276,10 +267,15 @@ async def upload_file( file:UploadFile=File(...) , data_format:str=Form(...) ): 
 
             print(f"[后端日志] 数据校验全部通过！最终用于分析的形状: {df.shape}")
 
+            df.to_csv(file_location) #将df保存到磁盘
+            #此时保存下来的df就很标准了，有表头行有索引列，第一行为特征名称，第一列为样本名称
+            #保存下来的文件，路径、文件名、后缀名和原文件完全一样，也就是说保存下来的文件会覆盖原文件
+            #保存下来的文件，分隔符使用的是英文逗号，因为to_csv()函数的默认分隔符就是英文逗号
+            #这样一来，"/api/run"接口就可以直接使用pd.read_csv(file_path,header=0,index_col=0,sep=',')读取输入数据了。虽然确实有可能出现read_csv一个.xlsx文件这种情况，不过这不碍事
         except Exception as e:
             raise HTTPException(status_code=400,detail=f"数据格式错误: {str(e)}")
 
-        return {
+        return{
             "status": "success",
             "filename": file.filename,
             "filepath": file_location,
@@ -287,7 +283,6 @@ async def upload_file( file:UploadFile=File(...) , data_format:str=Form(...) ): 
             "final_shape": df.shape, #最终用于分析的文件形状
             "message": f"文件 {file.filename} 上传成功"
         }
-
     except HTTPException as he: #捕获到了我们刚才自己抛出的错误，说明虽然读取文件成功，但是文件内容不合规
         if os.path.exists(file_location):
             os.remove(file_location) #删除文件
