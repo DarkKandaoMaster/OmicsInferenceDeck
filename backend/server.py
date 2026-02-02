@@ -75,8 +75,8 @@ async def run_analysis(request: AnalysisRequest): #指定record的类型为Analy
             file_path=os.path.join("upload",request.filename) #需要处理的文件的所在路径
             if not os.path.exists(file_path): #检查该路径是否存在（检查文件是否存在）
                 raise FileNotFoundError(f"找不到文件: {request.filename}")
-            df=pd.read_csv(file_path,header=0,index_col=0,sep=',') #因为"/api/upload"已经处理好文件了，所以这里可以直接这么读取输入数据
 
+            df=pd.read_csv(file_path,header=0,index_col=0,sep=',') #因为"/api/upload"已经处理好文件了，所以这里可以直接这么读取输入数据
             print(f"[算法日志] 数据加载成功，形状为: {df.shape}")
 
             #初始化K-means模型，同时将前端传来的用户自定义的参数传入模型【【【或许以后可以在这里写个if，最小改动地使用其他算法？】】】
@@ -85,7 +85,6 @@ async def run_analysis(request: AnalysisRequest): #指定record的类型为Analy
                 random_state=request.random_state,
                 max_iter=request.max_iter
             )
-
             labels=kmeans.fit_predict(df) #按照用户设置的参数，使用df这个输入数据，不断地训练模型。训练结束后，返回最后一次训练结果
 
             #修改结果字典
