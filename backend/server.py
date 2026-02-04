@@ -288,7 +288,7 @@ async def upload_file( file:UploadFile=File(...) , data_format:str=Form(...) ): 
     except HTTPException as he: #捕获到了我们刚才自己抛出的错误，说明虽然读取文件成功，但是文件内容不合规
         if os.path.exists(file_location):
             os.remove(file_location) #删除文件
-        print(f"[后端日志] 校验不通过，文件已删除: {str(e)}")
+        print(f"[后端日志] 校验不通过，文件已删除: {str(he)}")
         raise he #直接抛出错误给前端
     except Exception as e: #说明读取文件失败，或者其他什么错误
         if os.path.exists(file_location):
