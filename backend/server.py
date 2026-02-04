@@ -147,7 +147,8 @@ async def upload_file( file:UploadFile=File(...) , data_format:str=Form(...) ): 
     UPLOAD_PATH="upload" #用户上传文件的保存目录
     if not os.path.exists(UPLOAD_PATH): #如果目录不存在，则创建该目录
         os.makedirs(UPLOAD_PATH)
-    file_location=os.path.join(UPLOAD_PATH,file.filename) #用户上传文件的保存路径
+    new_filename=f"{uuid.uuid4()}.csv" #用户上传文件的新名称。使用uuid将用户上传文件改个名，这样能防止两个用户同时上传同名文件导致覆盖，以及防止用户上传文件的名称不规范；将后缀名固定改为.csv，因为我们之后会把处理好的文件保存为CSV格式
+    file_location=os.path.join(UPLOAD_PATH,new_filename) #用户上传文件的保存路径
 
     try:
         #将用户上传文件老老实实保存到本地
@@ -269,7 +270,7 @@ async def upload_file( file:UploadFile=File(...) , data_format:str=Form(...) ): 
 
             df.to_csv(file_location) #将df保存到磁盘
             #此时保存下来的df就很标准了，有表头行有索引列，第一行为特征名称，第一列为样本名称
-            #保存下来的文件，路径、文件名、后缀名和原文件完全一样，也就是说保存下来的文件会覆盖原文件
+            #保存下来的文件，路径、文件名、后缀名和原文件（使用uuid改名后的文件）完全一样，也就是说保存下来的文件会覆盖原文件
             #保存下来的文件，分隔符使用的是英文逗号，因为to_csv()函数的默认分隔符就是英文逗号
             #这样一来，"/api/run"接口就可以直接使用pd.read_csv(file_path,header=0,index_col=0,sep=',')读取输入数据了。虽然确实有可能出现read_csv一个.xlsx文件这种情况，不过这不碍事
         except Exception as e:
@@ -277,7 +278,8 @@ async def upload_file( file:UploadFile=File(...) , data_format:str=Form(...) ): 
 
         return{
             "status": "success",
-            "filename": file.filename,
+            "filename": new_filename, #用户上传文件的新名称
+            "original_filename": file.filename, #用户上传文件的原始名称。用于前端界面展示
             "filepath": file_location,
             "original_shape": original_shape, #文件原始形状
             "final_shape": df.shape, #最终用于分析的文件形状

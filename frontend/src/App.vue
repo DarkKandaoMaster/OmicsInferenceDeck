@@ -83,7 +83,6 @@ const uploadFile= async ()=>{
 
   try{
     uploadStatus.value="正在上传..." //更新界面状态提示，告知用户上传正在进行
-
     //使用axios发送POST请求到后端接口"/api/upload"
     // 参数1：接口URL
     // 参数2：请求体，就是那个formData
@@ -93,11 +92,10 @@ const uploadFile= async ()=>{
         'Content-Type': 'multipart/form-data' //显式指定请求头，确保后端能正确解析文件流
       }
     })
-
     //请求成功后，后端不是会返回一个字典嘛，我们要根据这个字典修改前端
-    uploadStatus.value=`✅ 上传成功: ${res.data.filename} \n📊 文件原始形状: ${   res.data.original_shape ? `(行=${res.data.original_shape[0]}, 列=${res.data.original_shape[1]})` : ''   }` //更新状态提示为成功，并显示文件名和文件原始形状 //res.data.original_shape就是后端返回的那个记录文件原始形状的original_shape
+    uploadStatus.value=`✅ 上传成功: ${res.data.original_filename} \n📊 文件原始形状: ${   res.data.original_shape ? `(行=${res.data.original_shape[0]}, 列=${res.data.original_shape[1]})` : ''   }` //更新状态提示为成功，并显示用户上传文件的原始名称和文件原始形状
     console.log('上传结果:',res.data) //在控制台打印日志
-    uploadedFilename.value=res.data.filename //将后端返回的文件名保存到前端变量，下一步分析要用
+    uploadedFilename.value=res.data.filename //将后端返回的用户上传文件的新名称保存到前端变量，下一步分析要用
   }
   catch(error){ //捕获并处理请求过程中的错误（如网络错误、4xx/5xx 状态码）
     console.error('上传出错:',error) //在控制台打印日志
