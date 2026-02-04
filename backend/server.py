@@ -224,7 +224,7 @@ async def upload_file( file:UploadFile=File(...) , data_format:str=Form(...) ): 
                 #使用**的调用方式：hanshu(**{"a":1,"b":2})
                 df=pd.read_csv(file_location,**read_params)
             except:
-                #如果读取失败，那么尝试用pd.read_excel读文件。不过pd.read_excel不支持sep和engine参数，所以我们先来删除它们
+                #如果读取失败，那么尝试用pd.read_excel读文件。不过pd.read_excel不支持sep和engine参数，所以我们先来删除它们 #注意想要使用pd.read_excel的话需要先安装openpyxl库
                 del read_params["sep"]
                 del read_params["engine"]
                 df=pd.read_excel(file_location,**read_params)
