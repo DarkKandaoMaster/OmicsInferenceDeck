@@ -9,6 +9,7 @@ import os
 import pandas as pd
 import numpy as np
 from sklearn.cluster import KMeans
+import uuid #【【【【【了解一下这个uuid！！【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【【
 
 # =============================================================================
 # 应用程序初始化
