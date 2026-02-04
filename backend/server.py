@@ -248,7 +248,7 @@ async def upload_file( file:UploadFile=File(...) , data_format:str=Form(...) ): 
 
             #检查样本名称是否重复
             if df.index.has_duplicates:
-                duplicated_samples=df.index[df.index.duplicated()].unique().tolist() #获取具体的重复样本名【【【【【改一下
+                duplicated_samples=df.index[df.index.duplicated()].unique().tolist() #获取具体的重复样本名【【【【【改一下。等会儿等会儿，因为我可能使用的是转置后的数据，所以这里的提示信息可能不太准确
                 raise ValueError(f"数据第一列（样本名称）发现重复值: {duplicated_samples}。请确保每个样本只有一行。")
 
             #检查特征名称是否重复
