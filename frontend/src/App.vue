@@ -289,7 +289,7 @@ const runAnalysis= async ()=>{
 
             <div class="param-item">
               <label>聚类簇数 (K值):</label>
-              <input type="number" v-model="kValue" min="2" max="20" /><!-- v-model: 双向绑定输入值到 kValue 变量 --><!-- min/max: 限制输入范围为 2-20 -->
+              <input type="number" v-model="kValue" /><!-- v-model: 双向绑定输入值到 kValue 变量 -->
             </div>
 
             <div class="param-item">
@@ -299,7 +299,7 @@ const runAnalysis= async ()=>{
 
             <div class="param-item">
               <label>最大迭代:</label>
-              <input type="number" v-model="maxIter" step="50" /><!-- v-model: 双向绑定输入值到 maxIter 变量 --><!-- step: 每次增减的步长为 50【【【【【这是什么意思？ -->
+              <input type="number" v-model="maxIter" /><!-- v-model: 双向绑定输入值到 maxIter 变量 -->
             </div>
           </div>
         </div>
