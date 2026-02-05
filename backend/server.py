@@ -10,6 +10,8 @@ import pandas as pd
 import numpy as np
 from sklearn.cluster import KMeans
 import uuid
+from sklearn.decomposition import PCA
+from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 
 # =============================================================================
 # 应用程序初始化
@@ -88,14 +90,47 @@ async def run_analysis(request: AnalysisRequest): #指定record的类型为Analy
             )
             labels=kmeans.fit_predict(df) #按照用户设置的参数，使用df这个输入数据，不断地训练模型。训练结束后，返回最后一次训练结果
 
-            #修改结果字典
+            #计算三个聚类评估指标：轮廓系数、CH指数、DB指数，它们是可以用来给任何聚类算法打分的通用指标
+            metrics_scores={} #初始化一个字典，用来存放这三个指标
+            if request.n_clusters>=2: #只有当簇数量大于等于2时，聚类评估指标才有数学意义
+                s_score=silhouette_score(df,labels) #轮廓系数。范围[-1,1]，越接近1表示分类效果越好。衡量一个样本“离自己组的人有多近”、“离隔壁组的人有多远”
+                ch_score=calinski_harabasz_score(df,labels) #CH指数。范围[0,+∞)，值越大表示分类效果越好。衡量簇内紧密度与簇间分离度的比值，简单来说就是它希望“组内越紧密越好”、“组间离得越远越好”
+                db_score=davies_bouldin_score(df,labels) #DB指数。范围[0,+∞)，值越小表示分类效果越好。衡量簇之间的重叠程度，如果这个指标很高，说明不同组混在一起了，分得不清楚
+                metrics_scores={
+                    "silhouette": round(float(s_score),4), #将s_score强制类型转换float，然后四舍五入保留小数点后4位
+                    "calinski": round(float(ch_score),4),
+                    "davies": round(float(db_score),4)
+                }
+            else: #如果K<2，那么这些指标都无法计算，所以我们把这些指标都赋值为-1
+                metrics_scores={
+                    "silhouette": -1,
+                    "calinski": -1,
+                    "davies": -1
+                }
+
+            #于是我们就计算出来那三个聚类评估指标了。但是它们不太直观，所以我们来另外计算一个散点图。如果聚类效果确实很好（样本确实分得很开），那么通常指标会很好、散点图也会分得很开，两者趋势是一致的
+            #为了能够画散点图，我们需要对df使用PCA/t-SNE/UMAP降维
+            pca=PCA(n_components=2) #初始化PCA模型，指定降维到2维（x轴和y轴）
+            pca_coords=pca.fit_transform(df) #对df进行降维，返回一个形状为(样本数量,2)的numpy数组。其中第0列表示第一主成分（PC1），这是数据差异最大、最能区分样本的方向；第1列表示第二主成分（PC2），这是数据差异第二大的方向
+            plot_data=[] #初始化一个列表，用来存放每个样本对应的信息，以便前端画散点图。在前端的散点图中，每个样本对应一个点
+            for i in range(len(df)):
+                plot_data.append({
+                    "name": df.index[i], #样本名称
+                    "x": float(pca_coords[i,0]), #降维后的第一主成分，作为散点图中的x轴坐标
+                    "y": float(pca_coords[i,1]), #降维后的第二主成分，作为散点图中的y轴坐标
+                    "cluster": int(labels[i]) #该样本所属的簇标签
+                })
+
+            #为结果字典赋值
             mock_result_data={
                 "method": "K-means (Real Run)",
                 "n_samples": df.shape[0], #样本总数
                 "n_features": df.shape[1], #特征数量
                 "inertia": float(kmeans.inertia_), #簇内误差平方和，评估聚类效果的指标，该值越小，表示簇内样本越紧密
                 "labels": labels.tolist(), #将numpy数组转换为Python列表，不然numpy数组无法直接序列化为JSON
-                "cluster_counts": pd.Series(labels).value_counts().to_dict() #统计每个类别（簇）的样本数量
+                "cluster_counts": pd.Series(labels).value_counts().to_dict(), #统计每个类别（簇）的样本数量
+                "metrics": metrics_scores, #我们刚才计算出来的聚类评估指标
+                "plot_data": plot_data #存放每个样本对应的信息的那个列表
             }
             print("[算法日志] K-means 计算完成") #在控制台打印日志
 

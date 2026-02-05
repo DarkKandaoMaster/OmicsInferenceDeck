@@ -1,4 +1,8 @@
 后端：
 openpyxl
+umap-learn
 
-记得补充一下其他东西
+前端：（npm install echarts）
+echarts
+
+之后记得补充一下其他东西

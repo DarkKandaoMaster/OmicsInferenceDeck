@@ -1,6 +1,7 @@
 <script setup>
-import { ref,computed } from 'vue' // 引入 Vue 框架的核心函数 // ref: 用于定义基本类型的响应式数据（数据变化时视图自动更新） // computed: 用于定义计算属性（依赖其他数据变化而自动重新计算并缓存结果）
-import axios from 'axios' // 引入 axios 库，用于在浏览器端发送 HTTP 请求，与后端服务器进行数据交互
+import { ref,computed,nextTick } from 'vue' //引入Vue框架的核心函数 //ref：用于定义基本类型的响应式数据（数据变化时视图自动更新） //computed：用于定义计算属性（依赖其他数据变化而自动重新计算并缓存结果） //nextTick：用于确保DOM元素渲染完成后再执行绘图代码
+import axios from 'axios' //引入 axios 库，用于在浏览器端发送 HTTP 请求，与后端服务器进行数据交互
+import * as echarts from 'echarts' //引入整个 echarts 库，命名为 echarts #为什么不这么写“import echarts from 'echarts'”？这是因为不同的库有不同的导出策略
 
 // ===================== 状态定义区 =====================
 
@@ -12,13 +13,15 @@ const errorMessage=ref('') //定义字符串变量，用于存储请求失败时
 
 const selectedAlgorithm=ref('') //定义当前选中的算法，默认值为空 //双向绑定到界面的下拉选择框
 
-const algorithms=['K-means', 'PIntMF', 'Subtype-GAN', 'NEMO', 'SNF'] //定义算法候选列表，供下拉框渲染使用 //这些算法对应论文表3和表5中提到的 "11种前沿多组学聚类算法" 及基础算法
+const algorithms=['K-means', 'PIntMF', 'Subtype-GAN', 'NEMO', 'SNF'] //定义算法候选数组，供下拉框渲染使用 //这些算法对应论文表3和表5中提到的 "11种前沿多组学聚类算法" 及基础算法
 
 const selectedFile=ref(null) //定义响应式变量，用于存储用户通过文件输入框选择的本地文件对象 //对应论文 3.3.2 节提到的 "User uploaded omics data"
 
 const uploadStatus=ref('') //定义字符串变量，用于向用户反馈文件上传的进度或结果（如 "上传成功" 或 错误信息）
 
 const uploadedFilename=ref('') //定义字符串变量，用于存储后端返回的用户上传文件的新名称 //前端在后续调用 "运行分析" 接口时，需要将此文件名传回后端，指定处理哪个文件
+
+const chartRef=ref(null) //定义一个引用变量，用来绑定template中的图表容器div
 
 // ===================== 数据格式处理区 =====================
 
@@ -40,7 +43,7 @@ const dataFormatOptions=[
 const exampleText=computed(()=>{
   switch(dataFormat.value){ //根据 dataFormat.value 的不同值，返回对应的字符串模板
     case 'row_feat_col_sample':
-      return `,特征1,特征2\n样本1,10,20\n样本2,30,40`
+      return `,特征1,特征2\n样本1,10,20\n样本2,30,40` //【【【【【这里记得修改一下
     case 'row_sample_col_feat':
       return `,样本1,样本2\n特征1,10,30\n特征2,20,40`
     case 'row_feat':
@@ -130,6 +133,54 @@ const handleFormatChange= ()=>{
   }
 }
 
+//渲染散点图
+const renderChart= (plot_data)=>{
+  if(!chartRef.value || !plot_data) return //防御性检查：确保DOM元素存在，且有数据
+  const myChart=echarts.init(chartRef.value) //初始化echarts实例，绑定到对应div上
+
+  const seriesData=[] //初始化一个数组，用来存放散点图中每个点的信息
+  const clusters=[...new Set(   plot_data.map(item=>item.cluster)   )]   .sort() //plot_data.map(item=>item.cluster)表示遍历plot_data数组，把每一项的cluster字段拿出来，组成一个新数组；然后我们把这个数组传给new出来的一个Set对象，于是存储在里面的数据没有重复值，实现去重；[... ]是扩展运算符，可以把Set对象里的数据一个个展开，放入一个新数组中；最后.sort()对数组元素进行默认升序排序
+  clusters.forEach(clusterId=>{ //遍历clusters数组，对数组中的每一个元素，它都会执行一次箭头函数clusterId=>{}内部的代码块
+    const clusterPoints=plot_data.filter(item=>item.cluster===clusterId) //遍历plot_data数组，筛选出cluster字段的值等于clusterId的所有项，并将它们组成一个新数组返回
+    seriesData.push({ //把下面这个对象push到seriesData数组的末尾
+      name: `Cluster ${clusterId}`, //表示该点被分到哪个cluster里了
+      type: 'scatter', //图表类型：散点图
+      symbolSize: 10, //点的大小
+      data: clusterPoints.map(p=>[p.x,p.y,p.name]), //[后端传来的x坐标,后端传来的y坐标,后端传来的name]。不把后端传来的name放在数组的第一位是因为echarts默认规定数组的前两位必须是坐标值，否则坐标失效
+      itemStyle: {
+        opacity: 0.8 //设置透明度为0.8，防止点重叠时看不清
+        //颜色的话就让echarts自动分配吧，echarts默认色板就很好看，所以这里不手动指定color
+      }
+    })
+  })
+
+  //为图表设置选项
+  myChart.setOption({
+    series: seriesData, //把我们刚才处理的seriesData数组传入这个图表
+    tooltip: {
+      trigger: 'item', //鼠标悬停在点上时触发
+      formatter: function(params){ //params的值来源于echarts内部引擎，当鼠标悬停时，echarts会自动打包该点的所有信息，并作为参数传给函数
+        return `<b>${params.data[2]}</b><br/>Cluster: ${params.seriesName}<br/>(x: ${params.data[0].toFixed(2)}, y: ${params.data[1].toFixed(2)})`
+        //params.data是该点对应的data数组，就是上面的[后端传来的x坐标,后端传来的y坐标,后端传来的name]
+        //params.seriesName是该点对应的name，就是上面的`Cluster ${clusterId}`
+        //.toFixed(2)表示保留2位小数
+      }
+    },
+    legend: { //为图例设置选项，就是散点图下方的那些东西
+      bottom: '5%', //把图例组件放置在距离容器底部5%的位置
+      data: clusters.map(c =>`Cluster ${c}`) //图例组件的内容
+    },
+    xAxis: {
+      name: 'PC 1', //x轴名称
+      splitLine: { show: false } //不显示网格线【【【【【以后考虑让用户自定义？
+    },
+    yAxis: {
+      name: 'PC 2', //y轴名称
+      splitLine: { show: false }
+    }
+  })
+}
+
 //定义事件处理函数，监听运行分析按钮的click事件，用户点击按钮时触发
 const runAnalysis= async ()=>{
   if(!uploadedFilename.value){ //判断用户是否已经选中了输入文件
@@ -160,6 +211,10 @@ const runAnalysis= async ()=>{
     })
     backendResponse.value=res.data //请求成功后，将后端返回的数据赋值给backendResponse。此时前端界面也会更新
     console.log('后端返回数据:',res.data) //在控制台打印日志
+    if(res.data.data.plot_data){ //如果成功返回了plot_data，那么渲染散点图
+        await nextTick() //暂停当前代码的执行，直到vue完成对网页界面的更新（DOM元素渲染完成），然后再继续。这是因为我们要渲染的div被包裹在这个div里：<div v-if="backendResponse" class="success-box">，所以只有backendResponse赋值完毕、要渲染成散点图的div加载完毕之后，我们才能执行下面这句代码
+        renderChart(res.data.data.plot_data) //plot_data就是后端传来的存放每个样本对应的信息的那个列表
+    }
   }
   catch(error){ //捕获并处理请求过程中的错误
     console.error('请求失败:', error) //在控制台打印日志
@@ -263,15 +318,34 @@ const runAnalysis= async ()=>{
 
         <div v-if="backendResponse || errorMessage" class="result-area">
           <h3>后端响应结果：</h3>
-
           <div v-if="backendResponse" class="success-box">
-            <p><strong>状态:</strong> {{ backendResponse.status }}</p>
-            <p><strong>信息:</strong> {{ backendResponse.message }}</p>
-            <p><strong>接收到的数据:</strong></p>
-            <pre>{{ backendResponse.data }}</pre>
+            <div v-if="backendResponse.data.metrics" class="metrics-container">
+               <h4>📊 聚类效果评估 (Evaluation Metrics)</h4>
+               <div class="metrics-grid">
+                  <div class="metric-card">
+                     <span class="m-label">轮廓系数 (Silhouette)</span>
+                     <span class="m-value">{{ backendResponse.data.metrics.silhouette }}</span>
+                  </div>
+                  <div class="metric-card">
+                     <span class="m-label">CH 指数 (Calinski-Harabasz)</span>
+                     <span class="m-value">{{ backendResponse.data.metrics.calinski }}</span>
+                  </div>
+                  <div class="metric-card">
+                     <span class="m-label">DB 指数 (Davies-Bouldin)</span>
+                     <span class="m-value">{{ backendResponse.data.metrics.davies }}</span>
+                  </div>
+               </div>
+            </div>
+
+            <div ref="chartRef" class="chart-container"></div><!-- 散点图 -->
+
+            <details>
+               <summary>查看原始 JSON 数据</summary>
+               <pre>{{ backendResponse.data }}</pre>
+            </details>
           </div>
 
-          <div v-if="errorMessage" class="error-box">
+          <div v-if="errorMessage" class="error-box"><!-- 报错窗口 -->
             {{ errorMessage }}
           </div>
         </div>
@@ -568,5 +642,61 @@ pre {
   padding: 10px;
   border-radius: 4px;
   overflow-x: auto; /* 内容过宽时显示滚动条 */
+}
+
+/* 指标容器布局 */
+.metrics-container {
+  margin-bottom: 30px;
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.metrics-container h4 {
+  margin-top: 0;
+  color: #2c3e50;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+/* 网格布局，让三个指标横向排列 */
+.metrics-grid {
+  display: flex;
+  justify-content: space-around; /* 平均分布 */
+  margin-top: 15px;
+}
+
+/* 单个指标卡片样式 */
+.metric-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f8f9fa;
+  padding: 15px 25px;
+  border-radius: 6px;
+  min-width: 120px;
+}
+
+.m-label {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.m-value {
+  font-size: 20px;
+  font-weight: bold;
+  color: #42b983; /* 使用主题绿色 */
+}
+
+/* 图表容器样式：必须指定高度，否则 echarts 无法显示 */
+.chart-container {
+  width: 100%;
+  height: 400px; /* 设定高度为 400px */
+  background-color: #fff;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  margin-bottom: 20px;
 }
 </style>
