@@ -293,7 +293,7 @@ const runAnalysis= async ()=>{
             </div>
 
             <div class="param-item">
-              <label>随机种子:</label>
+              <label>随机种子（-1表示None）:</label>
               <input type="number" v-model="randomSeed" /><!-- v-model: 双向绑定输入值到 randomSeed 变量 -->
             </div>
 
