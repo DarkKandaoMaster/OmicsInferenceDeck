@@ -227,7 +227,7 @@ const runAnalysis= async ()=>{
 </script>
 
 <template>
-  <div class="container"><!-- 请这样添加注释 -->
+  <div class="container">
 
     <header class="header">
       <div class="logo">InferenceDeck</div>
@@ -254,15 +254,15 @@ const runAnalysis= async ()=>{
             <input type="file" @change="handleFileChange" />
           </div>
 
-          <p class="status-message" :class="{ 'error-text': uploadStatus.startsWith('❌') }">
+          <p class="status-message" :class="{ 'error-text': uploadStatus.startsWith('❌') }"><!-- :class 动态绑定: 当 uploadStatus 以 '❌' 开头时，添加 'error-text' 类名【【【【【这是啥？ -->
             {{ uploadStatus }}
           </p>
 
           <div class="upload-config">
             <div class="config-item">
                <label>我的数据格式是：</label>
-               <select v-model="dataFormat" @change="handleFormatChange" class="format-select">
-                 <option v-for="opt in dataFormatOptions" :key="opt.value" :value="opt.value">
+               <select v-model="dataFormat" @change="handleFormatChange" class="format-select"><!-- v-model: 双向绑定选择框的值到 dataFormat 变量 -->
+                 <option v-for="opt in dataFormatOptions" :key="opt.value" :value="opt.value"><!-- v-for: 遍历 dataFormatOptions 数组生成选项 --><!-- :key: 列表渲染的唯一标识符 --><!-- :value: 动态绑定选项的 value 值 -->
                    {{ opt.label }}
                  </option>
                </select>
@@ -270,7 +270,7 @@ const runAnalysis= async ()=>{
 
             <div class="example-box">
                 <span class="example-label">示例CSV文本：</span>
-                <pre class="example-content">{{ exampleText }}</pre>
+                <pre class="example-content">{{ exampleText }}</pre><!-- pre 元素: 保留文本的空格和换行格式 -->
             </div>
           </div>
         </div>
@@ -278,8 +278,8 @@ const runAnalysis= async ()=>{
         <div class="step-section control-group">
           <h3>2. 算法选择 (Clustering Method)</h3>
           <label>选择算法：</label>
-          <select v-model="selectedAlgorithm">
-            <option v-for="algo in algorithms" :key="algo" :value="algo">
+          <select v-model="selectedAlgorithm"><!-- v-model: 双向绑定选择框的值到 selectedAlgorithm 变量 -->
+            <option v-for="algo in algorithms" :key="algo" :value="algo"><!-- v-for: 遍历 algorithms 数组生成选项 -->
               {{ algo }}
             </option>
           </select>
@@ -289,37 +289,33 @@ const runAnalysis= async ()=>{
 
             <div class="param-item">
               <label>聚类簇数 (K值):</label>
-              <input type="number" v-model="kValue" min="2" max="20" />
+              <input type="number" v-model="kValue" min="2" max="20" /><!-- v-model: 双向绑定输入值到 kValue 变量 --><!-- min/max: 限制输入范围为 2-20 -->
             </div>
 
             <div class="param-item">
               <label>随机种子:</label>
-              <input type="number" v-model="randomSeed" />
+              <input type="number" v-model="randomSeed" /><!-- v-model: 双向绑定输入值到 randomSeed 变量 -->
             </div>
 
             <div class="param-item">
               <label>最大迭代:</label>
-              <input type="number" v-model="maxIter" step="50" />
+              <input type="number" v-model="maxIter" step="50" /><!-- v-model: 双向绑定输入值到 maxIter 变量 --><!-- step: 每次增减的步长为 50【【【【【这是什么意思？ -->
             </div>
           </div>
         </div>
 
         <div class="step-section action-area">
           <h3>3. 运行分析 (Execution)</h3>
-          <button 
-            @click="runAnalysis" 
-            :disabled="isLoading"
-            class="run-btn"
-          >
-            <span v-if="isLoading">正在运行...</span>
+          <button @click="runAnalysis" :disabled="isLoading" class="run-btn"><!-- :disabled: 动态绑定禁用状态，当 isLoading 为 true 时按钮禁用 -->
+            <span v-if="isLoading">正在运行...</span><!-- 根据 isLoading 状态显示不同文本 -->
             <span v-else>运行分析 (Run Analysis)</span>
           </button>
         </div>
 
-        <div v-if="backendResponse || errorMessage" class="result-area">
+        <div v-if="backendResponse || errorMessage" class="result-area"><!-- 当后端响应成功或有错误信息时显示此区域 -->
           <h3>后端响应结果：</h3>
-          <div v-if="backendResponse" class="success-box">
-            <div v-if="backendResponse.data.metrics" class="metrics-container">
+          <div v-if="backendResponse" class="success-box"><!-- 显示成功结果 -->
+            <div v-if="backendResponse.data.metrics" class="metrics-container"><!-- 当响应数据中包含 metrics 对象时显示评估指标 -->
                <h4>📊 聚类效果评估 (Evaluation Metrics)</h4>
                <div class="metrics-grid">
                   <div class="metric-card">
@@ -337,15 +333,15 @@ const runAnalysis= async ()=>{
                </div>
             </div>
 
-            <div ref="chartRef" class="chart-container"></div><!-- 散点图 -->
+            <div ref="chartRef" class="chart-container"></div><!-- ref: 模板引用，将此 DOM 元素存储到 chartRef 变量中，用于把这个div渲染成散点图 -->
 
-            <details>
+            <details><!-- details 元素: 可折叠的详情区域 -->
                <summary>查看原始 JSON 数据</summary>
                <pre>{{ backendResponse.data }}</pre>
             </details>
           </div>
 
-          <div v-if="errorMessage" class="error-box"><!-- 报错窗口 -->
+          <div v-if="errorMessage" class="error-box"><!-- 显示错误信息 -->
             {{ errorMessage }}
           </div>
         </div>
