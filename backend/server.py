@@ -71,9 +71,9 @@ async def run_analysis(request: AnalysisRequest): #指定record的类型为Analy
 
     #设置全局随机种子。虽然下面这几句代码是写在函数里的，但它们生效的范围是全局。所以虽然在当前开发阶段这么写是完全可取的，但如果我以后要构建一个高并发的商业级服务器，这么写就不可取了
     seed=request.random_state if request.random_state!=-1 else None #如果用户传的是-1，变量设为None；否则设为用户传来的整数
-    seed_for_torch=request.random_state if request.random_state!=-1 else random.randint(0,2**32-1) #pytorch比较特殊，不能直接把None作为种子，所以我们随机生成一个整数作为种子
     random.seed(seed) # 设置Python原生random库的种子
     np.random.seed(seed) #设置NumPy的随机种子
+    seed_for_torch=request.random_state if request.random_state!=-1 else random.randint(0,2**32-1) #pytorch比较特殊，不能直接把None作为种子，所以我们随机生成一个整数作为种子
     torch.manual_seed(seed_for_torch) #设置CPU生成随机数的种子
     torch.cuda.manual_seed(seed_for_torch) #为当前GPU设置随机种子
     torch.cuda.manual_seed_all(seed_for_torch) #为所有GPU设置随机种子
