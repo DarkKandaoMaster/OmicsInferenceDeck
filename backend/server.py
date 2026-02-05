@@ -12,6 +12,8 @@ from sklearn.cluster import KMeans
 import uuid
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
+import random
+import torch
 
 # =============================================================================
 # 应用程序初始化
@@ -68,6 +70,13 @@ async def run_analysis(request: AnalysisRequest): #指定record的类型为Analy
     print(f"   - 处理文件: {request.filename}")
     print(f"   - 参数: K={request.n_clusters}, Seed={request.random_state}, Iter={request.max_iter}")
 
+    #设置全局随机种子。虽然下面这几句代码是写在函数里的，但它们生效的范围是全局。所以虽然在当前开发阶段这么写是完全可取的，但如果我以后要构建一个高并发的商业级服务器，这么写就不可取了
+    random.seed(request.random_state) # 设置Python原生random库的种子
+    torch.manual_seed(request.random_state) #设置CPU生成随机数的种子
+    torch.cuda.manual_seed_all(request.random_state) #为所有GPU设置随机种子
+    torch.cuda.manual_seed(request.random_state) #为当前GPU设置随机种子
+    np.random.seed(request.random_state) #设置NumPy的随机种子
+
     mock_result_data={} #初始化结果字典，这个就是函数要返回的东西之一
 
     # -------------------------------------------------------------------------
@@ -110,7 +119,7 @@ async def run_analysis(request: AnalysisRequest): #指定record的类型为Analy
 
             #于是我们就计算出来那三个聚类评估指标了。但是它们不太直观，所以我们来另外计算一个散点图。如果聚类效果确实很好（样本确实分得很开），那么通常指标会很好、散点图也会分得很开，两者趋势是一致的
             #为了能够画散点图，我们需要对df使用PCA/t-SNE/UMAP降维
-            pca=PCA(n_components=2) #初始化PCA模型，指定降维到2维（x轴和y轴）
+            pca=PCA(n_components=2,random_state=request.random_state) #初始化PCA模型，指定降维到2维（x轴和y轴） ## 显式传入种子。虽然 PCA 通常是确定性的，但在某些求解器（如 randomized svd）下需要种子来保证坐标轴方向一致。
             pca_coords=pca.fit_transform(df) #对df进行降维，返回一个形状为(样本数量,2)的numpy数组。其中第0列表示第一主成分（PC1），这是数据差异最大、最能区分样本的方向；第1列表示第二主成分（PC2），这是数据差异第二大的方向
             plot_data=[] #初始化一个列表，用来存放每个样本对应的信息，以便前端画散点图。在前端的散点图中，每个样本对应一个点
             for i in range(len(df)):
