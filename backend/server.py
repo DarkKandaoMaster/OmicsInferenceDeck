@@ -50,7 +50,6 @@ class AnalysisRequest(BaseModel): #定义一个类，在这个类里声明几个
     algorithm: str #用户选择的算法名称
     timestamp: str #请求发起时的时间戳
     filename: str #用户上传的文件名
-
     #以下参数具有默认值，所以以下参数是可选参数，其他算法即便不传这些参数也不会报错
     #K-means算法
     n_clusters: int=3 #聚类簇数（K值），默认3
