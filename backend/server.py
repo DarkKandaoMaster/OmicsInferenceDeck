@@ -70,11 +70,13 @@ async def run_analysis(request: AnalysisRequest): #指定record的类型为Analy
     print(f"   - 参数: K={request.n_clusters}, Seed={request.random_state}, Iter={request.max_iter}")
 
     #设置全局随机种子。虽然下面这几句代码是写在函数里的，但它们生效的范围是全局。所以虽然在当前开发阶段这么写是完全可取的，但如果我以后要构建一个高并发的商业级服务器，这么写就不可取了
-    random.seed(request.random_state) # 设置Python原生random库的种子
-    torch.manual_seed(request.random_state) #设置CPU生成随机数的种子
-    torch.cuda.manual_seed_all(request.random_state) #为所有GPU设置随机种子
-    torch.cuda.manual_seed(request.random_state) #为当前GPU设置随机种子
-    np.random.seed(request.random_state) #设置NumPy的随机种子
+    seed=request.random_state if request.random_state!=-1 else None #如果用户传的是-1，变量设为None；否则设为用户传来的整数
+    seed_for_torch=request.random_state if request.random_state!=-1 else random.randint(0,2**32-1) #pytorch比较特殊，不能直接把None作为种子，所以我们随机生成一个整数作为种子
+    random.seed(seed) # 设置Python原生random库的种子
+    np.random.seed(seed) #设置NumPy的随机种子
+    torch.manual_seed(seed_for_torch) #设置CPU生成随机数的种子
+    torch.cuda.manual_seed(seed_for_torch) #为当前GPU设置随机种子
+    torch.cuda.manual_seed_all(seed_for_torch) #为所有GPU设置随机种子
 
     mock_result_data={} #初始化结果字典，这个就是函数要返回的东西之一
 
@@ -93,7 +95,7 @@ async def run_analysis(request: AnalysisRequest): #指定record的类型为Analy
             #初始化K-means模型，同时将前端传来的用户自定义的参数传入模型【【【或许以后可以在这里写个if，最小改动地使用其他算法？】】】
             kmeans=KMeans(
                 n_clusters=request.n_clusters,
-                random_state=request.random_state,
+                random_state=seed,
                 max_iter=request.max_iter
             )
             labels=kmeans.fit_predict(df) #按照用户设置的参数，使用df这个输入数据，不断地训练模型。训练结束后，返回最后一次训练结果
@@ -118,7 +120,7 @@ async def run_analysis(request: AnalysisRequest): #指定record的类型为Analy
 
             #于是我们就计算出来那三个聚类评估指标了。但是它们不太直观，所以我们来另外计算一个散点图。如果聚类效果确实很好（样本确实分得很开），那么通常指标会很好、散点图也会分得很开，两者趋势是一致的
             #为了能够画散点图，我们需要对df使用PCA/t-SNE/UMAP降维
-            pca=PCA(n_components=2,random_state=request.random_state) #初始化PCA模型，指定降维到2维（x轴和y轴） ## 显式传入种子。虽然 PCA 通常是确定性的，但在某些求解器（如 randomized svd）下需要种子来保证坐标轴方向一致。
+            pca=PCA(n_components=2,random_state=seed) #初始化PCA模型，指定降维到2维（x轴和y轴） ## 显式传入种子。虽然 PCA 通常是确定性的，但在某些求解器（如 randomized svd）下需要种子来保证坐标轴方向一致。
             pca_coords=pca.fit_transform(df) #对df进行降维，返回一个形状为(样本数量,2)的numpy数组。其中第0列表示第一主成分（PC1），这是数据差异最大、最能区分样本的方向；第1列表示第二主成分（PC2），这是数据差异第二大的方向
             plot_data=[] #初始化一个列表，用来存放每个样本对应的信息，以便前端画散点图。在前端的散点图中，每个样本对应一个点
             for i in range(len(df)):
