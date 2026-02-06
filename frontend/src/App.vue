@@ -23,6 +23,8 @@ const uploadedFilename=ref('') //定义字符串变量，用于存储后端返�
 
 const chartRef=ref(null) //定义一个引用变量，用来绑定template中的图表容器div
 
+const currentReduction=ref('UMAP') //用户选择的降维算法，默认UMAP
+
 // ===================== 数据格式处理区 =====================
 
 const dataFormat=ref('row_feat_col_sample') //定义数据矩阵的格式选项，默认值为 'row_feat_col_sample' //对应论文 2.2.1 数据预处理中对 "特征(Features)" 和 "样本(Samples)" 排列方式的定义
@@ -207,7 +209,8 @@ const runAnalysis= async ()=>{
       filename: uploadedFilename.value, //要处理的文件名
       n_clusters: kValue.value, //用户自定义的K值
       random_state: randomSeed.value, //用户自定义的随机种子
-      max_iter: maxIter.value //用户自定义的最大迭代次数
+      max_iter: maxIter.value, //用户自定义的最大迭代次数
+      reduction: currentReduction.value //用户选择的降维算法
     })
     backendResponse.value=res.data //请求成功后，将后端返回的数据赋值给backendResponse。此时前端界面也会更新
     console.log('后端返回数据:',res.data) //在控制台打印日志
@@ -223,6 +226,13 @@ const runAnalysis= async ()=>{
   finally{ //无论请求成功还是失败，最终都要关闭加载状态，恢复按钮可用性
     isLoading.value=false
   }
+}
+
+//定义事件处理函数，监听PCA/t-SNE/UMAP按钮的click事件，用户点击按钮时触发
+const switchReduction= (method)=>{
+  if(currentReduction.value===method) return //如果用户点击的是当前已经选中的降维算法，则不进行任何操作
+  currentReduction.value=method //更新用户选择的降维算法
+  runAnalysis() //直接重新运行分析
 }
 </script>
 
@@ -260,7 +270,7 @@ const runAnalysis= async ()=>{
 
           <div class="upload-config">
             <div class="config-item">
-               <label>我的数据格式是：</label>
+               <label>我的数据格式是</label>
                <select v-model="dataFormat" @change="handleFormatChange" class="format-select"><!-- v-model: 双向绑定选择框的值到 dataFormat 变量 -->
                  <option v-for="opt in dataFormatOptions" :key="opt.value" :value="opt.value"><!-- v-for: 遍历 dataFormatOptions 数组生成选项 --><!-- :key: 列表渲染的唯一标识符 --><!-- :value: 动态绑定选项的 value 值 -->
                    {{ opt.label }}
@@ -269,7 +279,7 @@ const runAnalysis= async ()=>{
             </div>
 
             <div class="example-box">
-                <span class="example-label">示例CSV文本：</span>
+                <span class="example-label">示例CSV文本</span>
                 <pre class="example-content">{{ exampleText }}</pre><!-- pre 元素: 保留文本的空格和换行格式 -->
             </div>
           </div>
@@ -285,7 +295,7 @@ const runAnalysis= async ()=>{
           </select>
 
           <div v-if="selectedAlgorithm === 'K-means'" class="params-box">
-            <h4>K-means 参数配置：</h4>
+            <h4>K-means 参数配置:</h4>
 
             <div class="param-item">
               <label>聚类簇数 (K值):</label>
@@ -306,14 +316,14 @@ const runAnalysis= async ()=>{
 
         <div class="step-section action-area">
           <h3>3. 运行分析 (Execution)</h3>
-          <button @click="runAnalysis" :disabled="isLoading" class="run-btn"><!-- :disabled: 动态绑定禁用状态，当 isLoading 为 true 时按钮禁用 -->
+          <button @click="runAnalysis" :disabled="isLoading" class="run-btn"><!-- :disabled: 动态绑定禁用状态，当isLoading为true时按钮禁用 -->
             <span v-if="isLoading">正在运行...</span><!-- 根据 isLoading 状态显示不同文本 -->
             <span v-else>运行分析 (Run Analysis)</span>
           </button>
         </div>
 
         <div v-if="backendResponse || errorMessage" class="result-area"><!-- 当后端响应成功或有错误信息时显示此区域 -->
-          <h3>后端响应结果：</h3>
+          <h3>后端响应结果:</h3>
           <div v-if="backendResponse" class="success-box"><!-- 显示成功结果 -->
             <div v-if="backendResponse.data.metrics" class="metrics-container"><!-- 当响应数据中包含 metrics 对象时显示评估指标 -->
                <h4>📊 聚类效果评估 (Evaluation Metrics)</h4>
@@ -331,6 +341,15 @@ const runAnalysis= async ()=>{
                      <span class="m-value">{{ backendResponse.data.metrics.davies }}</span>
                   </div>
                </div>
+            </div>
+
+            <div class="reduction-controls">
+              <span class="reduction-label">降维算法:</span>
+              <div class="btn-group">
+                <button @click="switchReduction('PCA')" :class="{ active: currentReduction==='PCA' }" :disabled="isLoading">PCA</button><!-- 当用户点击这个按钮时，vue会执行函数switchReduction，并把字符串'PCA'作为参数传进去 --><!-- 如果用户选择的降维算法为'PCA'，那么给这个按钮加上一个名为“active”的CSS类 --><!-- 当isLoading为true时按钮禁用 -->
+                <button @click="switchReduction('t-SNE')" :class="{ active: currentReduction==='t-SNE' }" :disabled="isLoading">t-SNE</button>
+                <button @click="switchReduction('UMAP')" :class="{ active: currentReduction==='UMAP' }" :disabled="isLoading">UMAP</button>
+              </div>
             </div>
 
             <div ref="chartRef" class="chart-container"></div><!-- ref: 模板引用，将此 DOM 元素存储到 chartRef 变量中，用于把这个div渲染成散点图 -->
@@ -352,7 +371,7 @@ const runAnalysis= async ()=>{
 </template>
 
 <style scoped>
-/* style scoped 表示这里的 CSS 样式仅应用于当前组件，不污染全局样式 */
+/* style scoped 表示这里的 CSS 样式仅应用于当前组件，不污染全局样式【【【【【额额有什么用？ */
 
 /* 整体容器布局，设置字体、最小高度和背景色 */
 .container {
@@ -694,5 +713,61 @@ pre {
   border: 1px solid #eee;
   border-radius: 4px;
   margin-bottom: 20px;
+}
+
+/* PCA/t-SNE/UMAP按钮样式 */
+.reduction-controls {
+  display: flex; /* 弹性布局，让标签和按钮组水平排列 */
+  align-items: center; /* 垂直居中 */
+  justify-content: center; /* 水平居中 */
+  margin-bottom: 15px; /* 与下方图表保持间距 */
+  background-color: #f8f9fa; /* 浅灰背景衬托 */
+  padding: 10px;
+  border-radius: 6px;
+}
+
+.reduction-label {
+  font-size: 14px;
+  font-weight: bold;
+  color: #555;
+  margin-right: 15px; /* 标签与按钮组的间距 */
+}
+
+.btn-group {
+  display: flex;
+  border: 1px solid #ddd; /* 整体边框 */
+  border-radius: 4px; /* 整体圆角 */
+  overflow: hidden; /* 保证子按钮的直角不溢出圆角边框 */
+}
+
+.btn-group button {
+  background-color: white;
+  border: none; /* 去掉默认边框 */
+  border-right: 1px solid #ddd; /* 按钮之间的分割线 */
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.btn-group button:last-child {
+  border-right: none; /* 最后一个按钮不需要右分割线 */
+}
+
+.btn-group button:hover:not(:disabled) {
+  background-color: #f0f0f0; /* 悬停时的浅灰 */
+}
+
+/* 选中状态的样式 */
+.btn-group button.active {
+  background-color: #42b983; /* 激活时变成主题绿 */
+  color: white; /* 文字变白 */
+  font-weight: bold;
+}
+
+.btn-group button:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 </style>

@@ -11,6 +11,8 @@ import numpy as np
 from sklearn.cluster import KMeans
 import uuid
 from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+import umap
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 import random
 import torch
@@ -55,6 +57,8 @@ class AnalysisRequest(BaseModel): #定义一个类，在这个类里声明几个
     n_clusters: int=3 #聚类簇数（K值），默认3
     random_state: int=42 #随机种子，默认42
     max_iter: int=300 #最大迭代次数，默认300，用于防止算法在无法收敛时陷入死循环
+    #用户选择的降维算法
+    reduction: str="UMAP" #用户选择的降维算法，默认UMAP
 
 # =============================================================================
 # 接口：运行分析
@@ -64,9 +68,10 @@ class AnalysisRequest(BaseModel): #定义一个类，在这个类里声明几个
 @app.post("/api/run")
 async def run_analysis(request: AnalysisRequest): #指定record的类型为AnalysisRequest，就是我们刚才定义的那个类，如果前端传来的数据类型不匹配，FastAPI会自动拦截并返回422错误
     print(f"\n[后端日志] 收到分析请求:") #在控制台打印日志（实际生产环境中建议使用logging模块替代print）
-    print(f"   - 算法: {request.algorithm}")
+    print(f"   - 用户选择的算法名称: {request.algorithm}")
     print(f"   - 时间戳: {request.timestamp}")
-    print(f"   - 处理文件: {request.filename}")
+    print(f"   - 用户上传的文件名: {request.filename}")
+    print(f"   - 用户选择的降维算法: {request.reduction}")
     print(f"   - 参数: K={request.n_clusters}, Seed={request.random_state}, Iter={request.max_iter}")
 
     #设置全局随机种子。虽然下面这几句代码是写在函数里的，但它们生效的范围是全局。所以虽然在当前开发阶段这么写是完全可取的，但如果我以后要构建一个高并发的商业级服务器，这么写就不可取了
@@ -119,15 +124,22 @@ async def run_analysis(request: AnalysisRequest): #指定record的类型为Analy
                 }
 
             #于是我们就计算出来那三个聚类评估指标了。但是它们不太直观，所以我们来另外计算一个散点图。如果聚类效果确实很好（样本确实分得很开），那么通常指标会很好、散点图也会分得很开，两者趋势是一致的
-            #为了能够画散点图，我们需要对df使用PCA/t-SNE/UMAP降维
-            pca=PCA(n_components=2,random_state=seed) #初始化PCA模型，指定降维到2维（x轴和y轴） ## 显式传入种子。虽然 PCA 通常是确定性的，但在某些求解器（如 randomized svd）下需要种子来保证坐标轴方向一致。
-            pca_coords=pca.fit_transform(df) #对df进行降维，返回一个形状为(样本数量,2)的numpy数组。其中第0列表示第一主成分（PC1），这是数据差异最大、最能区分样本的方向；第1列表示第二主成分（PC2），这是数据差异第二大的方向
+            #为了能够画散点图，我们需要对df使用PCA/t-SNE/UMAP降维。PCA/t-SNE/UMAP搞定散点图中的x、y坐标，需要评估的算法搞定散点图中点对应的簇
+            coords=None #用来存放降维后的结果
+            if request.reduction=="PCA":
+                coords=PCA(n_components=2,random_state=seed)   .fit_transform(df) #初始化PCA模型，指定降维到2维（x轴和y轴）；对df进行降维，返回一个形状为(样本数量,2)的numpy数组。其中第0列表示第一主成分（PC1），这是数据差异最大、最能区分样本的方向；第1列表示第二主成分（PC2），这是数据差异第二大的方向
+            elif request.reduction=="t-SNE":
+                coords=TSNE(n_components=2,random_state=seed)   .fit_transform(df)
+            elif request.reduction=="UMAP":
+                coords=umap.UMAP(n_components=2,random_state=seed)   .fit_transform(df)
+            else: #兜底逻辑：如果用户选择了未知的降维算法，那么默认使用UMAP
+                coords=umap.UMAP(n_components=2,random_state=seed)   .fit_transform(df)
             plot_data=[] #初始化一个列表，用来存放每个样本对应的信息，以便前端画散点图。在前端的散点图中，每个样本对应一个点
             for i in range(len(df)):
                 plot_data.append({
                     "name": df.index[i], #样本名称
-                    "x": float(pca_coords[i,0]), #降维后的第一主成分，作为散点图中的x轴坐标
-                    "y": float(pca_coords[i,1]), #降维后的第二主成分，作为散点图中的y轴坐标
+                    "x": float(coords[i,0]), #降维后的第一主成分，作为散点图中的x轴坐标
+                    "y": float(coords[i,1]), #降维后的第二主成分，作为散点图中的y轴坐标
                     "cluster": int(labels[i]) #该样本所属的簇标签
                 })
 
