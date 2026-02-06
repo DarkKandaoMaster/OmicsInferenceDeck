@@ -31,7 +31,7 @@ const dataFormat=ref('row_feat_col_sample') //定义数据矩阵的格式选项�
 
 //定义表达矩阵格式的常量数组，包含显示标签(label)和传递给后端的实际值(value) //这是为了适配不同来源的组学数据（如 CSV 文件的转置情况）
 const dataFormatOptions=[
-  { label: '第一行为特征名称，第一列为样本名称', value: 'row_feat_col_sample' },
+  { label: '一行代表一个病人，一列代表一个特征', value: 'row_feat_col_sample' }, //【【【【【记得修改一下
   { label: '第一行为样本名称，第一列为特征名称', value: 'row_sample_col_feat' },
   { label: '第一行为特征名称', value: 'row_feat' },
   { label: '第一行为样本名称', value: 'row_sample' },
@@ -258,7 +258,7 @@ const switchReduction= (method)=>{
         </p>
 
         <div class="step-section upload-section">
-          <h3>1. 数据上传 (Data Upload)</h3>
+          <h3>1. 组学数据上传 (Data Upload)</h3>
 
           <div class="upload-controls">
             <input type="file" @change="handleFileChange" />
