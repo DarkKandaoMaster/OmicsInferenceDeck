@@ -16,6 +16,8 @@ import umap
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 import random
 import torch
+from lifelines import KaplanMeierFitter
+from lifelines.statistics import multivariate_logrank_test
 
 # =============================================================================
 # 应用程序初始化
@@ -45,20 +47,26 @@ app.add_middleware(
 # =============================================================================
 # 数据校验模型定义
 # =============================================================================
-#定义请求体的数据校验模型
+#"/api/run"的数据校验模型
 class AnalysisRequest(BaseModel): #定义一个类，在这个类里声明几个变量，并且明确指定这几个变量的类型。以此实现确保输入数据类型符合该要求，如果不符合，FastAPI会自动拦截并返回422错误
     #这里的冒号使用的是Python的类型提示语法。 变量名: 类型 意思是声明一个名为 变量名 的变量，它的预期类型是 类型 
     #虽然在普通Python代码中类型提示通常只是像注释一样给人看的，但在pydantic.BaseModel中，冒号具有强制性，Pydantic库会读取冒号后面的类型，并像C语言那样执行强制类型转换和验证
     algorithm: str #用户选择的算法名称
     timestamp: str #请求发起时的时间戳
-    filename: str #用户上传的文件名
+    filename: str #用户上传的使用UUID改名后的组学数据文件名
     #以下参数具有默认值，所以以下参数是可选参数，其他算法即便不传这些参数也不会报错
     #K-means算法
     n_clusters: int=3 #聚类簇数（K值），默认3
     random_state: int=42 #随机种子，默认42
     max_iter: int=300 #最大迭代次数，默认300，用于防止算法在无法收敛时陷入死循环
     #用户选择的降维算法
-    reduction: str="UMAP" #用户选择的降维算法，默认UMAP
+    reduction: str="PCA" #用户选择的降维算法，默认PCA
+
+#"/api/survival_analysis"的数据校验模型
+class SurvivalRequest(BaseModel):
+    clinical_filename: str #用户上传的使用UUID改名后的临床数据文件名
+    sample: list[str] #样本名称列表
+    labels: list[int] #和样本名称列表一一对应的聚类标签列表
 
 # =============================================================================
 # 接口：运行分析
@@ -194,10 +202,10 @@ async def run_analysis(request: AnalysisRequest): #指定record的类型为Analy
     return response #FastAPI会自动将这个字典序列化成JSON字符串，然后通过网络发送给前端
 
 # =============================================================================
-# 接口：处理用户上传文件的接口
+# 接口：处理用户上传组学数据的接口
 # =============================================================================
 @app.post("/api/upload")
-async def upload_file( file:UploadFile=File(...) , data_format:str=Form(...) ): #File(...)表示该字段为必填的文件对象；Form(...)表示该字段为必填的表单对象。前端传过来的东西必须包含这两个对象
+async def upload_file( file:UploadFile=File(...) , data_format:str=Form(...) , file_type:str=Form("omics") ): #File(...)表示该字段为必填的文件对象；Form(...)表示该字段为必填的表单对象。前端传过来的东西必须包含这两个对象 #file_type参数标记用户上传的是组学数据还是临床数据，默认是组学
     print(f"\n[后端日志] 收到文件上传请求: {file.filename}") #在控制台打印日志
     print(f"[后端日志] 用户指定的数据格式: {data_format}")
 
@@ -228,46 +236,62 @@ async def upload_file( file:UploadFile=File(...) , data_format:str=Form(...) ): 
                 "index_col": 0 #指定索引列为第0列，表示有索引列
             }
             need_transpose=False #标记是否需要转置
-            if data_format=="row_feat_col_sample": #如果前端传过来的data_format为"row_feat_col_sample"
-                #,特征1,特征2
-                #样本1,10,20
-                #样本2,30,40
+            if data_format=="row_sample_yes_yes": #如果前端传过来的data_format为"row_sample_yes_yes"
+                # ,特征1,特征2,特征3,...
+                # 病人1,11,12,13
+                # 病人2,21,22,23
+                # 病人3,31,32,33
+                # ...
                 pass #那么就什么都不用做
-            elif data_format=="row_sample_col_feat":
-                #,样本1,样本2
-                #特征1,10,30
-                #特征2,20,40
-                need_transpose=True #标记一下需要转置
-            elif data_format=="row_feat":
-                #特征1,特征2
-                #10,20
-                #30,40
+            elif data_format=="row_sample_yes_no":
+                # 特征1,特征2,特征3,...
+                # 11,12,13
+                # 21,22,23
+                # 31,32,33
+                # ...
                 read_params["index_col"]=None #不指定索引列，于是读取文件时pandas会自动生成索引列0,1,2,...
-            elif data_format=="row_sample":
-                #样本1,样本2
-                #10,30
-                #20,40
+            elif data_format=="row_sample_no_yes":
+                # 病人1,11,12,13,...
+                # 病人2,21,22,23
+                # 病人3,31,32,33
+                # ...
+                read_params["header"]=None
+                read_params["index_col"]=0
+            elif data_format=="row_sample_no_no":
+                # 11,12,13,...
+                # 21,22,23
+                # 31,32,33
+                # ...
+                read_params["header"]=None
+                read_params["index_col"]=None
+            elif data_format=="row_feature_yes_yes":
+                # ,病人1,病人2,病人3,...
+                # 特征1,11,21,31
+                # 特征2,12,22,32
+                # 特征3,13,23,33
+                # ...
+                need_transpose=True #标记一下需要转置
+            elif data_format=="row_feature_yes_no":
+                # 病人1,病人2,病人3,...
+                # 11,21,31
+                # 12,22,32
+                # 13,23,33
+                # ...
                 read_params["index_col"]=None
                 need_transpose=True
-            elif data_format=="col_feat":
-                #特征1,10,20
-                #特征2,30,40
+            elif data_format=="row_feature_no_yes":
+                # 特征1,11,21,31,...
+                # 特征2,12,22,32
+                # 特征3,13,23,33
+                # ...
                 read_params["header"]=None #不指定表头行，于是读取文件时pandas会自动生成表头行0,1,2,...
                 read_params["index_col"]=0
                 need_transpose=True
-            elif data_format=="col_sample":
-                #样本1,10,20
-                #样本2,30,40
-                read_params["header"]=None
-                read_params["index_col"]=0
-            elif data_format=="no_name_row_sample":
-                #10,20
-                #30,40
-                read_params["header"]=None
-                read_params["index_col"]=None
-            elif data_format=="no_name_row_feat":
-                #10,30
-                #20,40
+            elif data_format=="row_feature_no_no":
+                # 11,21,31,...
+                # 12,22,32
+                # 13,23,33
+                # ...
                 read_params["header"]=None
                 read_params["index_col"]=None
                 need_transpose=True
@@ -295,7 +319,7 @@ async def upload_file( file:UploadFile=File(...) , data_format:str=Form(...) ): 
         except Exception as e_read:
              raise ValueError(f"文件解析失败，请检查格式选项是否正确。错误信息: {str(e_read)}")
 
-        #此时读取出来的df就很标准了，有表头行有索引列，第一行为特征名称，第一列为样本名称
+        #此时读取出来的df就很标准了，行代表病人，列代表特征。有表头行、有索引列
         #读取文件成功后，我们还需要来检查一下内容合不合规，看看有没有脏数据什么的
         try:
             # 如果文件被解析为只有索引而没有特征列（比如 README.md），df.shape[1] 会是 0    确保 DataFrame 。如果读取了空文件或仅有索引，shape[1] 为 0。
@@ -313,23 +337,23 @@ async def upload_file( file:UploadFile=File(...) , data_format:str=Form(...) ): 
                 duplicated_features=df.columns[df.columns.duplicated()].unique().tolist()
                 raise ValueError(f"数据第一行（特征名称）发现重复值: {duplicated_features}。请确保特征名称不重复。")
 
-            #检查是否有缺失值（空值），确保矩阵是稠密的
-            if df.isnull().sum().sum()>0: #df.isnull().sum().sum()可以计算整个表格中空值的总数
-                raise ValueError("数据中包含缺失值（空值）。科研数据要求完整，请手动清理或补全数据。") #如果需要更友好的提示，可以把此处改为遍历找出具体是哪一行哪一列空了
-
-            # 我们尝试将所有列转换为数字，如果某一列包含无法转换的字符（如字符串），Pandas会将该列类型识别为 object【【【【【改一下。这是什么意思？
-            #检查内容是否全为数字（第一行、第一列除外）
-            non_numeric_cols=df.select_dtypes(exclude=[np.number]).columns.tolist() #select_dtypes(exclude=[np.number])可以筛选出所有非数字类型的列【【【【【非数字类型的列是怎么个事？
-            if len(non_numeric_cols)>0:
-                raise ValueError(f"以下列包含非数值内容: {non_numeric_cols}。请确保除行列头外，所有单元格均为数字。")
+            #如果是组学数据，那么检查整个表格中是否有缺失值，确保矩阵是稠密的；并且检查整个表格中是否有非数字内容
+            if file_type=="omics":
+                if df.isnull().sum().sum()>0: #df.isnull().sum().sum()可以计算整个表格中空值的总数
+                    raise ValueError("数据中包含缺失值。科研数据要求完整，请手动清理或补全数据。") #如果需要更友好的提示，可以把此处改为遍历找出具体是哪一行哪一列空了
+                non_numeric_cols=df.select_dtypes(exclude=[np.number]).columns.tolist() #select_dtypes(exclude=[np.number])可以筛选出所有非数字类型的列【【【【【非数字类型的列具体是什么？
+                if len(non_numeric_cols)>0:
+                    raise ValueError(f"以下列包含非数字内容: {non_numeric_cols}。请确保除行列头外，所有单元格均为数字。")
+            else: #如果是临床数据，那么检查OS、OS.time两列数据是否有缺失值、是否有非数字内容【【【【【此处待实现
+                pass
 
             print(f"[后端日志] 数据校验全部通过！最终用于分析的形状: {df.shape}")
 
             df.to_csv(file_location) #将df保存到磁盘
-            #此时保存下来的df就很标准了，有表头行有索引列，第一行为特征名称，第一列为样本名称
+            #此时保存下来的df就很标准了，行代表病人，列代表特征。有表头行、有索引列
             #保存下来的文件，路径、文件名、后缀名和原文件（使用uuid改名后的文件）完全一样，也就是说保存下来的文件会覆盖原文件
             #保存下来的文件，分隔符使用的是英文逗号，因为to_csv()函数的默认分隔符就是英文逗号
-            #这样一来，"/api/run"接口就可以直接使用pd.read_csv(file_path,header=0,index_col=0,sep=',')读取输入数据了。虽然确实有可能出现read_csv一个.xlsx文件这种情况，不过这不碍事
+            #这样一来，"/api/run"接口就可以直接使用pd.read_csv(file_path,header=0,index_col=0,sep=',')读取输入数据了
         except Exception as e:
             raise HTTPException(status_code=400,detail=f"数据格式错误: {str(e)}")
 
@@ -352,6 +376,83 @@ async def upload_file( file:UploadFile=File(...) , data_format:str=Form(...) ): 
             os.remove(file_location) #删除文件
         print(f"[后端日志] 严重错误，文件已删除: {str(e)}")
         raise HTTPException(status_code=500,detail=f"服务器内部错误: {str(e)}") #抛出错误给前端
+
+# =============================================================================
+# 接口：生存分析
+# =============================================================================
+@app.post("/api/survival_analysis")
+async def run_survival_analysis(request: SurvivalRequest):
+    print(f"\n[后端日志] 收到生存分析请求，处理文件: {request.clinical_filename}")
+
+    try:
+        # 1. 读取临床数据
+        clinical_path=os.path.join("upload", request.clinical_filename)
+        if not os.path.exists(clinical_path):
+            raise FileNotFoundError("找不到临床数据文件")
+
+        # 假设临床数据第一行为特征名，第一列为样本名（index_col=0）
+        clinical_df=pd.read_csv(clinical_path, index_col=0)
+
+        # 2. 构建聚类信息 DataFrame
+        # 将前端传来的 样本名 和 聚类标签 组合成一个 DataFrame
+        cluster_df=pd.DataFrame({
+            "SampleID": request.sample,
+            "Cluster": request.labels
+        })
+        cluster_df.set_index("SampleID", inplace=True)
+
+        # 3. 合并数据
+        # 使用 inner join (交集)，只保留既有组学数据又有临床数据的样本
+        merged_df=clinical_df.join(cluster_df, how="inner")
+
+        if merged_df.empty:
+            raise ValueError("临床数据与组学数据的样本名称没有交集，无法进行分析。请检查样本ID是否一致。")
+
+        # 检查必要的生存分析列
+        if "OS" not in merged_df.columns or "OS.time" not in merged_df.columns:
+            raise ValueError("临床数据必须包含 'OS' (生存状态, 1=死亡/事件发生, 0=存活) 和 'OS.time' (生存时间) 两列。")
+
+        # 4. 计算 Log-Rank P-value
+        # multivariate_logrank_test 用于比较多组生存曲线的差异
+        results = multivariate_logrank_test(
+            merged_df["OS.time"], 
+            merged_df["Cluster"], 
+            merged_df["OS"]
+        )
+        p_value = results.p_value
+
+        # 5. 计算 Kaplan-Meier 曲线数据（用于前端绘图）
+        kmf = KaplanMeierFitter()
+        plot_data = []
+
+        # 遍历每个簇，分别计算其生存曲线
+        # unique() 获取所有簇的编号，sorted() 排序
+        for cluster_id in sorted(merged_df["Cluster"].unique()):
+            # 筛选出当前簇的样本
+            subset = merged_df[merged_df["Cluster"] == cluster_id]
+
+            # 拟合数据：传入时间列和状态列
+            kmf.fit(subset["OS.time"], subset["OS"], label=f"Cluster {cluster_id}")
+
+            # 提取绘图数据：时间点和对应的生存概率
+            # survival_function_ 返回一个 DataFrame，index是时间，列是生存概率
+            plot_data.append({
+                "name": f"Cluster {cluster_id}",
+                "times": kmf.survival_function_.index.tolist(), # X轴：时间
+                "probs": kmf.survival_function_[f"Cluster {cluster_id}"].tolist(), # Y轴：生存概率
+                # 还可以选择性添加置信区间数据，这里为了简单略过
+            })
+
+        return {
+            "status": "success",
+            "p_value": p_value, # 返回 P 值
+            "km_data": plot_data, # 返回用于画图的数据
+            "n_samples": len(merged_df) # 实际参与分析的样本数
+        }
+
+    except Exception as e:
+        print(f"[生存分析错误] {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
 
 # =============================================================================
 # 程序入口

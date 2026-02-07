@@ -1,7 +1,8 @@
 <script setup>
 import { ref,computed,nextTick } from 'vue' //引入Vue框架的核心函数 //ref：用于定义基本类型的响应式数据（数据变化时视图自动更新） //computed：用于定义计算属性（依赖其他数据变化而自动重新计算并缓存结果） //nextTick：用于确保DOM元素渲染完成后再执行绘图代码
 import axios from 'axios' //引入 axios 库，用于在浏览器端发送 HTTP 请求，与后端服务器进行数据交互
-import * as echarts from 'echarts' //引入整个 echarts 库，命名为 echarts #为什么不这么写“import echarts from 'echarts'”？这是因为不同的库有不同的导出策略
+import * as echarts from 'echarts' //引入整个 echarts 库，命名为 echarts //为什么不这么写“import echarts from 'echarts'”？这是因为不同的库有不同的导出策略
+import Plotly from 'plotly.js-dist-min'
 
 // ===================== 状态定义区 =====================
 
@@ -23,43 +24,55 @@ const uploadedFilename=ref('') //定义字符串变量，用于存储后端返�
 
 const chartRef=ref(null) //定义一个引用变量，用来绑定template中的图表容器div
 
-const currentReduction=ref('UMAP') //用户选择的降维算法，默认UMAP
+const currentReduction=ref('PCA') //用户选择的降维算法，默认PCA
 
-// ===================== 数据格式处理区 =====================
+const clinicalFile=ref(null) //用户选择的临床数据文件
 
-const dataFormat=ref('row_feat_col_sample') //定义数据矩阵的格式选项，默认值为 'row_feat_col_sample' //对应论文 2.2.1 数据预处理中对 "特征(Features)" 和 "样本(Samples)" 排列方式的定义
+const clinicalUploadStatus=ref('') //临床数据文件上传状态提示
+
+const clinicalFilename=ref('') //后端返回的临床文件名
+
+const survivalResult=ref(null) //存储后端返回的生存分析结果（P值、KM数据）
+
+const isSurvivalLoading=ref(false) //生存分析加载状态
+
+const survivalChartRef=ref(null) //绑定生存曲线图表的DOM元素
+
+// ===================== 数据格式处理区【【【【【这几个区改一下名 =====================
+
+const dataFormat=ref('row_sample_yes_yes') //定义数据矩阵的格式选项，默认值为 'row_sample_yes_yes' //对应论文 2.2.1 数据预处理中对 "特征(Features)" 和 "样本(Samples)" 排列方式的定义
 
 //定义表达矩阵格式的常量数组，包含显示标签(label)和传递给后端的实际值(value) //这是为了适配不同来源的组学数据（如 CSV 文件的转置情况）
 const dataFormatOptions=[
-  { label: '一行代表一个病人，一列代表一个特征', value: 'row_feat_col_sample' }, //【【【【【记得修改一下
-  { label: '第一行为样本名称，第一列为特征名称', value: 'row_sample_col_feat' },
-  { label: '第一行为特征名称', value: 'row_feat' },
-  { label: '第一行为样本名称', value: 'row_sample' },
-  { label: '第一列为特征名称', value: 'col_feat' },
-  { label: '第一列为样本名称', value: 'col_sample' },
-  { label: '纯数据：每一行是样本', value: 'no_name_row_sample' },
-  { label: '纯数据：每一行是特征', value: 'no_name_row_feat' },
+  { label: '行代表病人，列代表特征。有表头行✅、有索引列✅', value: 'row_sample_yes_yes' },
+  { label: '行代表病人，列代表特征。有表头行✅、无索引列❌', value: 'row_sample_yes_no' },
+  { label: '行代表病人，列代表特征。无表头行❌、有索引列✅', value: 'row_sample_no_yes' },
+  { label: '行代表病人，列代表特征。无表头行❌、无索引列❌', value: 'row_sample_no_no' },
+  { label: '行代表特征，列代表病人。有表头行✅、有索引列✅', value: 'row_feature_yes_yes' },
+  { label: '行代表特征，列代表病人。有表头行✅、无索引列❌', value: 'row_feature_yes_no' },
+  { label: '行代表特征，列代表病人。无表头行❌、有索引列✅', value: 'row_feature_no_yes' },
+  { label: '行代表特征，列代表病人。无表头行❌、无索引列❌', value: 'row_feature_no_no' },
 ]
 
 //定义计算属性，根据当前选中的 dataFormat 动态生成 CSV 文本示例 //帮助用户校验自己的数据格式是否符合预期
 const exampleText=computed(()=>{
   switch(dataFormat.value){ //根据 dataFormat.value 的不同值，返回对应的字符串模板
-    case 'row_feat_col_sample':
-      return `,特征1,特征2\n样本1,10,20\n样本2,30,40` //【【【【【这里记得修改一下
-    case 'row_sample_col_feat':
-      return `,样本1,样本2\n特征1,10,30\n特征2,20,40`
-    case 'row_feat':
-      return `特征1,特征2\n10,20\n30,40`
-    case 'row_sample':
-      return `样本1,样本2\n10,30\n20,40`
-    case 'col_feat':
-      return `特征1,10,20\n特征2,30,40`
-    case 'col_sample':
-      return `样本1,10,20\n样本2,30,40`
-    case 'no_name_row_sample':
-      return `10,20\n30,40`
-    case 'no_name_row_feat':
-      return `10,30\n20,40`
+    case 'row_sample_yes_yes':
+      return `,特征1,特征2,特征3,...\n病人1,11,12,13\n病人2,21,22,23\n病人3,31,32,33\n...`
+    case 'row_sample_yes_no':
+      return `特征1,特征2,特征3,...\n11,12,13\n21,22,23\n31,32,33\n...`
+    case 'row_sample_no_yes':
+      return `病人1,11,12,13,...\n病人2,21,22,23\n病人3,31,32,33\n...`
+    case 'row_sample_no_no':
+      return `11,12,13,...\n21,22,23\n31,32,33\n...`
+    case 'row_feature_yes_yes':
+      return `,病人1,病人2,病人3,...\n特征1,11,21,31\n特征2,12,22,32\n特征3,13,23,33\n...`
+    case 'row_feature_yes_no':
+      return `病人1,病人2,病人3,...\n11,21,31\n12,22,32\n13,23,33\n...`
+    case 'row_feature_no_yes':
+      return `特征1,11,21,31,...\n特征2,12,22,32\n特征3,13,23,33\n...`
+    case 'row_feature_no_no':
+      return `11,21,31,...\n12,22,32\n13,23,33\n...`
     default:
       return ''
   }
@@ -215,8 +228,8 @@ const runAnalysis= async ()=>{
     backendResponse.value=res.data //请求成功后，将后端返回的数据赋值给backendResponse。此时前端界面也会更新
     console.log('后端返回数据:',res.data) //在控制台打印日志
     if(res.data.data.plot_data){ //如果成功返回了plot_data，那么渲染散点图
-        await nextTick() //暂停当前代码的执行，直到vue完成对网页界面的更新（DOM元素渲染完成），然后再继续。这是因为我们要渲染的div被包裹在这个div里：<div v-if="backendResponse" class="success-box">，所以只有backendResponse赋值完毕、要渲染成散点图的div加载完毕之后，我们才能执行下面这句代码
-        renderChart(res.data.data.plot_data) //plot_data就是后端传来的存放每个样本对应的信息的那个列表
+      await nextTick() //暂停当前代码的执行，直到vue完成对网页界面的更新（DOM元素渲染完成），然后再继续。这是因为我们要渲染的div被包裹在这个div里：<div v-if="backendResponse" class="success-box">，所以只有backendResponse赋值完毕、要渲染成散点图的div加载完毕之后，我们才能执行下面这句代码
+      renderChart(res.data.data.plot_data) //plot_data就是后端传来的存放每个样本对应的信息的那个列表
     }
   }
   catch(error){ //捕获并处理请求过程中的错误
@@ -233,6 +246,112 @@ const switchReduction= (method)=>{
   if(currentReduction.value===method) return //如果用户点击的是当前已经选中的降维算法，则不进行任何操作
   currentReduction.value=method //更新用户选择的降维算法
   runAnalysis() //直接重新运行分析
+}
+
+//临床数据上传函数
+const uploadClinicalFile= async ()=>{
+  if(!clinicalFile.value) return
+
+  const formData=new FormData()
+  formData.append('file', clinicalFile.value)
+  formData.append('data_format', 'row_sample_yes_yes') //临床数据默认假设：行代表病人，列代表特征。有表头行、有索引列
+  formData.append('file_type', 'clinical') //告诉后端这是临床数据，不要检查纯数字
+
+  try{
+    clinicalUploadStatus.value = "正在上传临床数据..."
+    const res=await axios.post('http://127.0.0.1:8000/api/upload',formData,{
+      headers:{
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    clinicalUploadStatus.value = `✅ 上传成功: ${res.data.original_filename}`
+    clinicalFilename.value = res.data.filename // 保存后端返回的临时文件名
+  }
+  catch(error){
+    console.error('上传失败:', error)
+    if (error.response?.data?.detail) {
+      clinicalUploadStatus.value = `❌ 错误: ${error.response.data.detail}`
+    } else {
+      clinicalUploadStatus.value = "❌ 上传失败"
+    }
+    clinicalFilename.value = ''
+  }
+}
+
+//监听临床文件选择
+const handleClinicalFileChange= (event)=>{
+  const file=event.target.files[0]
+  if(file){
+    clinicalFile.value=file
+    uploadClinicalFile() //选完文件自动上传
+  }
+}
+
+//运行生存分析函数
+const runSurvivalAnalysis= async ()=>{
+  if(!clinicalFilename.value){
+    alert("请先上传包含 OS 和 OS.time 的临床数据！")
+    return
+  }
+  // 确保之前的聚类分析已经跑完了，有结果了
+  if(!backendResponse.value || !backendResponse.value.data.plot_data){
+    alert("请先运行聚类分析！")
+    return
+  }
+
+  isSurvivalLoading.value = true
+  try{
+    // 从之前的聚类结果中提取样本名和标签
+    // plot_data 里的每一项都有 { name: "Sample1", cluster: 0, ... }
+    const plotData = backendResponse.value.data.plot_data
+    const sampleNames = plotData.map(item => item.name)
+    const clusterLabels = plotData.map(item => item.cluster)
+
+    // 发送请求给后端
+    const res=await axios.post('http://127.0.0.1:8000/api/survival_analysis',{
+      clinical_filename: clinicalFilename.value,
+      sample_names: sampleNames,
+      cluster_labels: clusterLabels
+    })
+
+    survivalResult.value=res.data
+
+    // 等待 DOM 更新后绘制 KM 曲线
+    await nextTick()
+    renderSurvivalChart(res.data.km_data)
+  }
+  catch(error){
+    console.error("生存分析失败:", error)
+    alert("生存分析失败: " + (error.response?.data?.detail || str(error)))
+  }
+  finally{
+    isSurvivalLoading.value=false
+  }
+}
+
+//绘制 Kaplan-Meier 曲线 (使用 Plotly)
+const renderSurvivalChart= (kmData)=>{
+  if(!survivalChartRef.value) return
+
+  // 将后端返回的 kmData 转换为 Plotly 需要的 traces 格式
+  const traces = kmData.map(group => ({
+    x: group.times, // 时间轴
+    y: group.probs, // 生存概率轴
+    mode: 'lines', // 线图
+    name: group.name, // 图例名称 (e.g., Cluster 0)
+    line: { shape: 'hv' }, // KM 曲线通常是阶梯状 (hv: horizontal-vertical)
+    type: 'scatter'
+  }))
+
+  const layout={
+    title: 'Kaplan-Meier Survival Curve',
+    xaxis: { title: 'Time (OS.time)' },
+    yaxis: { title: 'Survival Probability (OS)', range: [0, 1.05] },
+    showlegend: true
+  }
+
+  // 绘图
+  Plotly.newPlot(survivalChartRef.value, traces, layout)
 }
 </script>
 
@@ -270,17 +389,17 @@ const switchReduction= (method)=>{
 
           <div class="upload-config">
             <div class="config-item">
-               <label>我的数据格式是</label>
-               <select v-model="dataFormat" @change="handleFormatChange" class="format-select"><!-- v-model: 双向绑定选择框的值到 dataFormat 变量 -->
-                 <option v-for="opt in dataFormatOptions" :key="opt.value" :value="opt.value"><!-- v-for: 遍历 dataFormatOptions 数组生成选项 --><!-- :key: 列表渲染的唯一标识符 --><!-- :value: 动态绑定选项的 value 值 -->
-                   {{ opt.label }}
-                 </option>
-               </select>
+              <label>我的数据格式是</label>
+              <select v-model="dataFormat" @change="handleFormatChange" class="format-select"><!-- v-model: 双向绑定选择框的值到 dataFormat 变量 -->
+                <option v-for="opt in dataFormatOptions" :key="opt.value" :value="opt.value"><!-- v-for: 遍历 dataFormatOptions 数组生成选项 --><!-- :key: 列表渲染的唯一标识符 --><!-- :value: 动态绑定选项的 value 值 -->
+                  {{ opt.label }}
+                </option>
+              </select>
             </div>
 
             <div class="example-box">
-                <span class="example-label">示例CSV文本</span>
-                <pre class="example-content">{{ exampleText }}</pre><!-- pre 元素: 保留文本的空格和换行格式 -->
+              <span class="example-label">示例CSV文本</span>
+              <pre class="example-content">{{ exampleText }}</pre><!-- pre 元素: 保留文本的空格和换行格式 -->
             </div>
           </div>
         </div>
@@ -355,12 +474,44 @@ const switchReduction= (method)=>{
             <div ref="chartRef" class="chart-container"></div><!-- ref: 模板引用，将此 DOM 元素存储到 chartRef 变量中，用于把这个div渲染成散点图 -->
 
             <details><!-- details 元素: 可折叠的详情区域 -->
-               <summary>查看原始 JSON 数据</summary>
-               <pre>{{ backendResponse.data }}</pre>
+              <summary>查看原始 JSON 数据</summary>
+              <pre>{{ backendResponse.data }}</pre>
             </details>
+
+            <div class="step-section survival-section" style="margin-top: 30px; border-top: 2px dashed #ddd;">
+                <h3>4. 临床生存分析 (Clinical Analysis)</h3>
+                <p style="font-size:13px; color:#666;">
+                    请上传包含 <b>OS</b> (状态) 和 <b>OS.time</b> (时间) 的 CSV 文件。
+                    <br>每一行应为一个样本，且样本名称需与组学数据一致。
+                </p>
+
+                <div class="upload-controls">
+                    <input type="file" @change="handleClinicalFileChange" />
+                </div>
+                <p class="status-message" :class="{ 'error-text': clinicalUploadStatus.startsWith('❌') }">
+                    {{ clinicalUploadStatus }}
+                </p>
+
+                <div v-if="clinicalFilename" style="margin-top:15px;">
+                    <button @click="runSurvivalAnalysis" :disabled="isSurvivalLoading" class="run-btn" style="background-color: #3498db;">
+                        <span v-if="isSurvivalLoading">正在计算...</span>
+                        <span v-else>绘制生存曲线 (Draw KM Plot)</span>
+                    </button>
+                </div>
+
+                <div v-if="survivalResult" class="survival-result-box">
+                    <div class="p-value-tag">
+                        Log-Rank P-value: 
+                        <span :class="{'highlight-p': survivalResult.p_value < 0.05}">
+                            {{ survivalResult.p_value.toExponential(4) }} </span>
+                    </div>
+                    <div ref="survivalChartRef" class="chart-container" style="height: 450px;"></div>
+                </div>
+            </div>
+
           </div>
 
-          <div v-if="errorMessage" class="error-box"><!-- 显示错误信息 -->
+          <div v-if="errorMessage" class="error-box"><!-- 显示错误结果 -->
             {{ errorMessage }}
           </div>
         </div>
@@ -769,5 +920,31 @@ pre {
 .btn-group button:disabled {
   cursor: wait;
   opacity: 0.6;
+}
+
+/* 生存分析区域样式 */
+.survival-section {
+    background-color: #fff9f0; /* 这里的背景色稍微不同，区分功能区 */
+    border: 1px solid #ffe0b2;
+}
+
+.p-value-tag {
+    font-size: 18px;
+    font-weight: bold;
+    margin: 20px 0 10px 0;
+    text-align: center;
+}
+
+.highlight-p {
+    color: #e74c3c; /* 显著的P值显示为红色 */
+    font-weight: 800;
+}
+
+.survival-result-box {
+    margin-top: 20px;
+    padding: 10px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 </style>
