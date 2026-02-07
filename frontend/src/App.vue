@@ -233,7 +233,7 @@ const runAnalysis= async ()=>{
     }
   }
   catch(error){ //捕获并处理请求过程中的错误
-    console.error('请求失败:', error) //在控制台打印日志
+    console.error('请求失败:',error) //在控制台打印日志
     errorMessage.value='连接后端失败，请检查 FastAPI 是否启动并配置了 CORS。' //在前端界面显示错误提示
   }
   finally{ //无论请求成功还是失败，最终都要关闭加载状态，恢复按钮可用性
@@ -258,23 +258,24 @@ const uploadClinicalFile= async ()=>{
   formData.append('file_type', 'clinical') //告诉后端这是临床数据，不要检查纯数字
 
   try{
-    clinicalUploadStatus.value = "正在上传临床数据..."
+    clinicalUploadStatus.value="正在上传临床数据..."
     const res=await axios.post('http://127.0.0.1:8000/api/upload',formData,{
       headers:{
         'Content-Type': 'multipart/form-data'
       }
     })
-    clinicalUploadStatus.value = `✅ 上传成功: ${res.data.original_filename}`
-    clinicalFilename.value = res.data.filename // 保存后端返回的临时文件名
+    clinicalUploadStatus.value=`✅ 上传成功: ${res.data.original_filename}`
+    clinicalFilename.value=res.data.filename // 保存后端返回的临时文件名
   }
   catch(error){
     console.error('上传失败:', error)
-    if (error.response?.data?.detail) {
-      clinicalUploadStatus.value = `❌ 错误: ${error.response.data.detail}`
-    } else {
-      clinicalUploadStatus.value = "❌ 上传失败"
+    if(error.response?.data?.detail){
+      clinicalUploadStatus.value=`❌ 错误: ${error.response.data.detail}`
     }
-    clinicalFilename.value = ''
+    else{
+      clinicalUploadStatus.value="❌ 上传失败"
+    }
+    clinicalFilename.value=''
   }
 }
 
@@ -334,7 +335,7 @@ const renderSurvivalChart= (kmData)=>{
   if(!survivalChartRef.value) return
 
   // 将后端返回的 kmData 转换为 Plotly 需要的 traces 格式
-  const traces = kmData.map(group => ({
+  const traces=kmData.map(group=>({
     x: group.times, // 时间轴
     y: group.probs, // 生存概率轴
     mode: 'lines', // 线图
@@ -351,7 +352,7 @@ const renderSurvivalChart= (kmData)=>{
   }
 
   // 绘图
-  Plotly.newPlot(survivalChartRef.value, traces, layout)
+  Plotly.newPlot(survivalChartRef.value,traces,layout)
 }
 </script>
 
@@ -444,22 +445,25 @@ const renderSurvivalChart= (kmData)=>{
         <div v-if="backendResponse || errorMessage" class="result-area"><!-- 当后端响应成功或有错误信息时显示此区域 -->
           <h3>后端响应结果:</h3>
           <div v-if="backendResponse" class="success-box"><!-- 显示成功结果 -->
+
+
+
             <div v-if="backendResponse.data.metrics" class="metrics-container"><!-- 当响应数据中包含 metrics 对象时显示评估指标 -->
-               <h4>📊 聚类效果评估 (Evaluation Metrics)</h4>
-               <div class="metrics-grid">
-                  <div class="metric-card">
-                     <span class="m-label">轮廓系数 (Silhouette)</span>
-                     <span class="m-value">{{ backendResponse.data.metrics.silhouette }}</span>
-                  </div>
-                  <div class="metric-card">
-                     <span class="m-label">CH 指数 (Calinski-Harabasz)</span>
-                     <span class="m-value">{{ backendResponse.data.metrics.calinski }}</span>
-                  </div>
-                  <div class="metric-card">
-                     <span class="m-label">DB 指数 (Davies-Bouldin)</span>
-                     <span class="m-value">{{ backendResponse.data.metrics.davies }}</span>
-                  </div>
-               </div>
+              <h4>📊 聚类效果评估 (Evaluation Metrics)</h4>
+              <div class="metrics-grid">
+                <div class="metric-card">
+                  <span class="m-label">轮廓系数 (Silhouette)</span>
+                  <span class="m-value">{{ backendResponse.data.metrics.silhouette }}</span>
+                </div>
+                <div class="metric-card">
+                  <span class="m-label">CH 指数 (Calinski-Harabasz)</span>
+                  <span class="m-value">{{ backendResponse.data.metrics.calinski }}</span>
+                </div>
+                <div class="metric-card">
+                  <span class="m-label">DB 指数 (Davies-Bouldin)</span>
+                  <span class="m-value">{{ backendResponse.data.metrics.davies }}</span>
+                </div>
+              </div>
             </div>
 
             <div class="reduction-controls">
@@ -479,35 +483,37 @@ const renderSurvivalChart= (kmData)=>{
             </details>
 
             <div class="step-section survival-section" style="margin-top: 30px; border-top: 2px dashed #ddd;">
-                <h3>4. 临床生存分析 (Clinical Analysis)</h3>
-                <p style="font-size:13px; color:#666;">
-                    请上传包含 <b>OS</b> (状态) 和 <b>OS.time</b> (时间) 的 CSV 文件。
-                    <br>每一行应为一个样本，且样本名称需与组学数据一致。
-                </p>
+              <h3>4. 临床生存分析 (Clinical Analysis)</h3>
+              <p style="font-size:13px; color:#666;">
+                请上传包含 <b>OS</b> (状态) 和 <b>OS.time</b> (时间) 的 CSV 文件。
+                <br>每一行应为一个样本，且样本名称需与组学数据一致。
+              </p>
 
-                <div class="upload-controls">
-                    <input type="file" @change="handleClinicalFileChange" />
-                </div>
-                <p class="status-message" :class="{ 'error-text': clinicalUploadStatus.startsWith('❌') }">
-                    {{ clinicalUploadStatus }}
-                </p>
+              <div class="upload-controls">
+                <input type="file" @change="handleClinicalFileChange" />
+              </div>
+              <p class="status-message" :class="{ 'error-text': clinicalUploadStatus.startsWith('❌') }">
+                {{ clinicalUploadStatus }}
+              </p>
 
-                <div v-if="clinicalFilename" style="margin-top:15px;">
-                    <button @click="runSurvivalAnalysis" :disabled="isSurvivalLoading" class="run-btn" style="background-color: #3498db;">
-                        <span v-if="isSurvivalLoading">正在计算...</span>
-                        <span v-else>绘制生存曲线 (Draw KM Plot)</span>
-                    </button>
-                </div>
+              <div v-if="clinicalFilename" style="margin-top:15px;">
+                <button @click="runSurvivalAnalysis" :disabled="isSurvivalLoading" class="run-btn" style="background-color: #3498db;">
+                  <span v-if="isSurvivalLoading">正在计算...</span>
+                  <span v-else>绘制生存曲线 (Draw KM Plot)</span>
+                </button>
+              </div>
 
-                <div v-if="survivalResult" class="survival-result-box">
-                    <div class="p-value-tag">
-                        Log-Rank P-value: 
-                        <span :class="{'highlight-p': survivalResult.p_value < 0.05}">
-                            {{ survivalResult.p_value.toExponential(4) }} </span>
-                    </div>
-                    <div ref="survivalChartRef" class="chart-container" style="height: 450px;"></div>
+              <div v-if="survivalResult" class="survival-result-box">
+                <div class="p-value-tag">
+                  Log-Rank P-value: 
+                  <span :class="{'highlight-p': survivalResult.p_value < 0.05}">
+                    {{ survivalResult.p_value.toExponential(4) }} </span>
                 </div>
+                <div ref="survivalChartRef" class="chart-container" style="height: 450px;"></div>
+              </div>
             </div>
+
+
 
           </div>
 
@@ -924,27 +930,27 @@ pre {
 
 /* 生存分析区域样式 */
 .survival-section {
-    background-color: #fff9f0; /* 这里的背景色稍微不同，区分功能区 */
-    border: 1px solid #ffe0b2;
+  background-color: #fff9f0; /* 这里的背景色稍微不同，区分功能区 */
+  border: 1px solid #ffe0b2;
 }
 
 .p-value-tag {
-    font-size: 18px;
-    font-weight: bold;
-    margin: 20px 0 10px 0;
-    text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+  margin: 20px 0 10px 0;
+  text-align: center;
 }
 
 .highlight-p {
-    color: #e74c3c; /* 显著的P值显示为红色 */
-    font-weight: 800;
+  color: #e74c3c; /* 显著的P值显示为红色 */
+  font-weight: 800;
 }
 
 .survival-result-box {
-    margin-top: 20px;
-    padding: 10px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  margin-top: 20px;
+  padding: 10px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 </style>
