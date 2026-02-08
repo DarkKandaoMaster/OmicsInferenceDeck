@@ -219,7 +219,7 @@ async def upload_file( file:UploadFile=File(...) , data_format:str=Form(...) , f
         #将用户上传文件老老实实保存到本地
         #将上传的文件流写入服务器本地磁盘
         #使用 with 语句确保文件句柄在操作完成后自动关闭
-        with open(file_location,"wb") as buffer: #【【【【【这句代码是什么意思？
+        with open(file_location,"wb") as buffer: #【【【【【这句代码是什么意思？这是标准的文件写入操作，把上传的文件流保存到本地？
             shutil.copyfileobj(file.file,buffer)
         print(f"[后端日志] 文件已保存至: {file_location}")
 
