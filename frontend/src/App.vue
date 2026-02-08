@@ -173,6 +173,20 @@ const renderChart= (plot_data)=>{
     })
   })
 
+  let axisPrefix //根据不同降维算法，选用不同名称，用于后续拼接成'PC 1'、'PC 2'这样的x轴名称和y轴名称
+  switch(currentReduction.value){
+    case 'PCA':
+      axisPrefix='PC' //如果降维算法是PCA，那么选用'PC'，而不是'PCA'
+      break
+    case 't-SNE':
+      axisPrefix='t-SNE'
+      break
+    case 'UMAP':
+      axisPrefix='UMAP'
+      break
+    default:
+      axisPrefix='Dim' //兜底使用'Dim'
+  }
   //为图表设置选项
   myChart.setOption({
     series: seriesData, //把我们刚才处理的seriesData数组传入这个图表
@@ -190,11 +204,11 @@ const renderChart= (plot_data)=>{
       data: clusters.map(c =>`Cluster ${c}`) //图例组件的内容
     },
     xAxis: {
-      name: 'PC 1', //x轴名称
+      name: `${axisPrefix} 1`, //x轴名称，比如'PC 1'
       splitLine: { show: false } //不显示网格线【【【【【以后考虑让用户自定义？
     },
     yAxis: {
-      name: 'PC 2', //y轴名称
+      name: `${axisPrefix} 2`, //y轴名称
       splitLine: { show: false }
     }
   })
