@@ -44,9 +44,11 @@ const survivalAreaRef=ref(null) //绑定生存分析结果区域的DOM元素，�
 
 // ===================== 数据格式处理区【【【【【这几个区改一下名 =====================
 
-const dataFormat=ref('row_sample_yes_yes') //定义数据矩阵的格式选项，默认值为 'row_sample_yes_yes' //对应论文 2.2.1 数据预处理中对 "特征(Features)" 和 "样本(Samples)" 排列方式的定义
+const dataFormat=ref('row_sample_yes_yes') //定义组学数据的数据格式选项，默认'row_sample_yes_yes'
 
-//定义表达矩阵格式的常量数组，包含显示标签(label)和传递给后端的实际值(value) //这是为了适配不同来源的组学数据（如 CSV 文件的转置情况）
+const clinicalDataFormat=ref('row_sample_yes_yes') //定义临床数据的数据格式选项，默认'row_sample_yes_yes'
+
+//组学和临床数据的数据格式
 const dataFormatOptions=[
   { label: '行代表病人，列代表特征。有表头行✅、有索引列✅', value: 'row_sample_yes_yes' },
   { label: '行代表病人，列代表特征。有表头行✅、无索引列❌', value: 'row_sample_yes_no' },
@@ -58,9 +60,9 @@ const dataFormatOptions=[
   { label: '行代表特征，列代表病人。无表头行❌、无索引列❌', value: 'row_feature_no_no' },
 ]
 
-//定义计算属性，根据当前选中的 dataFormat 动态生成 CSV 文本示例 //帮助用户校验自己的数据格式是否符合预期
+//根据用户选择的组学数据格式，使用不同的示例CSV文本
 const exampleText=computed(()=>{
-  switch(dataFormat.value){ //根据 dataFormat.value 的不同值，返回对应的字符串模板
+  switch(dataFormat.value){
     case 'row_sample_yes_yes':
       return `,特征1,特征2,特征3,...\n病人1,11,12,13\n病人2,21,22,23\n病人3,31,32,33\n...`
     case 'row_sample_yes_no':
@@ -77,6 +79,30 @@ const exampleText=computed(()=>{
       return `特征1,11,21,31,...\n特征2,12,22,32\n特征3,13,23,33\n...`
     case 'row_feature_no_no':
       return `11,21,31,...\n12,22,32\n13,23,33\n...`
+    default:
+      return ''
+  }
+})
+
+//根据用户选择的临床数据格式，使用不同的示例CSV文本
+const clinicalExampleText=computed(()=>{
+  switch(clinicalDataFormat.value){
+    case 'row_sample_yes_yes':
+      return `,OS,OS.time,特征3,...\n病人1,1,20,55\n病人2,0,45,60\n病人3,1,12,62\n...`
+    case 'row_sample_yes_no':
+      return `OS,OS.time,特征3,...\n1,20,55\n0,45,60\n1,12,62\n...`
+    case 'row_sample_no_yes':
+      return `病人1,1,20,55,...\n病人2,0,45,60\n病人3,1,12,62\n...`
+    case 'row_sample_no_no':
+      return `1,20,55,...\n0,45,60\n1,12,62\n...`
+    case 'row_feature_yes_yes':
+      return `,病人1,病人2,病人3,...\nOS,1,0,1\nOS.time,20,45,12\n特征3,55,60,62\n...`
+    case 'row_feature_yes_no':
+      return `病人1,病人2,病人3,...\n1,0,1\n20,45,12\n55,60,62\n...`
+    case 'row_feature_no_yes':
+      return `OS,1,0,1,...\nOS.time,20,45,12\n特征3,55,60,62\n...`
+    case 'row_feature_no_no':
+      return `1,0,1,...\n20,45,12\n55,60,62\n...`
     default:
       return ''
   }
@@ -144,7 +170,7 @@ const handleFileChange= (event)=>{
   }
 }
 
-//定义事件处理函数，监听数据格式下拉菜单的change事件，用户改变选项时触发
+//定义事件处理函数，监听组学数据格式下拉菜单的change事件，用户改变选项时触发【【【【【或许可以考虑把这个if换掉？
 const handleFormatChange= ()=>{
   if(selectedFile.value){ //判断用户是否已经选中了输入文件，如果是，那么说明用户想用新格式重新解析这个文件；如果不是，那么不需要任何操作
     console.log("格式已变更，正在重新校验文件...") //在控制台打印日志
@@ -274,9 +300,9 @@ const uploadClinicalFile= async ()=>{
   if(!clinicalFile.value) return
 
   const formData=new FormData()
-  formData.append('file', clinicalFile.value)
-  formData.append('data_format', 'row_sample_yes_yes') //临床数据默认假设：行代表病人，列代表特征。有表头行、有索引列
-  formData.append('file_type', 'clinical') //告诉后端这是临床数据，不要检查纯数字
+  formData.append('file',clinicalFile.value)
+  formData.append('data_format',clinicalDataFormat.value) //加入用户选择的临床数据格式
+  formData.append('file_type','clinical') //告诉后端这是临床数据，不要检查纯数字
 
   try{
     clinicalUploadStatus.value="正在上传临床数据..."
@@ -306,6 +332,14 @@ const handleClinicalFileChange= (event)=>{
   if(file){
     clinicalFile.value=file
     uploadClinicalFile() //选完文件自动上传
+  }
+}
+
+//定义事件处理函数，监听临床数据格式下拉菜单的change事件，用户改变选项时触发【【【【【或许可以考虑把这个if换掉？
+const handleClinicalFormatChange= ()=>{
+  if(clinicalFile.value){ //判断用户是否已经选中了输入文件，如果是，那么说明用户想用新格式重新解析这个文件；如果不是，那么不需要任何操作
+    console.log("临床数据格式已变更，正在重新解析...")
+    uploadFile() //此时需要重新触发uploadFile函数
   }
 }
 
@@ -417,7 +451,7 @@ const renderSurvivalChart= (kmData)=>{
             <div class="config-item">
               <label>我的数据格式是</label>
               <select v-model="dataFormat" @change="handleFormatChange" class="format-select"><!-- v-model: 双向绑定选择框的值到 dataFormat 变量 -->
-                <option v-for="opt in dataFormatOptions" :key="opt.value" :value="opt.value"><!-- v-for: 遍历 dataFormatOptions 数组生成选项 --><!-- :key: 列表渲染的唯一标识符 --><!-- :value: 动态绑定选项的 value 值 -->
+                <option v-for="opt in dataFormatOptions" :key="opt.value" :value="opt.value"><!-- v-for遍历dataFormatOptions数组生成8个选项 --><!-- :key为每个选项提供唯一标识 --><!-- :value动态绑定选项的值 -->
                   {{ opt.label }}
                 </option>
               </select>
@@ -521,7 +555,23 @@ const renderSurvivalChart= (kmData)=>{
                 {{ clinicalUploadStatus }}
               </p>
 
-              <div v-if="clinicalFilename" style="margin-top:15px;">
+              <!-- 临床数据格式选择区域，包含数据格式下拉选择框和示例CSV文本展示 -->
+              <div class="upload-config">
+                <div class="config-item">
+                  <label>我的临床数据格式是</label>
+                  <select v-model="clinicalDataFormat" @change="handleClinicalFormatChange" class="format-select"><!-- 下拉选择框，v-model双向绑定到clinicalDataFormat变量；@change监听用户改变选项时触发handleClinicalFormatChange函数 -->
+                    <option v-for="opt in dataFormatOptions" :key="opt.value" :value="opt.value"><!-- v-for遍历dataFormatOptions数组生成8个选项 --><!-- :key为每个选项提供唯一标识 --><!-- :value动态绑定选项的值 -->
+                      {{ opt.label }}
+                    </option>
+                  </select>
+                </div>
+                <div class="example-box">
+                  <span class="example-label">示例CSV文本</span>
+                  <pre class="example-content">{{ clinicalExampleText }}</pre><!-- pre元素保留文本的空格和换行，显示根据clinicalDataFormat动态计算的示例文本 -->
+                </div>
+              </div>
+
+              <div style="margin-top:15px;">
                 <button @click="runSurvivalAnalysis" :disabled="isSurvivalLoading" class="run-btn" style="background-color: #3498db;">
                   <span v-if="isSurvivalLoading">正在计算...</span>
                   <span v-else>绘制生存曲线 (Draw KM Plot)</span>
