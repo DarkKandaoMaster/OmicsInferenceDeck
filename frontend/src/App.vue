@@ -311,8 +311,8 @@ const runSurvivalAnalysis= async ()=>{
     // 发送请求给后端
     const res=await axios.post('http://127.0.0.1:8000/api/survival_analysis',{
       clinical_filename: clinicalFilename.value,
-      sample_names: sampleNames,
-      cluster_labels: clusterLabels
+      sample: sampleNames,
+      labels: clusterLabels
     })
 
     survivalResult.value=res.data
