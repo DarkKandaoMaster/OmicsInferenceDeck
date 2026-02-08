@@ -38,6 +38,10 @@ const isSurvivalLoading=ref(false) //生存分析加载状态
 
 const survivalChartRef=ref(null) //绑定生存曲线图表的DOM元素
 
+const resultsAreaRef=ref(null) //绑定运行分析结果区域的DOM元素，用于自动滚动定位
+
+const survivalAreaRef=ref(null) //绑定生存分析结果区域的DOM元素，用于自动滚动定位
+
 // ===================== 数据格式处理区【【【【【这几个区改一下名 =====================
 
 const dataFormat=ref('row_sample_yes_yes') //定义数据矩阵的格式选项，默认值为 'row_sample_yes_yes' //对应论文 2.2.1 数据预处理中对 "特征(Features)" 和 "样本(Samples)" 排列方式的定义
@@ -227,8 +231,8 @@ const runAnalysis= async ()=>{
     })
     backendResponse.value=res.data //请求成功后，将后端返回的数据赋值给backendResponse。此时前端界面也会更新
     console.log('后端返回数据:',res.data) //在控制台打印日志
+    await nextTick() //暂停当前代码的执行，直到vue完成对网页界面的更新（DOM元素渲染完成），然后再继续。这是因为我们要渲染的div被包裹在这个div里：<div v-if="backendResponse" class="success-box">，所以只有backendResponse赋值完毕、要渲染成散点图的div加载完毕之后，我们才能执行下面这句代码
     if(res.data.data.plot_data){ //如果成功返回了plot_data，那么渲染散点图
-      await nextTick() //暂停当前代码的执行，直到vue完成对网页界面的更新（DOM元素渲染完成），然后再继续。这是因为我们要渲染的div被包裹在这个div里：<div v-if="backendResponse" class="success-box">，所以只有backendResponse赋值完毕、要渲染成散点图的div加载完毕之后，我们才能执行下面这句代码
       renderChart(res.data.data.plot_data) //plot_data就是后端传来的存放每个样本对应的信息的那个列表
     }
   }
@@ -236,8 +240,11 @@ const runAnalysis= async ()=>{
     console.error('请求失败:',error) //在控制台打印日志
     errorMessage.value='连接后端失败，请检查 FastAPI 是否启动并配置了 CORS。' //在前端界面显示错误提示
   }
-  finally{ //无论请求成功还是失败，最终都要关闭加载状态，恢复按钮可用性
+  finally{ //无论请求成功还是失败，最终都要关闭加载状态，恢复按钮可用性；并且自动滚动到运行分析结果区域
     isLoading.value=false
+    if(resultsAreaRef.value){ //防御性检查：确保DOM元素存在
+      resultsAreaRef.value.scrollIntoView({ behavior:'smooth',block:'start' }) //'smooth'表示平滑滚动效果，不是瞬间跳转；'start'表示将目标元素的顶部对齐到可视区域的顶部
+    }
   }
 }
 
@@ -320,6 +327,10 @@ const runSurvivalAnalysis= async ()=>{
     // 等待 DOM 更新后绘制 KM 曲线
     await nextTick()
     renderSurvivalChart(res.data.km_data)
+    //自动滚动到运行分析结果区域
+    if(survivalAreaRef.value){ //防御性检查：确保DOM元素存在
+      survivalAreaRef.value.scrollIntoView({ behavior:'smooth',block:'start' })
+    }
   }
   catch(error){
     console.error("生存分析失败:", error)
@@ -442,7 +453,7 @@ const renderSurvivalChart= (kmData)=>{
           </button>
         </div>
 
-        <div v-if="backendResponse || errorMessage" class="result-area"><!-- 当后端响应成功或有错误信息时显示此区域 -->
+        <div v-if="backendResponse || errorMessage" class="result-area" ref="resultsAreaRef"><!-- 当后端响应成功或有错误信息时显示此区域 -->
           <h3>后端响应结果:</h3>
           <div v-if="backendResponse" class="success-box"><!-- 显示成功结果 -->
 
@@ -503,7 +514,7 @@ const renderSurvivalChart= (kmData)=>{
                 </button>
               </div>
 
-              <div v-if="survivalResult" class="survival-result-box">
+              <div v-if="survivalResult" class="survival-result-box" ref="survivalAreaRef">
                 <div class="p-value-tag">
                   Log-Rank P-value: 
                   <span :class="{'highlight-p': survivalResult.p_value < 0.05}">
