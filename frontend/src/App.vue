@@ -16,7 +16,7 @@ const selectedAlgorithm=ref('') //定义当前选中的算法，默认值为空 
 
 const algorithms=['K-means', 'PIntMF', 'Subtype-GAN', 'NEMO', 'SNF'] //定义算法候选数组，供下拉框渲染使用 //这些算法对应论文表3和表5中提到的 "11种前沿多组学聚类算法" 及基础算法
 
-const selectedFile=ref(null) //定义响应式变量，用于存储用户通过文件输入框选择的本地文件对象 //对应论文 3.3.2 节提到的 "User uploaded omics data"
+const selectedFiles=ref([]) //用于存储用户通过文件输入框选择的各个文件对象
 
 const uploadStatus=ref('') //定义字符串变量，用于向用户反馈文件上传的进度或结果（如 "上传成功" 或 错误信息）
 
@@ -120,14 +120,16 @@ const randomSeed=ref(42) //定义随机种子，初始值42 //确保算法结果
 
 //定义异步函数，处理文件上传逻辑
 const uploadFile= async ()=>{
-  if(!selectedFile.value){ //防御性编程：检查 selectedFile 是否为空，若为空则弹出浏览器原生警告并中断执行。正常情况下，因为handleFileChange函数中有个if(file)，所以不可能触发这个if
-    alert("请先选择一个文件！")
+  if(selectedFiles.value.length===0){ //检查文件数组长度是否为0 //正常情况下，因为handleFileChange函数中有个if(files.length>0)，所以不可能触发这个if
+    alert("请至少选择一个文件！")
     return
   }
 
-  const formData=new FormData() //创建 FormData 对象，这是 Web API 中用于构建键值对集合的标准对象，可以用作请求体，是JSON格式 //专门用于通过 XMLHttpRequest 或 fetch/axios 发送 multipart/form-data 格式的数据（即文件上传）
-  formData.append('file',selectedFile.value) //将用户选择的文件追加到表单数据中，键名为'file'。这里需与后端接口"/api/upload"的形参参数名保持一致
-  formData.append('data_format',dataFormat.value) //将用户选择的数据格式字符串追加到表单数据中
+  const formData=new FormData() //创建FormData对象，这是Web API中用于构建键值对集合的标准对象，可以用作请求体，是JSON格式 //专门用于通过 XMLHttpRequest 或 fetch/axios 发送 multipart/form-data 格式的数据（即文件上传）
+  for(let i=0; i<selectedFiles.value.length ;i++){ //遍历selectedFiles数组，将用户选择的所有文件追加到formData中。FormData允许一个key对应多个值，FastAPI会自动将其解析为列表
+    formData.append('files',selectedFiles.value[i]) //键名为'files'，这个键名必须和后端接口"/api/upload"对应的函数形参files名称保持一致
+  }
+  formData.append('data_format',dataFormat.value) //将用户选择的数据格式字符串也追加到表单数据中
 
   try{
     uploadStatus.value="正在上传..." //更新界面状态提示，告知用户上传正在进行
@@ -141,7 +143,7 @@ const uploadFile= async ()=>{
       }
     })
     //请求成功后，后端不是会返回一个字典嘛，我们要根据这个字典修改前端
-    uploadStatus.value=`✅ 上传成功: ${res.data.original_filename} \n📊 文件原始形状: ${   res.data.original_shape ? `(行=${res.data.original_shape[0]}, 列=${res.data.original_shape[1]})` : ''   }` //更新状态提示为成功，并显示用户上传文件的原始名称和文件原始形状
+    uploadStatus.value=`✅ 上传成功: ${res.data.original_filename} \n📊 合并后的形状: ${   res.data.original_shape ? `(行=${res.data.original_shape[0]}, 列=${res.data.original_shape[1]})` : ''   }` //更新状态提示为成功，并显示用户上传的各个文件的原始名称和合并后的形状
     console.log('上传结果:',res.data) //在控制台打印日志
     uploadedFilename.value=res.data.filename //将后端返回的用户上传文件的新名称保存到前端变量，下一步分析要用
   }
@@ -159,11 +161,11 @@ const uploadFile= async ()=>{
 
 //定义事件处理函数，监听文件输入框的change事件，用户更换输入文件时触发
 const handleFileChange= (event)=>{
-  const file=event.target.files[0] //获取文件输入框中的第一个文件
-  if(file){ //判断用户是否真的选中了文件（防止用户打开文件选择框后点击取消，导致file为undefined，于是报错）
-    selectedFile.value=file //更新响应式变量，存储用户通过文件输入框选择的本地文件对象
+  const files=Array.from(event.target.files) //获取文件输入框中的所有文件 //event.target.files是一个FileList对象，Array.from可以将其转换为数组
+  if(files.length>0){ //判断用户是否真的选中了文件（防止用户打开文件选择框后点击取消，导致files为undefined，于是报错）【【【【【现在files还会为undefined吗？
+    selectedFiles.value=files //存储用户通过文件输入框选择的各个文件对象
     uploadStatus.value='' //清空旧的状态提示
-    uploadFile() //用户选中文件后直接触发uploadFile函数
+    uploadFile() //用户选择文件后直接触发uploadFile函数
   }
   else{ //否则就清空状态提示
     uploadStatus.value=""
@@ -172,7 +174,7 @@ const handleFileChange= (event)=>{
 
 //定义事件处理函数，监听组学数据格式下拉菜单的change事件，用户改变选项时触发【【【【【或许可以考虑把这个if换掉？
 const handleFormatChange= ()=>{
-  if(selectedFile.value){ //判断用户是否已经选中了输入文件，如果是，那么说明用户想用新格式重新解析这个文件；如果不是，那么不需要任何操作
+  if(selectedFiles.value.length>0){ //判断用户是否已经选择了输入文件，如果是，那么说明用户想用新格式重新解析这个文件；如果不是，那么不需要任何操作
     console.log("格式已变更，正在重新校验文件...") //在控制台打印日志
     uploadFile() //此时需要重新触发uploadFile函数
   }
@@ -300,7 +302,7 @@ const uploadClinicalFile= async ()=>{
   if(!clinicalFile.value) return
 
   const formData=new FormData()
-  formData.append('file',clinicalFile.value)
+  formData.append('files',clinicalFile.value)
   formData.append('data_format',clinicalDataFormat.value) //加入用户选择的临床数据格式
   formData.append('file_type','clinical') //告诉后端这是临床数据，不要检查纯数字
 
@@ -439,14 +441,7 @@ const renderSurvivalChart= (kmData)=>{
         <div class="step-section upload-section">
           <h3>1. 组学数据上传 (Data Upload)</h3>
 
-          <div class="upload-controls">
-            <input type="file" @change="handleFileChange" />
-          </div>
-
-          <p class="status-message" :class="{ 'error-text': uploadStatus.startsWith('❌') }"><!-- :class 动态绑定: 当 uploadStatus 以 '❌' 开头时，添加 'error-text' 类名【【【【【这是啥？ -->
-            {{ uploadStatus }}
-          </p>
-
+          <!-- 组学数据格式选择区域，包含数据格式下拉选择框和示例CSV文本展示 -->
           <div class="upload-config">
             <div class="config-item">
               <label>我的数据格式是</label>
@@ -456,12 +451,22 @@ const renderSurvivalChart= (kmData)=>{
                 </option>
               </select>
             </div>
-
             <div class="example-box">
               <span class="example-label">示例CSV文本</span>
               <pre class="example-content">{{ exampleText }}</pre><!-- pre 元素: 保留文本的空格和换行格式 -->
             </div>
           </div>
+
+          <!-- 包含上传组学数据的输入框和提示文本 -->
+          <div class="upload-controls">
+            <input type="file" @change="handleFileChange" multiple />
+          </div>
+          <p style="font-size: 12px; color: #888; margin-top: 5px;">
+            * 支持多文件上传。系统将根据<b>样本名称</b>自动合并数据。
+          </p>
+          <p class="status-message" :class="{ 'error-text': uploadStatus.startsWith('❌') }"><!-- :class 动态绑定: 当 uploadStatus 以 '❌' 开头时，添加 'error-text' 类名【【【【【这是啥？ -->
+            {{ uploadStatus }}
+          </p>
         </div>
 
         <div class="step-section control-group">
@@ -543,17 +548,6 @@ const renderSurvivalChart= (kmData)=>{
 
             <div class="step-section survival-section" style="margin-top: 30px; border-top: 2px dashed #ddd;">
               <h3>4. 临床生存分析 (Clinical Analysis)</h3>
-              <p style="font-size:13px; color:#666;">
-                请上传包含 <b>OS</b> (状态) 和 <b>OS.time</b> (时间) 的 CSV 文件。
-                <br>每一行应为一个样本，且样本名称需与组学数据一致。
-              </p>
-
-              <div class="upload-controls">
-                <input type="file" @change="handleClinicalFileChange" />
-              </div>
-              <p class="status-message" :class="{ 'error-text': clinicalUploadStatus.startsWith('❌') }">
-                {{ clinicalUploadStatus }}
-              </p>
 
               <!-- 临床数据格式选择区域，包含数据格式下拉选择框和示例CSV文本展示 -->
               <div class="upload-config">
@@ -570,6 +564,18 @@ const renderSurvivalChart= (kmData)=>{
                   <pre class="example-content">{{ clinicalExampleText }}</pre><!-- pre元素保留文本的空格和换行，显示根据clinicalDataFormat动态计算的示例文本 -->
                 </div>
               </div>
+
+              <!-- 包含上传临床数据的输入框和提示文本 -->
+              <p style="font-size:13px; color:#666;">
+                请上传包含 <b>OS</b> (状态) 和 <b>OS.time</b> (时间) 的 CSV 文件。
+                <br>每一行应为一个样本，且样本名称需与组学数据一致。
+              </p>
+              <div class="upload-controls">
+                <input type="file" @change="handleClinicalFileChange" />
+              </div>
+              <p class="status-message" :class="{ 'error-text': clinicalUploadStatus.startsWith('❌') }">
+                {{ clinicalUploadStatus }}
+              </p>
 
               <div style="margin-top:15px;">
                 <button @click="runSurvivalAnalysis" :disabled="isSurvivalLoading" class="run-btn" style="background-color: #3498db;">

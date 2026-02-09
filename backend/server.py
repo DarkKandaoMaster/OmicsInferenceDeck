@@ -18,6 +18,7 @@ import random
 import torch
 from lifelines import KaplanMeierFitter
 from lifelines.statistics import multivariate_logrank_test
+from typing import List
 
 # =============================================================================
 # 应用程序初始化
@@ -205,30 +206,38 @@ async def run_analysis(request: AnalysisRequest): #指定record的类型为Analy
 # 接口：处理用户上传组学数据的接口
 # =============================================================================
 @app.post("/api/upload")
-async def upload_file( file:UploadFile=File(...) , data_format:str=Form(...) , file_type:str=Form("omics") ): #File(...)表示该字段为必填的文件对象；Form(...)表示该字段为必填的表单对象。前端传过来的东西必须包含这两个对象 #file_type参数标记用户上传的是组学数据还是临床数据，默认是组学
-    print(f"\n[后端日志] 收到文件上传请求: {file.filename}") #在控制台打印日志
+async def upload_file( files:List[UploadFile]=File(...) , data_format:str=Form(...) , file_type:str=Form("omics") ): #Files(...)表示该字段为必填的文件对象；Form(...)表示该字段为必填的表单对象。前端传过来的东西必须包含这两个对象 #file_type参数标记用户上传的是组学数据还是临床数据，默认是组学
+    print(f"\n[后端日志] 收到文件上传请求，文件数量: {len(files)}") #在控制台打印日志
     print(f"[后端日志] 用户指定的数据格式: {data_format}")
 
     UPLOAD_PATH="upload" #用户上传文件的保存目录
-    if not os.path.exists(UPLOAD_PATH): #如果目录不存在，则创建该目录
-        os.makedirs(UPLOAD_PATH)
-    new_filename=f"{uuid.uuid4()}.csv" #用户上传文件的新名称。使用uuid将用户上传文件改个名，这样能防止两个用户同时上传同名文件导致覆盖，以及防止用户上传文件的名称不规范；将后缀名固定改为.csv，因为我们之后会把处理好的文件保存为CSV格式
-    file_location=os.path.join(UPLOAD_PATH,new_filename) #用户上传文件的保存路径
+    if not os.path.exists(UPLOAD_PATH): #如果目录不存在
+        os.makedirs(UPLOAD_PATH) #则创建该目录
 
+    #接下来我们打算：
+    # 1.把各个文件都保存到本地
+    # 2.根据用户选择的数据格式读取各个文件
+    # 3.把读取到的各个文件合并成一个文件
+    # 4.检查一下合并后的文件内容合不合规
+    # 5.把合并后的文件保存到本地
+    # 6.删除用户上传的各个文件
+
+    dataframes=[] #我们希望把读取到并且处理好的各个文件都临时存放进这个列表，以便后续使用pd.concat合并
+    temp_file_paths=[] #记录用户上传的各个文件的路径，以便后续删除这些文件
     try:
-        #将用户上传文件老老实实保存到本地
-        #将上传的文件流写入服务器本地磁盘
-        #使用 with 语句确保文件句柄在操作完成后自动关闭
-        with open(file_location,"wb") as buffer: #【【【【【这句代码是什么意思？这是标准的文件写入操作，把上传的文件流保存到本地？
-            shutil.copyfileobj(file.file,buffer)
-        print(f"[后端日志] 文件已保存至: {file_location}")
+        for file in files: #遍历用户上传的每一个文件
+            temp_filename=f"temp_{uuid.uuid4()}.csv" #使用uuid将用户上传的各个文件改个名，这样能防止两个用户同时上传同名文件导致覆盖，以及防止用户上传文件的名称不规范【【【【【这里的后缀名是不是无所谓的？推荐我把后缀名删除吗？
+            file_location=os.path.join(UPLOAD_PATH,temp_filename) #得到用户上传的各个文件的保存路径
+            temp_file_paths.append(file_location) #记录用户上传的各个文件的路径，以便后续删除这些文件
 
-        #根据用户选择的数据格式读取文件
-        df=None
-        original_shape=(0,0) #用于记录文件原始形状
-        try:
+            # 1.把用户上传的各个文件都保存到本地
+            with open(file_location,"wb") as buffer: #将文件流写入本地磁盘【【【【【话说这两句代码到底是什么意思？ #将上传的文件流写入服务器本地磁盘 #使用 with 语句确保文件句柄在操作完成后自动关闭 #【【【【【这句代码是什么意思？这是标准的文件写入操作，把上传的文件流保存到本地？
+                shutil.copyfileobj(file.file,buffer)
+
+            # 2.根据用户选择的数据格式读取各个文件
             #因为用户可能会把文件后缀名改成.fea之类的，所以我们不检查文件后缀名，我们直接来读文件
-            #因为需要使用pd.read_csv或pd.read_excel来读文件，所以这里用一个字典来存储其参数
+            df_single=None
+            #因为需要使用pd.read_csv或pd.read_excel来读文件，所以这里用一个字典read_params来存储其参数
             read_params={
                 "sep": None, #分隔符，默认None，表示自动嗅探分隔符
                 "engine": "python", #使用Python引擎，这样才能支持自动嗅探分隔符
@@ -236,6 +245,7 @@ async def upload_file( file:UploadFile=File(...) , data_format:str=Form(...) , f
                 "index_col": 0 #指定索引列为第0列，表示有索引列
             }
             need_transpose=False #标记是否需要转置
+            #接下来我们要根据用户选择的数据格式修改read_params和need_transpose
             if data_format=="row_sample_yes_yes": #如果前端传过来的data_format为"row_sample_yes_yes"
                 # ,特征1,特征2,特征3,...
                 # 病人1,11,12,13
@@ -295,48 +305,49 @@ async def upload_file( file:UploadFile=File(...) , data_format:str=Form(...) , f
                 read_params["header"]=None
                 read_params["index_col"]=None
                 need_transpose=True
-
-            #读取文件
+            #接下来我们来读取各个文件
             try:
                 #首先我们尝试用pd.read_csv读文件
+                df_single=pd.read_csv(file_location,**read_params)
                 #**是Python的字典解包语法，可以把 字典键值对 拆解成 函数参数 
                 #假设有一个函数需要两个参数：def hanshu(a,b)
                 #普通调用方式：hanshu(a=1,b=2)
                 #使用**的调用方式：hanshu(**{"a":1,"b":2})
-                df=pd.read_csv(file_location,**read_params)
-            except:
-                #如果读取失败，那么尝试用pd.read_excel读文件。不过pd.read_excel不支持sep和engine参数，所以我们先来删除它们 #注意想要使用pd.read_excel的话需要先安装openpyxl库
+            except: #如果读取失败，那么尝试用pd.read_excel读文件。不过pd.read_excel不支持sep和engine参数，所以我们先来删除它们 #注意想要使用pd.read_excel的话需要安装openpyxl库
                 del read_params["sep"]
                 del read_params["engine"]
-                df=pd.read_excel(file_location,**read_params)
-                #如果还是读取失败，那么程序会触发外层try的异常捕获机制，首先是被except Exception as e_read捕获，抛出ValueError；然后是被最外层的except Exception as e捕获，删除文件同时抛出HTTPException
-
-            original_shape=df.shape #记录文件原始形状
-            print(f"[后端日志] 文件原始形状: {original_shape}")
+                try:
+                    df_single=pd.read_excel(file_location,**read_params)
+                except Exception as e_read: #如果还是读取失败，那么抛出的错误会被最外层的except Exception as e捕获，删除用户上传的各个文件同时抛出HTTPException
+                    raise ValueError(f"文件 {file.filename} 解析失败: {str(e_read)}")
             if need_transpose: #如果需要转置
-                df=df.T
-                print(f"[后端日志] 数据已转置，当前形状: {df.shape}")
-        except Exception as e_read:
-             raise ValueError(f"文件解析失败，请检查格式选项是否正确。错误信息: {str(e_read)}")
+                df_single=df_single.T
+            #此时读取出来的df_single就很标准了，行代表病人，列代表特征。有表头行、有索引列
+            dataframes.append(df_single) #把读取到并且处理好的各个文件都临时存放进这个列表，以便后续使用pd.concat合并
 
-        #此时读取出来的df就很标准了，行代表病人，列代表特征。有表头行、有索引列
-        #读取文件成功后，我们还需要来检查一下内容合不合规，看看有没有脏数据什么的
+        # 3.循环结束，此时dataframes里面应该就已经存放好了读取到并且处理好的各个文件，所以我们来合并一下
+        if not dataframes:
+            raise ValueError("未上传有效文件")
+        df=pd.concat(dataframes,axis=1,join='inner') #axis=1表示在每一行后面拼接，即按列拼接；join='inner'表示取索引的交集，即“如果病人名称有对不上的，那么取病人名称的交集”
+        if df.empty:
+            raise ValueError("合并后数据为空！请检查数据格式选项是否正确，以及所有文件的病人名称是否一致。")
+        original_shape=df.shape #记录合并后的形状
+        print(f"[后端日志] 数据合并完成，合并后的形状: {df.shape}")
+
+        # 4.合并各个文件成功后，我们还需要来检查一下合并后的文件内容合不合规，有没有脏数据什么的
         try:
             # 如果文件被解析为只有索引而没有特征列（比如 README.md），df.shape[1] 会是 0    确保 DataFrame 。如果读取了空文件或仅有索引，shape[1] 为 0。
             #检查数据列数，确保df至少包含一列数据，防止读到空文件或者【【【【【改一下
             if df.shape[1]<1:
-                raise ValueError("未检测到有效的数据列。请检查分隔符是否正确（当前仅支持逗号分隔），或文件是否包含特征数据。")
-
+                raise ValueError("未检测到有效的数据列。")
             #检查样本名称是否重复
             if df.index.has_duplicates:
                 duplicated_samples=df.index[df.index.duplicated()].unique().tolist() #获取具体的重复样本名【【【【【改一下。等会儿等会儿，因为我可能使用的是转置后的数据，所以这里的提示信息可能不太准确
-                raise ValueError(f"数据第一列（样本名称）发现重复值: {duplicated_samples}。请确保每个样本只有一行。")
-
+                raise ValueError(f"合并后发现重复样本名: {duplicated_samples}。")
             #检查特征名称是否重复
             if df.columns.has_duplicates:
                 duplicated_features=df.columns[df.columns.duplicated()].unique().tolist()
-                raise ValueError(f"数据第一行（特征名称）发现重复值: {duplicated_features}。请确保特征名称不重复。")
-
+                raise ValueError(f"合并后发现重复特征名: {duplicated_features}。请确保不同组学文件中的特征不重名。")
             #如果是组学数据，那么检查整个表格中是否有缺失值，确保矩阵是稠密的；并且检查整个表格中是否有非数字内容
             if file_type=="omics":
                 if df.isnull().sum().sum()>0: #df.isnull().sum().sum()可以计算整个表格中空值的总数
@@ -346,34 +357,42 @@ async def upload_file( file:UploadFile=File(...) , data_format:str=Form(...) , f
                     raise ValueError(f"以下列包含非数字内容: {non_numeric_cols}。请确保除行列头外，所有单元格均为数字。")
             else: #如果是临床数据，那么检查OS、OS.time两列数据是否有缺失值、是否有非数字内容【【【【【此处待实现
                 pass
-
             print(f"[后端日志] 数据校验全部通过！最终用于分析的形状: {df.shape}")
 
-            df.to_csv(file_location) #将df保存到磁盘
+            # 5.接下来我们要把合并后的文件保存到本地
+            final_filename=f"{uuid.uuid4()}.csv" #给合并后的文件起个名
+            final_file_location=os.path.join(UPLOAD_PATH,final_filename) #得到合并后的文件的保存路径
+            df.to_csv(final_file_location) #把合并后的文件保存到本地
             #此时保存下来的df就很标准了，行代表病人，列代表特征。有表头行、有索引列
-            #保存下来的文件，路径、文件名、后缀名和原文件（使用uuid改名后的文件）完全一样，也就是说保存下来的文件会覆盖原文件
             #保存下来的文件，分隔符使用的是英文逗号，因为to_csv()函数的默认分隔符就是英文逗号
             #这样一来，"/api/run"接口就可以直接使用pd.read_csv(file_path,header=0,index_col=0,sep=',')读取输入数据了
+
+            # 6.删除用户上传的各个文件
+            for path in temp_file_paths:
+                if os.path.exists(path):
+                    os.remove(path)
+
         except Exception as e:
             raise HTTPException(status_code=400,detail=f"数据格式错误: {str(e)}")
-
         return{
             "status": "success",
-            "filename": new_filename, #用户上传文件的新名称
-            "original_filename": file.filename, #用户上传文件的原始名称。用于前端界面展示
-            "filepath": file_location,
+            "filename": final_filename, #合并后的文件名称
+            "original_filename": " + ".join([f.filename for f in files]), #用户上传的各个文件的原始名称。用于前端界面展示【【【【【这句代码是什么意思？
+            "filepath": final_file_location, #合并后的文件的路径
             "original_shape": original_shape, #文件原始形状
             "final_shape": df.shape, #最终用于分析的文件形状
-            "message": f"文件 {file.filename} 上传成功"
+            "message": f"成功合并 {len(files)} 个文件"
         }
-    except HTTPException as he: #捕获到了我们刚才自己抛出的错误，说明虽然读取文件成功，但是文件内容不合规
-        if os.path.exists(file_location):
-            os.remove(file_location) #删除文件
+    except HTTPException as he: #捕获到了我们刚才自己抛出的错误，说明虽然读取、合并文件成功，但是文件内容不合规
+        for path in temp_file_paths: #删除用户上传的各个文件
+            if os.path.exists(path):
+                os.remove(path)
         print(f"[后端日志] 校验不通过，文件已删除: {str(he)}")
         raise he #直接抛出错误给前端
     except Exception as e: #说明读取文件失败，或者其他什么错误
-        if os.path.exists(file_location):
-            os.remove(file_location) #删除文件
+        for path in temp_file_paths: #删除用户上传的各个文件
+            if os.path.exists(path):
+                os.remove(path)
         print(f"[后端日志] 严重错误，文件已删除: {str(e)}")
         raise HTTPException(status_code=500,detail=f"服务器内部错误: {str(e)}") #抛出错误给前端
 
