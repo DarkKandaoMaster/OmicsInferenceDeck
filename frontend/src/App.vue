@@ -391,64 +391,187 @@ const runSurvivalAnalysis= async ()=>{
   }
 }
 
-//绘制生存曲线
+//绘制生存曲线（使用ECharts）
 const renderSurvivalChart= (kmData)=>{
-  if(!survivalChartRef.value) return
+  if(!survivalChartRef.value) return //防御性检查
 
-  const colorPalette=['#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#bcbd22','#17becf'] //定义一套Plotly风格的默认色板，用于确保同一组的生存曲线和删失点颜色一致
-  const traces=[] //用于存放所有的绘图轨迹（生存曲线和删失点）
+  //初始化 ECharts 实例
+  //注意：在实际开发中可能需要判断实例是否已存在并 dispose，但在简单场景下直接 init 会覆盖或重用
+  const myChart = echarts.init(survivalChartRef.value)
+
+  const colorPalette=['#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#bcbd22','#17becf'] //复用之前的色板
+  
+  const series=[] //用于存放 ECharts 的系列配置
+
   kmData.forEach((group,index)=>{ //遍历后端返回的每一组数据
-    const groupColor=colorPalette[index % colorPalette.length] //设置当前组的颜色（循环使用我们上面定义的色板）
-    //构建生存曲线
-    const lineTrace={
-      x: group.times, //时间轴，作为生存曲线中的x轴坐标
-      y: group.probs, //生存概率，作为生存曲线中的y轴坐标
-      mode: 'lines', //选择模式为线图
-      name: group.name, //图例名称
-      line: {
-        shape: 'hv', //使用阶梯状曲线
-        color: groupColor, //显式设置颜色
-        width: 2 //生存曲线的线条宽度
-      },
-      type: 'scatter',
-      legendgroup: group.name //将生存曲线和删失点归为同一图例组，这样点击图例时就可以同时显示/隐藏
+    const groupColor=colorPalette[index % colorPalette.length] //获取当前组颜色
+
+    // 1. 准备生存曲线的数据 (Line Series)
+    // ECharts 接收的数据格式为二维数组 [[x1, y1], [x2, y2], ...]
+    const lineData = group.times.map((t, i) => [t, group.probs[i]])
+
+    // 2. 准备删失点的数据 (Scatter Series)
+    const censoredData = []
+    if(group.censored_times){
+      group.censored_times.forEach((t, i) => {
+        censoredData.push([t, group.censored_probs[i]])
+      })
     }
-    traces.push(lineTrace)
-    //构建删失点
-    if(group.censored_times && group.censored_times.length>0){
-      const censoredTrace={
-        x: group.censored_times, //删失点的OS.time，作为删失点的x轴坐标
-        y: group.censored_probs, //删失点对应的生存概率，作为删失点的y轴坐标
-        mode: 'markers', //选择模式为散点图
-        name: group.name+' Censored', //图例名称，不过我们之后会隐藏它
-        type: 'scatter',
-        marker: {
-          symbol: 'line-ns-open', //使用垂直竖线“|”作为散点图中的点，也就是删失点
-          size: 4, //删失点的大小
-          color: groupColor, //删失点的颜色，和生存曲线一致
-          opacity: 0.6, //删失点的透明度
-          line: {
-            width: 1, //删失点的粗细
-            color: groupColor //这个是干嘛的？
-          }
+
+    // 3. 配置生存曲线系列 (Line)
+    series.push({
+      name: group.name, //系列名称，用于图例显示
+      type: 'line', //折线图
+      step: 'end', //关键配置：设置为阶梯线，'end' 表示在当前点之后发生转折（水平线->垂直线），对应 Plotly 的 'hv'
+      data: lineData,
+      symbol: 'none', //线条上的数据点不显示标记，保持曲线平滑
+      lineStyle: {
+        width: 2, //线宽，保持与之前一致
+        color: groupColor //显式指定颜色
+      },
+      itemStyle: {
+        color: groupColor //图例颜色
+      },
+      // ECharts 没有直接的 legendgroup，但如果 Series 名称相同，图例会自动合并控制
+    })
+
+    // 4. 配置删失点系列 (Scatter) - 仅当有删失数据时添加
+    if(censoredData.length > 0){
+      series.push({
+        name: group.name, //使用相同的名称！这样点击图例时，线条和删失点会同时隐藏/显示
+        type: 'scatter', //散点图
+        data: censoredData,
+        symbol: 'rect', //使用矩形模拟垂直竖线 '|'
+        symbolSize: [1,6], //设置矩形宽为2，高为10，看起来像一条短竖线
+        itemStyle: {
+          color: groupColor, //颜色与线条一致
+          opacity: 0.6 //透明度
         },
-        hoverinfo: 'x+y+name', //鼠标悬停在删失点时显示的信息
-        showlegend: false, //这样可以不在图例中单独显示删失点
-        legendgroup: group.name //将生存曲线和删失点归为同一图例组，这样点击图例时就可以同时显示/隐藏
-      }
-      traces.push(censoredTrace)
+        cursor: 'default', //鼠标悬停时不显示手型，避免干扰
+        z: 10 //z-index，确保点显示在线条上方
+      })
     }
   })
 
-  const layout={
-    title: 'Kaplan-Meier Survival Curve',
-    xaxis: { title: 'Time (OS.time)' },
-    yaxis: { title: 'Survival Probability (OS)', range: [0, 1.05] },
-    showlegend: true
+  // ECharts 配置项
+  const option = {
+    tooltip: {
+      trigger: 'item', //鼠标悬停在元素上时触发
+      formatter: function (params) {
+        // 自定义提示框内容
+        // params.value[0] 是时间 (x), params.value[1] 是概率 (y)
+        return `${params.seriesName}<br/>Time: ${params.value[0]}<br/>Probability: ${params.value[1].toFixed(4)}`
+      }
+    },
+    legend: {
+      orient: 'horizontal',
+      bottom: '0%', //图例放在底部
+      type: 'scroll' //如果组别太多，允许图例滚动
+    },
+    grid: {
+      left: '5%',
+      right: '5%',
+      bottom: '15%', //给图例留出空间
+      containLabel: true
+    },
+    xAxis: {
+      type: 'value',
+      name: 'Time (OS.time)', //X轴名称
+      nameLocation: 'middle',
+      nameGap: 30, //名称与轴的距离
+      min: 0, // [要求] X轴从0开始
+      splitLine: { show: false } //不显示网格线，保持界面整洁
+    },
+    yAxis: {
+      type: 'value',
+      name: 'Survival Probability (OS)', //Y轴名称
+      nameLocation: 'middle',
+      nameGap: 50,
+      min: 0, //Y轴最小值
+      max: 1, // [要求] Y轴最大值限制为1
+      splitLine: { show: true, lineStyle: { type: 'dashed' } } //显示虚线网格辅助看图
+    },
+    series: series //载入我们在上面构建好的所有系列
   }
 
-  Plotly.newPlot(survivalChartRef.value,traces,layout) //绘制生存曲线
+  myChart.setOption(option) //渲染图表
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// //绘制生存曲线（使用Plotly）
+// const renderSurvivalChart= (kmData)=>{
+//   if(!survivalChartRef.value) return
+
+//   const colorPalette=['#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#bcbd22','#17becf'] //定义一套Plotly风格的默认色板，用于确保同一组的生存曲线和删失点颜色一致
+//   const traces=[] //用于存放所有的绘图轨迹（生存曲线和删失点）
+//   kmData.forEach((group,index)=>{ //遍历后端返回的每一组数据
+//     const groupColor=colorPalette[index % colorPalette.length] //设置当前组的颜色（循环使用我们上面定义的色板）
+//     //构建生存曲线
+//     const lineTrace={
+//       x: group.times, //时间轴，作为生存曲线中的x轴坐标
+//       y: group.probs, //生存概率，作为生存曲线中的y轴坐标
+//       mode: 'lines', //选择模式为线图
+//       name: group.name, //图例名称
+//       line: {
+//         shape: 'hv', //使用阶梯状曲线
+//         color: groupColor, //显式设置颜色
+//         width: 2 //生存曲线的线条宽度
+//       },
+//       type: 'scatter',
+//       legendgroup: group.name //将生存曲线和删失点归为同一图例组，这样点击图例时就可以同时显示/隐藏
+//     }
+//     traces.push(lineTrace)
+//     //构建删失点
+//     if(group.censored_times && group.censored_times.length>0){
+//       const censoredTrace={
+//         x: group.censored_times, //删失点的OS.time，作为删失点的x轴坐标
+//         y: group.censored_probs, //删失点对应的生存概率，作为删失点的y轴坐标
+//         mode: 'markers', //选择模式为散点图
+//         name: group.name+' Censored', //图例名称，不过我们之后会隐藏它
+//         type: 'scatter',
+//         marker: {
+//           symbol: 'line-ns-open', //使用垂直竖线“|”作为散点图中的点，也就是删失点
+//           size: 4, //删失点的大小
+//           color: groupColor, //删失点的颜色，和生存曲线一致
+//           opacity: 0.6, //删失点的透明度
+//           line: {
+//             width: 1, //删失点的粗细
+//             color: groupColor //这个是干嘛的？
+//           }
+//         },
+//         hoverinfo: 'x+y+name', //鼠标悬停在删失点时显示的信息
+//         showlegend: false, //这样可以不在图例中单独显示删失点
+//         legendgroup: group.name //将生存曲线和删失点归为同一图例组，这样点击图例时就可以同时显示/隐藏
+//       }
+//       traces.push(censoredTrace)
+//     }
+//   })
+
+//   const layout={
+//     title: 'Kaplan-Meier Survival Curve',
+//     xaxis: { title: 'Time (OS.time)' },
+//     yaxis: { title: 'Survival Probability (OS)', range: [0, 1.05] },
+//     showlegend: true
+//   }
+
+//   Plotly.newPlot(survivalChartRef.value,traces,layout) //绘制生存曲线
+// }
 </script>
 
 <template>
