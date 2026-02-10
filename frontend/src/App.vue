@@ -345,7 +345,7 @@ const handleClinicalFormatChange= ()=>{
   }
 }
 
-//运行生存分析函数
+//生存分析运行函数
 const runSurvivalAnalysis= async ()=>{
   if(!clinicalFilename.value){
     alert("请先上传包含 OS 和 OS.time 的临床数据！")

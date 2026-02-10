@@ -94,101 +94,90 @@ async def run_analysis(request: AnalysisRequest): #指定record的类型为Analy
 
     mock_result_data={} #初始化结果字典，这个就是函数要返回的东西之一
 
-    # -------------------------------------------------------------------------
-    # 算法：K-means
-    # -------------------------------------------------------------------------
-    if request.algorithm=="K-means":
-        try:
-            file_path=os.path.join("upload",request.filename) #需要处理的文件的所在路径
-            if not os.path.exists(file_path): #检查该路径是否存在（检查文件是否存在）
-                raise FileNotFoundError(f"找不到文件: {request.filename}")
+    #接下来我们打算：
+    # 1.读取"/api/upload"已经处理好的组学数据文件
+    # 2.根据用户选择的算法训练模型并获取聚类标签
+    # 3.计算三个聚类评估指标
+    # 4.对df使用PCA/t-SNE/UMAP降维
+    # 5.返回结果
 
-            df=pd.read_csv(file_path,header=0,index_col=0,sep=',') #因为"/api/upload"已经处理好文件了，所以这里可以直接这么读取输入数据
-            print(f"[算法日志] 数据加载成功，形状为: {df.shape}")
+    try:
+        # 1.读取"/api/upload"已经处理好的组学数据文件
+        file_path=os.path.join("upload",request.filename) #"/api/upload"已经处理好的组学数据文件的所在路径
+        if not os.path.exists(file_path): #检查该路径是否存在
+            raise FileNotFoundError(f"找不到文件: {request.filename}")
+        df=pd.read_csv(file_path,header=0,index_col=0,sep=',') #因为"/api/upload"已经处理好文件了，所以这里可以直接这么读取输入数据
+        print(f"[算法日志] 数据加载成功，形状为: {df.shape}")
 
-            #初始化K-means模型，同时将前端传来的用户自定义的参数传入模型【【【或许以后可以在这里写个if，最小改动地使用其他算法？】】】
-            kmeans=KMeans(
+        # 2.根据用户选择的算法训练模型并获取聚类标签
+        model=None
+        if request.algorithm=="K-means": #如果用户选择了K-means算法
+            #初始化K-means模型，同时将前端传来的用户自定义的参数传入模型
+            model=KMeans(
                 n_clusters=request.n_clusters,
                 random_state=seed,
                 max_iter=request.max_iter
             )
-            labels=kmeans.fit_predict(df) #按照用户设置的参数，使用df这个输入数据，不断地训练模型。训练结束后，返回最后一次训练结果
+        else: #如果用户选择了其他算法
+            raise ValueError("选择了未实现的算法")
+        labels=model.fit_predict(df) #按照用户设置的参数，使用df这个输入数据，不断地训练模型。训练结束后，返回最后一次训练结果
 
-            #计算三个聚类评估指标：轮廓系数、CH指数、DB指数，它们是可以用来给任何聚类算法打分的通用指标
-            metrics_scores={} #初始化一个字典，用来存放这三个指标
-            if request.n_clusters>=2: #只有当簇数量大于等于2时，聚类评估指标才有数学意义
-                s_score=silhouette_score(df,labels) #轮廓系数。范围[-1,1]，越接近1表示分类效果越好。衡量一个样本“离自己组的人有多近”、“离隔壁组的人有多远”
-                ch_score=calinski_harabasz_score(df,labels) #CH指数。范围[0,+∞)，值越大表示分类效果越好。衡量簇内紧密度与簇间分离度的比值，简单来说就是它希望“组内越紧密越好”、“组间离得越远越好”
-                db_score=davies_bouldin_score(df,labels) #DB指数。范围[0,+∞)，值越小表示分类效果越好。衡量簇之间的重叠程度，如果这个指标很高，说明不同组混在一起了，分得不清楚
-                metrics_scores={
-                    "silhouette": round(float(s_score),4), #将s_score强制类型转换float，然后四舍五入保留小数点后4位
-                    "calinski": round(float(ch_score),4),
-                    "davies": round(float(db_score),4)
-                }
-            else: #如果K<2，那么这些指标都无法计算，所以我们把这些指标都赋值为-1
-                metrics_scores={
-                    "silhouette": -1,
-                    "calinski": -1,
-                    "davies": -1
-                }
-
-            #于是我们就计算出来那三个聚类评估指标了。但是它们不太直观，所以我们来另外计算一个散点图。如果聚类效果确实很好（样本确实分得很开），那么通常指标会很好、散点图也会分得很开，两者趋势是一致的
-            #为了能够画散点图，我们需要对df使用PCA/t-SNE/UMAP降维。PCA/t-SNE/UMAP搞定散点图中的x、y坐标，需要评估的算法搞定散点图中点对应的簇
-            coords=None #用来存放降维后的结果
-            if request.reduction=="PCA":
-                coords=PCA(n_components=2,random_state=seed)   .fit_transform(df) #初始化PCA模型，指定降维到2维（x轴和y轴）；对df进行降维，返回一个形状为(样本数量,2)的numpy数组。其中第0列表示第一主成分（PC1），这是数据差异最大、最能区分样本的方向；第1列表示第二主成分（PC2），这是数据差异第二大的方向
-            elif request.reduction=="t-SNE":
-                coords=TSNE(n_components=2,random_state=seed)   .fit_transform(df)
-            elif request.reduction=="UMAP":
-                coords=umap.UMAP(n_components=2,random_state=seed)   .fit_transform(df)
-            else: #兜底逻辑：如果用户选择了未知的降维算法，那么默认使用UMAP
-                coords=umap.UMAP(n_components=2,random_state=seed)   .fit_transform(df)
-            plot_data=[] #初始化一个列表，用来存放每个样本对应的信息，以便前端画散点图。在前端的散点图中，每个样本对应一个点
-            for i in range(len(df)):
-                plot_data.append({
-                    "name": df.index[i], #样本名称
-                    "x": float(coords[i,0]), #降维后的第一主成分，作为散点图中的x轴坐标
-                    "y": float(coords[i,1]), #降维后的第二主成分，作为散点图中的y轴坐标
-                    "cluster": int(labels[i]) #该样本所属的簇标签
-                })
-
-            #为结果字典赋值
-            mock_result_data={
-                "method": "K-means (Real Run)",
-                "n_samples": df.shape[0], #样本总数
-                "n_features": df.shape[1], #特征数量
-                "inertia": float(kmeans.inertia_), #簇内误差平方和，评估聚类效果的指标，该值越小，表示簇内样本越紧密
-                "labels": labels.tolist(), #将numpy数组转换为Python列表，不然numpy数组无法直接序列化为JSON
-                "cluster_counts": pd.Series(labels).value_counts().to_dict(), #统计每个类别（簇）的样本数量
-                "metrics": metrics_scores, #我们刚才计算出来的聚类评估指标
-                "plot_data": plot_data #存放每个样本对应的信息的那个列表
+        # 3.计算三个聚类评估指标：轮廓系数、CH指数、DB指数，它们是可以用来给任何聚类算法打分的通用指标
+        metrics_scores={} #初始化一个字典，用来存放这三个指标
+        if request.n_clusters>=2: #只有当簇数量大于等于2时，聚类评估指标才有数学意义
+            s_score=silhouette_score(df,labels) #轮廓系数。范围[-1,1]，越接近1表示分类效果越好。衡量一个样本“离自己组的人有多近”、“离隔壁组的人有多远”
+            ch_score=calinski_harabasz_score(df,labels) #CH指数。范围[0,+∞)，值越大表示分类效果越好。衡量簇内紧密度与簇间分离度的比值，简单来说就是它希望“组内越紧密越好”、“组间离得越远越好”
+            db_score=davies_bouldin_score(df,labels) #DB指数。范围[0,+∞)，值越小表示分类效果越好。衡量簇之间的重叠程度，如果这个指标很高，说明不同组混在一起了，分得不清楚
+            metrics_scores={
+                "silhouette": round(float(s_score),4), #将s_score强制类型转换float，然后四舍五入保留小数点后4位
+                "calinski": round(float(ch_score),4),
+                "davies": round(float(db_score),4)
             }
-            print("[算法日志] K-means 计算完成") #在控制台打印日志
-
-        except Exception as e: #处理用户参数设置不合理，或者上传了一个非常大的CSV文件并且上传时硬盘存得下但处理时硬盘存不下，等情况
-            print(f"[算法错误] {str(e)}")
-            return{
-                "status": "error", 
-                "message": f"算法运行失败: {str(e)}",
-                "server_time": datetime.datetime.now().isoformat()
+        else: #如果K<2，那么这些指标都无法计算，所以我们把这些指标都赋值为-1
+            metrics_scores={
+                "silhouette": -1,
+                "calinski": -1,
+                "davies": -1
             }
 
-    # -------------------------------------------------------------------------
-    # 算法：PIntMF (模拟实现)
-    # -------------------------------------------------------------------------
-    elif request.algorithm=="PIntMF":
-        # 实际开发中，此处应调用 R 语言脚本 (rpy2) 或相应的 Python 实现。
-        pass
+        #于是我们就计算出来那三个聚类评估指标了。但是它们不太直观，所以我们来另外计算一个散点图。如果聚类效果确实很好（样本确实分得很开），那么通常指标会很好、散点图也会分得很开，两者趋势是一致的
+        # 4.为了能够画散点图，我们需要对df使用PCA/t-SNE/UMAP降维。PCA/t-SNE/UMAP搞定散点图中的x、y坐标，需要评估的算法搞定散点图中点对应的簇
+        coords=None #用来存放降维后的结果
+        if request.reduction=="PCA":
+            coords=PCA(n_components=2,random_state=seed)   .fit_transform(df) #初始化PCA模型，指定降维到2维（x轴和y轴）；对df进行降维，返回一个形状为(样本数量,2)的numpy数组。其中第0列表示第一主成分（PC1），这是数据差异最大、最能区分样本的方向；第1列表示第二主成分（PC2），这是数据差异第二大的方向
+        elif request.reduction=="t-SNE":
+            coords=TSNE(n_components=2,random_state=seed)   .fit_transform(df)
+        elif request.reduction=="UMAP":
+            coords=umap.UMAP(n_components=2,random_state=seed)   .fit_transform(df)
+        else: #兜底逻辑：如果用户选择了未知的降维算法，那么默认使用UMAP
+            coords=umap.UMAP(n_components=2,random_state=seed)   .fit_transform(df)
+        plot_data=[] #初始化一个列表，用来存放每个样本对应的信息，以便前端画散点图。在前端的散点图中，每个样本对应一个点
+        for i in range(len(df)):
+            plot_data.append({
+                "name": df.index[i], #样本名称
+                "x": float(coords[i,0]), #降维后的第一主成分，作为散点图中的x轴坐标
+                "y": float(coords[i,1]), #降维后的第二主成分，作为散点图中的y轴坐标
+                "cluster": int(labels[i]) #该样本所属的簇标签
+            })
 
-    # -------------------------------------------------------------------------
-    # 算法：Subtype-GAN (模拟实现)
-    # -------------------------------------------------------------------------
-    elif request.algorithm=="Subtype-GAN":
-        pass
-    else: #如果用户选择了其他算法
+        #为结果字典赋值
         mock_result_data={
-            "info": f"算法 {request.algorithm} 的接口尚未完全实现",
-            "status": "pending"
+            "method": "K-means (Real Run)",
+            "n_samples": df.shape[0], #样本总数
+            "n_features": df.shape[1], #特征数量
+            "labels": labels.tolist(), #将numpy数组转换为Python列表，不然numpy数组无法直接序列化为JSON
+            "cluster_counts": pd.Series(labels).value_counts().to_dict(), #统计每个类别（簇）的样本数量
+            "metrics": metrics_scores, #我们刚才计算出来的聚类评估指标
+            "plot_data": plot_data #存放每个样本对应的信息的那个列表
+        }
+        print("[算法日志] K-means 计算完成") #在控制台打印日志
+
+    except Exception as e: #处理用户参数设置不合理，或者上传了一个非常大的CSV文件并且上传时硬盘存得下但处理时硬盘存不下，等情况
+        print(f"[算法错误] {str(e)}")
+        return{
+            "status": "error",
+            "message": f"算法运行失败: {str(e)}",
+            "server_time": datetime.datetime.now().isoformat()
         }
 
     #构建HTTP响应
@@ -203,7 +192,7 @@ async def run_analysis(request: AnalysisRequest): #指定record的类型为Analy
     return response #FastAPI会自动将这个字典序列化成JSON字符串，然后通过网络发送给前端
 
 # =============================================================================
-# 接口：处理用户上传组学数据的接口
+# 接口：处理用户上传组学和临床数据的接口
 # =============================================================================
 @app.post("/api/upload")
 async def upload_file( files:List[UploadFile]=File(...) , data_format:str=Form(...) , file_type:str=Form("omics") ): #Files(...)表示该字段为必填的文件对象；Form(...)表示该字段为必填的表单对象。前端传过来的东西必须包含这两个对象 #file_type参数标记用户上传的是组学数据还是临床数据，默认是组学
@@ -221,6 +210,7 @@ async def upload_file( files:List[UploadFile]=File(...) , data_format:str=Form(.
     # 4.检查一下合并后的文件内容合不合规
     # 5.把合并后的文件保存到本地
     # 6.删除用户上传的各个文件
+    # 7.返回结果
 
     dataframes=[] #我们希望把读取到并且处理好的各个文件都临时存放进这个列表，以便后续使用pd.concat合并
     temp_file_paths=[] #记录用户上传的各个文件的路径，以便后续删除这些文件
@@ -336,7 +326,7 @@ async def upload_file( files:List[UploadFile]=File(...) , data_format:str=Form(.
 
         # 4.合并各个文件成功后，我们还需要来检查一下合并后的文件内容合不合规，有没有脏数据什么的
         try:
-            # 如果文件被解析为只有索引而没有特征列（比如 README.md），df.shape[1] 会是 0    确保 DataFrame 。如果读取了空文件或仅有索引，shape[1] 为 0。
+            # 如果文件被解析为只有索引而没有特征列（比如 README.md），df.shape[1] 会是 0    。如果读取了空文件或仅有索引，shape[1] 为 0。
             #检查数据列数，确保df至少包含一列数据，防止读到空文件或者【【【【【改一下
             if df.shape[1]<1:
                 raise ValueError("未检测到有效的数据列。")
@@ -403,75 +393,72 @@ async def upload_file( files:List[UploadFile]=File(...) , data_format:str=Form(.
 async def run_survival_analysis(request: SurvivalRequest):
     print(f"\n[后端日志] 收到生存分析请求，处理文件: {request.clinical_filename}")
 
+    #接下来我们打算：
+    # 1.读取"/api/upload"已经处理好的临床数据文件，得到clinical_df
+    # 2.把前端传过来的样本名称列表、聚类标签列表整理成一个cluster_df
+    # 3.把clinical_df和cluster_df合并起来
+    # 4.计算Log-Rank P-value
+    # 5.计算绘制生存曲线所需数据
+    # 6.返回结果
+
     try:
-        # 1. 读取临床数据
-        clinical_path=os.path.join("upload", request.clinical_filename)
+        # 1.读取"/api/upload"已经处理好的临床数据文件
+        clinical_path=os.path.join("upload",request.clinical_filename) #"/api/upload"已经处理好的组学数据文件的所在路径
         if not os.path.exists(clinical_path):
             raise FileNotFoundError("找不到临床数据文件")
+        clinical_df=pd.read_csv(clinical_path,header=0,index_col=0,sep=',') #因为"/api/upload"已经处理好文件了，所以这里可以直接这么读取输入数据
 
-        # 假设临床数据第一行为特征名，第一列为样本名（index_col=0）
-        clinical_df=pd.read_csv(clinical_path, index_col=0)
-
-        # 2. 构建聚类信息 DataFrame
-        # 将前端传来的 样本名 和 聚类标签 组合成一个 DataFrame
+        # 2.把前端传过来的样本名称列表、聚类标签列表整理成一个cluster_df
+        #创建一个DataFrame对象，同时传入一个字典。于是字典的key就会变成列名，value就会变成列的数据
         cluster_df=pd.DataFrame({
-            "SampleID": request.sample,
-            "Cluster": request.labels
+            "SampleID": request.sample, #样本名称列表
+            "Cluster": request.labels #聚类标签列表
         })
-        cluster_df.set_index("SampleID", inplace=True)
+        cluster_df.set_index("SampleID",inplace=True) #.set_index()可以将cluster_df的"SampleID"列设置为索引列；inplace=True表示直接在原对象上修改
 
-        # 3. 合并数据
-        # 使用 inner join (交集)，只保留既有组学数据又有临床数据的样本
-        merged_df=clinical_df.join(cluster_df, how="inner")
-
+        # 3.把clinical_df和cluster_df合并起来
+        merged_df=clinical_df.join(cluster_df,how="inner") #how='inner'表示取索引的交集，即“如果病人名称有对不上的，那么取病人名称的交集”
         if merged_df.empty:
-            raise ValueError("临床数据与组学数据的样本名称没有交集，无法进行分析。请检查样本ID是否一致。")
+            raise ValueError("临床数据与组学数据的样本名称没有交集，无法进行分析。请检查选择的数据格式是否正确，或者样本ID是否一致。")
 
-        # 检查必要的生存分析列
+        # 4.计算Log-Rank P-value
+        #首先我们来检查合并后的文件有没有"OS"、"OS.time"两列
         if "OS" not in merged_df.columns or "OS.time" not in merged_df.columns:
-            raise ValueError("临床数据必须包含 'OS' (生存状态, 1=死亡/事件发生, 0=存活) 和 'OS.time' (生存时间) 两列。")
-
-        # 4. 计算 Log-Rank P-value
-        # multivariate_logrank_test 用于比较多组生存曲线的差异
-        results = multivariate_logrank_test(
-            merged_df["OS.time"], 
-            merged_df["Cluster"], 
-            merged_df["OS"]
+            raise ValueError("临床数据必须包含 'OS' (生存状态，1=死亡，0=存活) 和 'OS.time' (生存时间) 两列。")
+        #我们来解释一下，在统计学中，我们做检验通常是为了验证一个假设：你提供的分组标签对生存时间没有任何影响
+        #于是下面这个函数multivariate_logrank_test就可以根据我们传进去的三个数据，计算出一个概率（P值），告诉你上述假设成立的可能性有多大。如果P值<0.05，说明原假设大概率是错的，分组标签是有意义的
+        results=multivariate_logrank_test(
+            merged_df["OS.time"], #生存时间（代表病人从诊断开始到死亡或最后一次随访的时间长度）
+            merged_df["Cluster"], #分组标签（根据用户选择算法算出来的分组标签）
+            merged_df["OS"] #生存状态（1代表死亡，0代表存活）
         )
-        p_value = results.p_value
+        p_value=results.p_value #得到P值
 
-        # 5. 计算 Kaplan-Meier 曲线数据（用于前端绘图）
-        kmf = KaplanMeierFitter()
-        plot_data = []
-
-        # 遍历每个簇，分别计算其生存曲线
-        # unique() 获取所有簇的编号，sorted() 排序
-        for cluster_id in sorted(merged_df["Cluster"].unique()):
-            # 筛选出当前簇的样本
-            subset = merged_df[merged_df["Cluster"] == cluster_id]
-
-            # 拟合数据：传入时间列和状态列
-            kmf.fit(subset["OS.time"], subset["OS"], label=f"Cluster {cluster_id}")
-
-            # 提取绘图数据：时间点和对应的生存概率
-            # survival_function_ 返回一个 DataFrame，index是时间，列是生存概率
+        #于是我们就计算出来P值了。但它也不太直观，所以我们来另外计算一个生存曲线。如果聚类效果确实很好（样本确实分得很开），那么通常P值会很小、生存曲线也会分得很开，两者趋势是一致的
+        #总的来说，三个聚类评估指标、散点图可以看数学上分得好不好，有没有把数据分开；P值、生存曲线可以看医学上有没意义，分出来的组能不能预测病人的死活
+        # 5.计算绘制生存曲线所需数据
+        kmf=KaplanMeierFitter() #用来计算绘制生存曲线所需数据
+        plot_data=[] #用来存放绘制生存曲线所需数据
+        for cluster_id in sorted(merged_df["Cluster"].unique()): #遍历所有簇，分别计算其生存曲线 #.unique()可以获取merged_df["Cluster"]中所有不重复的值，即获取所有簇；sorted()可以升序排序
+            subset=merged_df[merged_df["Cluster"]==cluster_id] #筛选出merged_df中属于当前簇的样本
+            kmf.fit(subset["OS.time"],subset["OS"],label=f"Cluster {cluster_id}") #使用传入的OS.time、OS数据计算生存概率；label用于标记这条曲线的名称
+            #此时使用kmf.survival_function_就能返回一个DataFrame，索引代表时间轴、列代表生存概率、列名代表上一句代码中我们传入的label。当然，整个DataFrame只有一列数据
             plot_data.append({
-                "name": f"Cluster {cluster_id}",
-                "times": kmf.survival_function_.index.tolist(), # X轴：时间
-                "probs": kmf.survival_function_[f"Cluster {cluster_id}"].tolist(), # Y轴：生存概率
-                # 还可以选择性添加置信区间数据，这里为了简单略过
+                "name": f"Cluster {cluster_id}", #这条曲线的名称
+                "times": kmf.survival_function_.index.tolist(), #时间轴，作为生存曲线中的x轴坐标
+                "probs": kmf.survival_function_[f"Cluster {cluster_id}"].tolist(), #生存概率，作为生存曲线中的y轴坐标
+                #听AI说这里还可以添加置信区间数据？要不要加？【【【【【
             })
 
-        return {
+        return{
             "status": "success",
-            "p_value": p_value, # 返回 P 值
-            "km_data": plot_data, # 返回用于画图的数据
-            "n_samples": len(merged_df) # 实际参与分析的样本数
+            "p_value": p_value, #P值
+            "km_data": plot_data, #绘制生存曲线所需数据
+            "n_samples": len(merged_df) #合并后的行数，即合并后的样本数量
         }
-
     except Exception as e:
         print(f"[生存分析错误] {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400,detail=str(e))
 
 # =============================================================================
 # 程序入口
