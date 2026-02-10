@@ -430,7 +430,7 @@ async def run_survival_analysis(request: SurvivalRequest):
         results=multivariate_logrank_test(
             merged_df["OS.time"], #生存时间（代表病人从诊断开始到死亡或最后一次随访的时间长度）
             merged_df["Cluster"], #分组标签（根据用户选择算法算出来的分组标签）
-            merged_df["OS"] #生存状态（1代表死亡，0代表存活）
+            merged_df["OS"] #生存状态（1代表死亡，或者说事件发生；0代表存活，或者说删失）
         )
         p_value=results.p_value #得到P值
 
@@ -443,10 +443,15 @@ async def run_survival_analysis(request: SurvivalRequest):
             subset=merged_df[merged_df["Cluster"]==cluster_id] #筛选出merged_df中属于当前簇的样本
             kmf.fit(subset["OS.time"],subset["OS"],label=f"Cluster {cluster_id}") #使用传入的OS.time、OS数据计算生存概率；label用于标记这条曲线的名称
             #此时使用kmf.survival_function_就能返回一个DataFrame，索引代表时间轴、列代表生存概率、列名代表上一句代码中我们传入的label。当然，整个DataFrame只有一列数据
+            #接下来我们来计算删失点的坐标
+            censored_times=subset[subset["OS"]==0]   ["OS.time"].tolist() #筛选出subset中删失（OS==0）的样本，取OS.time那一列，把那一列转换为列表并返回
+            censored_probs=kmf.survival_function_at_times(censored_times).values.tolist() #获取删失点对应的生存概率 #.survival_function_at_times()返回的是Series，需要用.values转换为numpy数组
             plot_data.append({
                 "name": f"Cluster {cluster_id}", #这条曲线的名称
                 "times": kmf.survival_function_.index.tolist(), #时间轴，作为生存曲线中的x轴坐标
                 "probs": kmf.survival_function_[f"Cluster {cluster_id}"].tolist(), #生存概率，作为生存曲线中的y轴坐标
+                "censored_times": censored_times, #删失点的OS.time，作为删失点的x轴坐标
+                "censored_probs": censored_probs #删失点对应的生存概率，作为删失点的y轴坐标
                 #听AI说这里还可以添加置信区间数据？要不要加？【【【【【
             })
 

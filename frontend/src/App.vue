@@ -391,19 +391,54 @@ const runSurvivalAnalysis= async ()=>{
   }
 }
 
-//绘制 Kaplan-Meier 曲线 (使用 Plotly)
+//绘制生存曲线
 const renderSurvivalChart= (kmData)=>{
   if(!survivalChartRef.value) return
 
-  // 将后端返回的 kmData 转换为 Plotly 需要的 traces 格式
-  const traces=kmData.map(group=>({
-    x: group.times, // 时间轴
-    y: group.probs, // 生存概率轴
-    mode: 'lines', // 线图
-    name: group.name, // 图例名称 (e.g., Cluster 0)
-    line: { shape: 'hv' }, // KM 曲线通常是阶梯状 (hv: horizontal-vertical)
-    type: 'scatter'
-  }))
+  const colorPalette=['#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#bcbd22','#17becf'] //定义一套Plotly风格的默认色板，用于确保同一组的生存曲线和删失点颜色一致
+  const traces=[] //用于存放所有的绘图轨迹（生存曲线和删失点）
+  kmData.forEach((group,index)=>{ //遍历后端返回的每一组数据
+    const groupColor=colorPalette[index % colorPalette.length] //设置当前组的颜色（循环使用我们上面定义的色板）
+    //构建生存曲线
+    const lineTrace={
+      x: group.times, //时间轴，作为生存曲线中的x轴坐标
+      y: group.probs, //生存概率，作为生存曲线中的y轴坐标
+      mode: 'lines', //选择模式为线图
+      name: group.name, //图例名称
+      line: {
+        shape: 'hv', //使用阶梯状曲线
+        color: groupColor, //显式设置颜色
+        width: 2 //生存曲线的线条宽度
+      },
+      type: 'scatter',
+      legendgroup: group.name //将生存曲线和删失点归为同一图例组，这样点击图例时就可以同时显示/隐藏
+    }
+    traces.push(lineTrace)
+    //构建删失点
+    if(group.censored_times && group.censored_times.length>0){
+      const censoredTrace={
+        x: group.censored_times, //删失点的OS.time，作为删失点的x轴坐标
+        y: group.censored_probs, //删失点对应的生存概率，作为删失点的y轴坐标
+        mode: 'markers', //选择模式为散点图
+        name: group.name+' Censored', //图例名称，不过我们之后会隐藏它
+        type: 'scatter',
+        marker: {
+          symbol: 'line-ns-open', //使用垂直竖线“|”作为散点图中的点，也就是删失点
+          size: 4, //删失点的大小
+          color: groupColor, //删失点的颜色，和生存曲线一致
+          opacity: 0.6, //删失点的透明度
+          line: {
+            width: 1, //删失点的粗细
+            color: groupColor //这个是干嘛的？
+          }
+        },
+        hoverinfo: 'x+y+name', //鼠标悬停在删失点时显示的信息
+        showlegend: false, //这样可以不在图例中单独显示删失点
+        legendgroup: group.name //将生存曲线和删失点归为同一图例组，这样点击图例时就可以同时显示/隐藏
+      }
+      traces.push(censoredTrace)
+    }
+  })
 
   const layout={
     title: 'Kaplan-Meier Survival Curve',
@@ -412,8 +447,7 @@ const renderSurvivalChart= (kmData)=>{
     showlegend: true
   }
 
-  // 绘图
-  Plotly.newPlot(survivalChartRef.value,traces,layout)
+  Plotly.newPlot(survivalChartRef.value,traces,layout) //绘制生存曲线
 }
 </script>
 
