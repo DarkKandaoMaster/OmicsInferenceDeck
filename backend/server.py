@@ -46,32 +46,10 @@ app.add_middleware(
 )
 
 # =============================================================================
-# 数据校验模型定义
-# =============================================================================
-#"/api/run"的数据校验模型
-class AnalysisRequest(BaseModel): #定义一个类，在这个类里声明几个变量，并且明确指定这几个变量的类型。以此实现确保输入数据类型符合该要求，如果不符合，FastAPI会自动拦截并返回422错误
-    #这里的冒号使用的是Python的类型提示语法。 变量名: 类型 意思是声明一个名为 变量名 的变量，它的预期类型是 类型 
-    #虽然在普通Python代码中类型提示通常只是像注释一样给人看的，但在pydantic.BaseModel中，冒号具有强制性，Pydantic库会读取冒号后面的类型，并像C语言那样执行强制类型转换和验证
-    algorithm: str #用户选择的算法名称
-    timestamp: str #请求发起时的时间戳
-    filename: str #用户上传的使用UUID改名后的组学数据文件名
-    #以下参数具有默认值，所以以下参数是可选参数，其他算法即便不传这些参数也不会报错
-    #K-means算法
-    n_clusters: int=3 #聚类簇数（K值），默认3
-    random_state: int=42 #随机种子，默认42
-    max_iter: int=300 #最大迭代次数，默认300，用于防止算法在无法收敛时陷入死循环
-    #用户选择的降维算法
-    reduction: str="PCA" #用户选择的降维算法，默认PCA
-
-#"/api/survival_analysis"的数据校验模型
-class SurvivalRequest(BaseModel):
-    clinical_filename: str #用户上传的使用UUID改名后的临床数据文件名
-    sample: list[str] #样本名称列表
-    labels: list[int] #和样本名称列表一一对应的聚类标签列表
-
-# =============================================================================
 # 接口：处理用户上传组学和临床数据的接口
 # =============================================================================
+#@app.post是一个装饰器，它的作用是将下面的upload_file函数注册到Web服务器的路由表中，当用户发送POST请求到“/api/upload”这个网址时，服务器会自动调用下面的upload_file函数来处理，同时FastAPI会自动读取HTTP请求体中的数据，并将其传给upload_file函数中的形参，实现接收输入数据
+#async可以定义异步函数，允许在进行文件读写或等待模型推理时，服务器可以挂起当前任务去处理其他请求，提高并发吞吐量
 @app.post("/api/upload")
 async def upload_file( files:List[UploadFile]=File(...) , data_format:str=Form(...) , file_type:str=Form("omics") ): #Files(...)表示该字段为必填的文件对象；Form(...)表示该字段为必填的表单对象。前端传过来的东西必须包含这两个对象 #file_type参数标记用户上传的是组学数据还是临床数据，默认是组学
     print(f"\n[后端日志] 收到文件上传请求，文件数量: {len(files)}") #在控制台打印日志
@@ -267,8 +245,20 @@ async def upload_file( files:List[UploadFile]=File(...) , data_format:str=Form(.
 # =============================================================================
 # 接口：运行分析
 # =============================================================================
-#@app.post是一个装饰器，它的作用是将下面的run_analysis函数注册到Web服务器的路由表中，当用户发送POST请求到“/api/run”这个网址时，服务器会自动调用下面的run_analysis函数来处理，同时FastAPI会自动读取HTTP请求体中的数据，并将其传给下面的request参数，实现接收输入数据
-#async可以定义异步函数，允许在进行文件读写或等待模型推理时，服务器可以挂起当前任务去处理其他请求，提高并发吞吐量
+class AnalysisRequest(BaseModel): #定义数据校验模型 #定义一个类，在这个类里声明几个变量，并且明确指定这几个变量的类型。以此实现确保输入数据类型符合该要求，如果不符合，FastAPI会自动拦截并返回422错误
+    #这里的冒号使用的是Python的类型提示语法。 变量名: 类型 意思是声明一个名为 变量名 的变量，它的预期类型是 类型 
+    #虽然在普通Python代码中类型提示通常只是像注释一样给人看的，但在pydantic.BaseModel中，冒号具有强制性，Pydantic库会读取冒号后面的类型，并像C语言那样执行强制类型转换和验证
+    algorithm: str #用户选择的算法名称
+    timestamp: str #请求发起时的时间戳
+    filename: str #用户上传的使用UUID改名后的组学数据文件名
+    #以下参数具有默认值，所以以下参数是可选参数，其他算法即便不传这些参数也不会报错
+    #K-means算法
+    n_clusters: int=3 #聚类簇数（K值），默认3
+    random_state: int=42 #随机种子，默认42
+    max_iter: int=300 #最大迭代次数，默认300，用于防止算法在无法收敛时陷入死循环
+    #用户选择的降维算法
+    reduction: str="PCA" #用户选择的降维算法，默认PCA
+
 @app.post("/api/run")
 async def run_analysis(request: AnalysisRequest): #指定record的类型为AnalysisRequest，就是我们刚才定义的那个类，如果前端传来的数据类型不匹配，FastAPI会自动拦截并返回422错误
     print(f"\n[后端日志] 收到分析请求:") #在控制台打印日志（实际生产环境中建议使用logging模块替代print）
@@ -389,6 +379,11 @@ async def run_analysis(request: AnalysisRequest): #指定record的类型为Analy
 # =============================================================================
 # 接口：生存分析
 # =============================================================================
+class SurvivalRequest(BaseModel): #定义数据校验模型
+    clinical_filename: str #用户上传的使用UUID改名后的临床数据文件名
+    sample: list[str] #样本名称列表
+    labels: list[int] #和样本名称列表一一对应的聚类标签列表
+
 @app.post("/api/survival_analysis")
 async def run_survival_analysis(request: SurvivalRequest):
     print(f"\n[后端日志] 收到生存分析请求，处理文件: {request.clinical_filename}")
