@@ -2,7 +2,6 @@
 import { ref,computed,nextTick } from 'vue' //引入Vue框架的核心函数 //ref：用于定义基本类型的响应式数据（数据变化时视图自动更新） //computed：用于定义计算属性（依赖其他数据变化而自动重新计算并缓存结果） //nextTick：用于确保DOM元素渲染完成后再执行绘图代码
 import axios from 'axios' //引入 axios 库，用于在浏览器端发送 HTTP 请求，与后端服务器进行数据交互
 import * as echarts from 'echarts' //引入整个 echarts 库，命名为 echarts //为什么不这么写“import echarts from 'echarts'”？这是因为不同的库有不同的导出策略
-import Plotly from 'plotly.js-dist-min'
 
 // ===================== 状态定义区 =====================
 
@@ -180,18 +179,18 @@ const handleFormatChange= ()=>{
   }
 }
 
-//渲染散点图
+//绘制散点图（使用echarts）
 const renderChart= (plot_data)=>{
   if(!chartRef.value || !plot_data) return //防御性检查：确保DOM元素存在，且有数据
   const myChart=echarts.init(chartRef.value) //初始化echarts实例，绑定到对应div上
 
-  const seriesData=[] //初始化一个数组，用来存放散点图中每个点的信息
+  const series=[] //用来存放散点图中每个点的配置
   const clusters=[...new Set(   plot_data.map(item=>item.cluster)   )]   .sort() //plot_data.map(item=>item.cluster)表示遍历plot_data数组，把每一项的cluster字段拿出来，组成一个新数组；然后我们把这个数组传给new出来的一个Set对象，于是存储在里面的数据没有重复值，实现去重；[... ]是扩展运算符，可以把Set对象里的数据一个个展开，放入一个新数组中；最后.sort()对数组元素进行默认升序排序
   clusters.forEach(clusterId=>{ //遍历clusters数组，对数组中的每一个元素，它都会执行一次箭头函数clusterId=>{}内部的代码块
     const clusterPoints=plot_data.filter(item=>item.cluster===clusterId) //遍历plot_data数组，筛选出cluster字段的值等于clusterId的所有项，并将它们组成一个新数组返回
-    seriesData.push({ //把下面这个对象push到seriesData数组的末尾
-      name: `Cluster ${clusterId}`, //表示该点被分到哪个cluster里了
-      type: 'scatter', //图表类型：散点图
+    series.push({ //把下面这个对象push到series数组的末尾
+      name: `Cluster ${clusterId}`, //该点的名称，表示该点被分到哪个cluster里了，用于图例显示
+      type: 'scatter', //选择类型为散点图
       symbolSize: 10, //点的大小
       data: clusterPoints.map(p=>[p.x,p.y,p.name]), //[后端传来的x坐标,后端传来的y坐标,后端传来的name]。不把后端传来的name放在数组的第一位是因为echarts默认规定数组的前两位必须是坐标值，否则坐标失效
       itemStyle: {
@@ -217,7 +216,7 @@ const renderChart= (plot_data)=>{
   }
   //为图表设置选项
   myChart.setOption({
-    series: seriesData, //把我们刚才处理的seriesData数组传入这个图表
+    series: series, //把我们刚才处理的series数组传入这个图表
     tooltip: {
       trigger: 'item', //鼠标悬停在点上时触发
       formatter: function(params){ //params的值来源于echarts内部引擎，当鼠标悬停时，echarts会自动打包该点的所有信息，并作为参数传给函数
@@ -233,11 +232,11 @@ const renderChart= (plot_data)=>{
     },
     xAxis: {
       name: `${axisPrefix} 1`, //x轴名称，比如'PC 1'
-      splitLine: { show: false } //不显示网格线【【【【【以后考虑让用户自定义？
+      splitLine: { show: false } //不显示网格线
     },
     yAxis: {
       name: `${axisPrefix} 2`, //y轴名称
-      splitLine: { show: false }
+      splitLine: { show: false } //不显示网格线
     }
   })
 }
@@ -274,7 +273,7 @@ const runAnalysis= async ()=>{
     backendResponse.value=res.data //请求成功后，将后端返回的数据赋值给backendResponse。此时前端界面也会更新
     console.log('后端返回数据:',res.data) //在控制台打印日志
     await nextTick() //暂停当前代码的执行，直到vue完成对网页界面的更新（DOM元素渲染完成），然后再继续。这是因为我们要渲染的div被包裹在这个div里：<div v-if="backendResponse" class="success-box">，所以只有backendResponse赋值完毕、要渲染成散点图的div加载完毕之后，我们才能执行下面这句代码
-    if(res.data.data.plot_data){ //如果成功返回了plot_data，那么渲染散点图
+    if(res.data.data.plot_data){ //如果成功返回了plot_data，那么绘制散点图
       renderChart(res.data.data.plot_data) //plot_data就是后端传来的存放每个样本对应的信息的那个列表
     }
   }
@@ -391,187 +390,145 @@ const runSurvivalAnalysis= async ()=>{
   }
 }
 
-//绘制生存曲线（使用ECharts）
+//绘制生存曲线（也使用echarts）
 const renderSurvivalChart= (kmData)=>{
   if(!survivalChartRef.value) return //防御性检查
+  //在绑定新的mousemove事件前，必须销毁旧实例，否则会导致事件监听器重复叠加，引起性能问题或报错
+  const existingInstance=echarts.getInstanceByDom(survivalChartRef.value)
+  if(existingInstance){
+    existingInstance.dispose()
+  }
+  const myChart=echarts.init(survivalChartRef.value) //初始化echarts实例，绑定到对应div上
+  const colorPalette=['#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#bcbd22','#17becf'] //定义一套Plotly风格的默认色板 //这里的话就不推荐让echarts自动分配颜色了，因为我感觉不好看（），所以我们来定义一个色板，手动指定color
 
-  //初始化 ECharts 实例
-  //注意：在实际开发中可能需要判断实例是否已存在并 dispose，但在简单场景下直接 init 会覆盖或重用
-  const myChart = echarts.init(survivalChartRef.value)
-
-  const colorPalette=['#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#bcbd22','#17becf'] //复用之前的色板
-  
-  const series=[] //用于存放 ECharts 的系列配置
-
-  kmData.forEach((group,index)=>{ //遍历后端返回的每一组数据
-    const groupColor=colorPalette[index % colorPalette.length] //获取当前组颜色
-
-    // 1. 准备生存曲线的数据 (Line Series)
-    // ECharts 接收的数据格式为二维数组 [[x1, y1], [x2, y2], ...]
-    const lineData = group.times.map((t, i) => [t, group.probs[i]])
-
-    // 2. 准备删失点的数据 (Scatter Series)
-    const censoredData = []
+  const series=[] //用来存放生存曲线和删失点的配置
+  kmData.forEach((group,index)=>{ //遍历后端返回的每一组数据。index是当前循环的索引（比如0、1、2）
+    const groupColor=colorPalette[index % colorPalette.length] //设置当前组的颜色（循环使用我们上面定义的色板）
+    //生存曲线的配置
+    series.push({
+      name: group.name, //该生存曲线的名称，用于图例显示
+      type: 'line', //选择类型为线图
+      step: 'end', //设置为阶梯状曲线
+      data: group.times.map((t,i)=>[t,group.probs[i]]), //[后端传来的时间轴,后端传来的生存概率]
+      symbol: 'circle', //数据点的形状：实心圆
+      symbolSize: 10, //数据点的大小
+      showSymbol: true, //显示数据点。之后我们会实现平时数据点透明度为0，高亮时为1
+      itemStyle: {
+        color: groupColor, //数据点和图例的颜色
+        opacity: 0 //平时数据点透明度为0
+      },
+      emphasis: { //高亮时的样式
+        itemStyle: { //高亮时数据点的样式（不包括图例，图例还是使用默认样式）
+          opacity: 1 //高亮时数据点透明度为1
+        }
+      },
+      lineStyle: {
+        width: 2, //生存曲线的线条宽度
+        color: groupColor //生存曲线的线条颜色
+      }
+    })
+    //删失点的配置
+    const censoredData=[] //用来存放后端传来的删失点的坐标
     if(group.censored_times){
-      group.censored_times.forEach((t, i) => {
-        censoredData.push([t, group.censored_probs[i]])
+      group.censored_times.forEach((t,i)=>{
+        censoredData.push([t,group.censored_probs[i]]) //[删失点的OS.time,删失点对应的生存概率]
       })
     }
-
-    // 3. 配置生存曲线系列 (Line)
-    series.push({
-      name: group.name, //系列名称，用于图例显示
-      type: 'line', //折线图
-      step: 'end', //关键配置：设置为阶梯线，'end' 表示在当前点之后发生转折（水平线->垂直线），对应 Plotly 的 'hv'
-      data: lineData,
-      symbol: 'none', //线条上的数据点不显示标记，保持曲线平滑
-      lineStyle: {
-        width: 2, //线宽，保持与之前一致
-        color: groupColor //显式指定颜色
-      },
-      itemStyle: {
-        color: groupColor //图例颜色
-      },
-      // ECharts 没有直接的 legendgroup，但如果 Series 名称相同，图例会自动合并控制
-    })
-
-    // 4. 配置删失点系列 (Scatter) - 仅当有删失数据时添加
-    if(censoredData.length > 0){
+    if(censoredData.length>0){ //如果存在删失点
       series.push({
-        name: group.name, //使用相同的名称！这样点击图例时，线条和删失点会同时隐藏/显示
-        type: 'scatter', //散点图
-        data: censoredData,
-        symbol: 'rect', //使用矩形模拟垂直竖线 '|'
-        symbolSize: [1,6], //设置矩形宽为2，高为10，看起来像一条短竖线
+        name: group.name, //使用与生存曲线相同的名称。于是点击图例时，生存曲线和删失点会同时显示/隐藏
+        type: 'scatter', //选择类型为散点图
+        data: censoredData, //把我们刚才处理的censoredData数组传入这个图表
+        symbol: 'rect', //删失点的形状：矩形
+        symbolSize: [1,6], //设置矩形宽1像素，高6像素。于是看起来就像一条短竖线
         itemStyle: {
-          color: groupColor, //颜色与线条一致
-          opacity: 0.6 //透明度
+          color: groupColor, //删失点的颜色
+          opacity: 0.7 //删失点的透明度
         },
-        cursor: 'default', //鼠标悬停时不显示手型，避免干扰
-        z: 10 //z-index，确保点显示在线条上方
+        cursor: 'default', //这样就能鼠标悬停时不显示手指图标，避免用户误以为可以点击
       })
     }
   })
 
-  // ECharts 配置项
-  const option = {
-    tooltip: {
-      trigger: 'item', //鼠标悬停在元素上时触发
-      formatter: function (params) {
-        // 自定义提示框内容
-        // params.value[0] 是时间 (x), params.value[1] 是概率 (y)
-        return `${params.seriesName}<br/>Time: ${params.value[0]}<br/>Probability: ${params.value[1].toFixed(4)}`
+  //为图表设置选项
+  myChart.setOption({
+    series: series, //把我们刚才处理的series数组传入这个图表
+    tooltip: { //鼠标悬停提示框配置
+      trigger: 'item', //鼠标悬停在数据点上时触发
+      triggerOn: 'none', //不使用echarts自带的鼠标触发机制。之后我们会写个函数控制何时显示提示框
+      formatter: function(params){
+        return `${params.seriesName}<br/>Time: ${params.value[0]}<br/>Probability: ${params.value[1].toFixed(4)}` //params.value[0]是该数据点对应的时间轴；params.value[1]是该数据点对应的生存概率
       }
     },
-    legend: {
-      orient: 'horizontal',
-      bottom: '0%', //图例放在底部
-      type: 'scroll' //如果组别太多，允许图例滚动
+    legend: { //图例配置
+      orient: 'horizontal', //图例水平排列
+      // type: 'scroll', //当图例过多超出宽度时，显示滚动箭头（如果图例超过14个再考虑开启这个）【【【【【我希望图例最多能显示两行，超过两行时再开启这个，并且开启这个时图例仍能最多显示两行
+      bottom: '0%' //图例放在底部
     },
-    grid: {
-      left: '5%',
-      right: '5%',
-      bottom: '15%', //给图例留出空间
-      containLabel: true
+    xAxis: { //x轴配置
+      type: 'value', //类型：数值轴
+      name: 'Time (OS.time)', //x轴名称
+      nameLocation: 'middle', //居中显示x轴名称
+      nameGap: 30, //x轴名称与轴线的距离
+      min: 0, //x轴最小值。这样就能让x轴从0开始
+      splitLine: { show: false } //不显示垂直网格线
     },
-    xAxis: {
+    yAxis: { //y轴配置
       type: 'value',
-      name: 'Time (OS.time)', //X轴名称
+      name: 'Survival Probability (OS)', //y轴名称
       nameLocation: 'middle',
-      nameGap: 30, //名称与轴的距离
-      min: 0, // [要求] X轴从0开始
-      splitLine: { show: false } //不显示网格线，保持界面整洁
-    },
-    yAxis: {
-      type: 'value',
-      name: 'Survival Probability (OS)', //Y轴名称
-      nameLocation: 'middle',
-      nameGap: 50,
-      min: 0, //Y轴最小值
-      max: 1, // [要求] Y轴最大值限制为1
-      splitLine: { show: true, lineStyle: { type: 'dashed' } } //显示虚线网格辅助看图
-    },
-    series: series //载入我们在上面构建好的所有系列
-  }
+      nameGap: 30,
+      min: 0, //y轴最小值
+      max: 1, //y轴最大值
+      splitLine: { show: false } //不显示水平网格线
+    }
+  })
 
-  myChart.setOption(option) //渲染图表
+  //寻找并记录距离鼠标最近的那个数据点的信息
+  myChart.getZr().on('mousemove',function(params){ //获取ZRender实例并监听整个画布的mousemove事件，这样就能拿到鼠标在画布上的像素坐标
+    const pointInPixel=[params.offsetX,params.offsetY] //拿到鼠标在画布上的像素坐标
+    let minDistance=Infinity //初始化最小距离为无穷大
+    let nearestItem=null //存放距离鼠标最近的那个数据点的信息
+    series.forEach((s,sIdx)=>{ //遍历生存曲线上的每一个数据点，以及每一个删失点
+      if(s.type==='scatter') return //如果遍历到删失点，那么跳过 //这里不能用continue，只能用return。在.forEach中，return相当于普通循环中的continue
+      s.data.forEach((d,dIdx)=>{
+        const point=myChart.convertToPixel({ seriesIndex:sIdx },d) //使用convertToPixel（echarts提供的API），将[时间轴,生存概率]转换为屏幕上的物理像素坐标[px,py]
+        if(point){
+          //计算鼠标与该数据点之间的距离
+          const dx=point[0]-pointInPixel[0]
+          const dy=point[1]-pointInPixel[1]
+          const distanceSquared=dx*dx+dy*dy //不需要开根号，因为这里只需要用到比大小，开不开根号结果一样
+          if(distanceSquared<minDistance){ //如果距离比之前记录的最小距离还小
+            minDistance=distanceSquared //更新最小距离
+            nearestItem={
+              seriesIndex: sIdx, //该数据点属于哪个系列 //你就先理解成“该数据点属于哪个簇”吧。实际上，series[0]、series[1]是Cluster 0的曲线、删失点；series[2]、series[3]是Cluster 1的曲线、删失点。这个series的0、1、2、3就是不同的系列
+              dataIndex: dIdx, //该数据点是系列中的第几个数据
+              distance: Math.sqrt(distanceSquared) //计算并存储鼠标与该数据点之间的真实距离
+            }
+          }
+        }
+      })
+    })
+    //于是我们就找到距离鼠标最近的那个数据点了。然后我们来做个判断，如果鼠标与该数据点之间的距离<100，那么高亮该数据点，并显示鼠标悬停提示框
+    if(nearestItem && nearestItem.distance<100){
+      myChart.dispatchAction({ type: 'downplay' }) //首先取消所有点的高亮状态，防止多个点同时高亮
+      myChart.dispatchAction({
+        type: 'highlight', //高亮该数据点
+        seriesIndex: nearestItem.seriesIndex,
+        dataIndex: nearestItem.dataIndex
+      })
+      myChart.dispatchAction({
+        type: 'showTip', //显示鼠标悬停提示框
+        seriesIndex: nearestItem.seriesIndex,
+        dataIndex: nearestItem.dataIndex
+      })
+    }
+    else{ //否则就说明鼠标离所有数据点都很远
+      myChart.dispatchAction({ type: 'downplay' }) //首先取消所有点的高亮状态
+      myChart.dispatchAction({ type: 'hideTip' }) //隐藏鼠标悬停提示框
+    }
+  })
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// //绘制生存曲线（使用Plotly）
-// const renderSurvivalChart= (kmData)=>{
-//   if(!survivalChartRef.value) return
-
-//   const colorPalette=['#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#bcbd22','#17becf'] //定义一套Plotly风格的默认色板，用于确保同一组的生存曲线和删失点颜色一致
-//   const traces=[] //用于存放所有的绘图轨迹（生存曲线和删失点）
-//   kmData.forEach((group,index)=>{ //遍历后端返回的每一组数据
-//     const groupColor=colorPalette[index % colorPalette.length] //设置当前组的颜色（循环使用我们上面定义的色板）
-//     //构建生存曲线
-//     const lineTrace={
-//       x: group.times, //时间轴，作为生存曲线中的x轴坐标
-//       y: group.probs, //生存概率，作为生存曲线中的y轴坐标
-//       mode: 'lines', //选择模式为线图
-//       name: group.name, //图例名称
-//       line: {
-//         shape: 'hv', //使用阶梯状曲线
-//         color: groupColor, //显式设置颜色
-//         width: 2 //生存曲线的线条宽度
-//       },
-//       type: 'scatter',
-//       legendgroup: group.name //将生存曲线和删失点归为同一图例组，这样点击图例时就可以同时显示/隐藏
-//     }
-//     traces.push(lineTrace)
-//     //构建删失点
-//     if(group.censored_times && group.censored_times.length>0){
-//       const censoredTrace={
-//         x: group.censored_times, //删失点的OS.time，作为删失点的x轴坐标
-//         y: group.censored_probs, //删失点对应的生存概率，作为删失点的y轴坐标
-//         mode: 'markers', //选择模式为散点图
-//         name: group.name+' Censored', //图例名称，不过我们之后会隐藏它
-//         type: 'scatter',
-//         marker: {
-//           symbol: 'line-ns-open', //使用垂直竖线“|”作为散点图中的点，也就是删失点
-//           size: 4, //删失点的大小
-//           color: groupColor, //删失点的颜色，和生存曲线一致
-//           opacity: 0.6, //删失点的透明度
-//           line: {
-//             width: 1, //删失点的粗细
-//             color: groupColor //这个是干嘛的？
-//           }
-//         },
-//         hoverinfo: 'x+y+name', //鼠标悬停在删失点时显示的信息
-//         showlegend: false, //这样可以不在图例中单独显示删失点
-//         legendgroup: group.name //将生存曲线和删失点归为同一图例组，这样点击图例时就可以同时显示/隐藏
-//       }
-//       traces.push(censoredTrace)
-//     }
-//   })
-
-//   const layout={
-//     title: 'Kaplan-Meier Survival Curve',
-//     xaxis: { title: 'Time (OS.time)' },
-//     yaxis: { title: 'Survival Probability (OS)', range: [0, 1.05] },
-//     showlegend: true
-//   }
-
-//   Plotly.newPlot(survivalChartRef.value,traces,layout) //绘制生存曲线
-// }
 </script>
 
 <template>

@@ -452,7 +452,6 @@ async def run_survival_analysis(request: SurvivalRequest):
                 "probs": kmf.survival_function_[f"Cluster {cluster_id}"].tolist(), #生存概率，作为生存曲线中的y轴坐标
                 "censored_times": censored_times, #删失点的OS.time，作为删失点的x轴坐标
                 "censored_probs": censored_probs #删失点对应的生存概率，作为删失点的y轴坐标
-                #听AI说这里还可以添加置信区间数据？要不要加？【【【【【
             })
 
         return{

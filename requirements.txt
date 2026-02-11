@@ -5,6 +5,5 @@ lifelines（需要Python3.11以上版本）
 
 前端：（npm install echarts）
 echarts
-plotly.js-dist-min
 
 之后记得补充一下其他东西
