@@ -2,7 +2,6 @@ import uvicorn
 from fastapi import FastAPI,HTTPException,File,UploadFile,Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import time
 import datetime
 import shutil
 import os
