@@ -1,7 +1,7 @@
 <script setup>
 import { ref,computed,nextTick } from 'vue' //引入Vue框架的核心函数 //ref：用于定义基本类型的响应式数据（数据变化时视图自动更新） //computed：用于定义计算属性（依赖其他数据变化而自动重新计算并缓存结果） //nextTick：用于确保DOM元素渲染完成后再执行绘图代码
 import axios from 'axios' //引入 axios 库，用于在浏览器端发送 HTTP 请求，与后端服务器进行数据交互
-import * as echarts from 'echarts' //引入整个 echarts 库，命名为 echarts //为什么不这么写“import echarts from 'echarts'”？这是因为不同的库有不同的导出策略
+import * as echarts from 'echarts' //引入整个echarts库，命名为echarts //为什么不这么写“import echarts from 'echarts'”？这是因为不同的库有不同的导出策略
 
 // ===================== 状态定义区 =====================
 
