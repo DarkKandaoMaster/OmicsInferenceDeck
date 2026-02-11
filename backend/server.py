@@ -194,15 +194,20 @@ async def upload_file( files:List[UploadFile]=File(...) , data_format:str=Form(.
             if df.columns.has_duplicates:
                 duplicated_features=df.columns[df.columns.duplicated()].unique().tolist()
                 raise ValueError(f"合并后发现重复特征名: {duplicated_features}。请确保不同组学文件中的特征不重名。")
-            #如果是组学数据，那么检查整个表格中是否有缺失值，确保矩阵是稠密的；并且检查整个表格中是否有非数字内容
-            if file_type=="omics":
-                if df.isnull().sum().sum()>0: #df.isnull().sum().sum()可以计算整个表格中空值的总数
-                    raise ValueError("数据中包含缺失值。科研数据要求完整，请手动清理或补全数据。") #如果需要更友好的提示，可以把此处改为遍历找出具体是哪一行哪一列空了
-                non_numeric_cols=df.select_dtypes(exclude=[np.number]).columns.tolist() #select_dtypes(exclude=[np.number])可以筛选出所有非数字类型的列【【【【【非数字类型的列具体是什么？
+            if file_type=="omics": #如果是组学数据，那么检查整个表格中是否有缺失值，确保矩阵是稠密的；并且检查整个表格中是否有非数字内容
+                if df.isnull().sum().sum()>0: #df.isnull().sum().sum()可以统计整个表格中空值的总数
+                    raise ValueError("检测到数据中包含缺失值。请手动清理或补全数据。") #如果需要更友好的提示，可以把此处改为遍历找出具体是哪一行哪一列空了
+                non_numeric_cols=df.select_dtypes(exclude=[np.number]).columns.tolist() #select_dtypes(exclude=[np.number])可以筛选出所有非数字类型（非int、float）的列
                 if len(non_numeric_cols)>0:
-                    raise ValueError(f"以下列包含非数字内容: {non_numeric_cols}。请确保除行列头外，所有单元格均为数字。")
-            else: #如果是临床数据，那么检查OS、OS.time两列数据是否有缺失值、是否有非数字内容【【【【【此处待实现
-                pass
+                    raise ValueError(f"检测到以下列包含非数字内容: {non_numeric_cols}。请确保除行列头外，所有单元格均为数字。")
+            else: #如果是临床数据，那么检查OS、OS.time两列数据是否有缺失值、是否有非数字内容
+                if 'OS' not in df.columns or 'OS.time' not in df.columns: #检查有没有"OS"、"OS.time"两列
+                    raise ValueError("临床数据必须包含 'OS' (生存状态，1=死亡，0=存活) 和 'OS.time' (生存时间) 两列。")
+                if df[['OS','OS.time']].isnull().sum().sum()>0:
+                    raise ValueError("检测到 'OS' 或 'OS.time' 列包含缺失值。请手动清理或补全数据。")
+                non_numeric_cols=df[['OS','OS.time']].select_dtypes(exclude=[np.number]).columns.tolist()
+                if len(non_numeric_cols)>0:
+                    raise ValueError(f"检测到以下列包含非数字内容: {non_numeric_cols}。请确保这两个列只包含数字。")
             print(f"[后端日志] 数据校验全部通过！最终用于分析的形状: {df.shape}")
 
             # 5.接下来我们要把合并后的文件保存到本地
@@ -417,9 +422,6 @@ async def run_survival_analysis(request: SurvivalRequest):
             raise ValueError("临床数据与组学数据的样本名称没有交集，无法进行分析。请检查选择的数据格式是否正确，或者样本ID是否一致。")
 
         # 4.计算Log-Rank P-value
-        #首先我们来检查合并后的文件有没有"OS"、"OS.time"两列
-        if "OS" not in merged_df.columns or "OS.time" not in merged_df.columns:
-            raise ValueError("临床数据必须包含 'OS' (生存状态，1=死亡，0=存活) 和 'OS.time' (生存时间) 两列。")
         #我们来解释一下，在统计学中，我们做检验通常是为了验证一个假设：你提供的分组标签对生存时间没有任何影响
         #于是下面这个函数multivariate_logrank_test就可以根据我们传进去的三个数据，计算出一个概率（P值），告诉你上述假设成立的可能性有多大。如果P值<0.05，说明原假设大概率是错的，分组标签是有意义的
         results=multivariate_logrank_test(
