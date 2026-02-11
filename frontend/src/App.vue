@@ -701,8 +701,9 @@ const renderSurvivalChart= (kmData)=>{
               <div v-if="survivalResult" class="survival-result-box" ref="survivalAreaRef">
                 <div class="p-value-tag">
                   Log-Rank P-value: 
-                  <span :class="{'highlight-p': survivalResult.p_value < 0.05}">
-                    {{ survivalResult.p_value.toExponential(4) }} </span>
+                  <span :class="{'highlight-p': survivalResult.p_value<0.05}">
+                    {{ survivalResult.p_value<0.0001 ? survivalResult.p_value.toExponential(4) : survivalResult.p_value.toFixed(4) }}<!-- 如果P值小于0.0001，那么显示科学计数法；否则直接显示小数 -->
+                  </span>
                 </div>
                 <div ref="survivalChartRef" class="chart-container" style="height: 450px;"></div>
               </div>
