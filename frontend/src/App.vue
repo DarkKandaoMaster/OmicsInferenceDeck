@@ -182,6 +182,11 @@ const handleFormatChange= ()=>{
 //绘制散点图（使用echarts）
 const renderChart= (plot_data)=>{
   if(!chartRef.value || !plot_data) return //防御性检查：确保DOM元素存在，且有数据
+  //检查是否已存在实例，若存在则销毁
+  const existingInstance=echarts.getInstanceByDom(chartRef.value)
+  if(existingInstance){
+    existingInstance.dispose()
+  }
   const myChart=echarts.init(chartRef.value) //初始化echarts实例，绑定到对应div上
 
   const series=[] //用来存放散点图中每个点的配置
@@ -393,7 +398,7 @@ const runSurvivalAnalysis= async ()=>{
 //绘制生存曲线（也使用echarts）
 const renderSurvivalChart= (kmData)=>{
   if(!survivalChartRef.value) return //防御性检查
-  //在绑定新的mousemove事件前，必须销毁旧实例，否则会导致事件监听器重复叠加，引起性能问题或报错
+  //检查是否已存在实例，若存在则销毁
   const existingInstance=echarts.getInstanceByDom(survivalChartRef.value)
   if(existingInstance){
     existingInstance.dispose()
