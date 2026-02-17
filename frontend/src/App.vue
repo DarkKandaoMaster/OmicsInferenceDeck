@@ -41,6 +41,17 @@ const resultsAreaRef=ref(null) //绑定运行分析结果区域的DOM元素，�
 
 const survivalAreaRef=ref(null) //绑定生存分析结果区域的DOM元素，用于自动滚动定位
 
+// *********************************************
+// [新增] 差异分析相关状态
+const diffResult = ref(null) // 存储后端返回的差异分析结果
+const isDiffLoading = ref(false) // 差异分析加载状态
+const diffAnalysisAreaRef = ref(null) // 滚动定位用
+const selectedVolcanoCluster = ref(0) // 用户当前选择查看哪个簇的火山图
+const volcanoChartRef = ref(null) // 火山图 DOM 引用
+const heatmapChartRef = ref(null) // 热图 DOM 引用  绑定热图DOM
+const diffErrorMessage = ref('') // 差异分析错误信息
+// *********************************************
+
 // ===================== 数据格式处理区【【【【【这几个区改一下名 =====================
 
 const dataFormat=ref('row_sample_yes_yes') //定义组学数据的数据格式选项，默认'row_sample_yes_yes'
@@ -534,6 +545,319 @@ const renderSurvivalChart= (kmData)=>{
     }
   })
 }
+
+//运行差异分析【【【【【待修改
+const runDifferentialAnalysis= async ()=>{
+  if(!uploadedFilename.value || !backendResponse.value?.data?.plot_data){
+    alert("请先完成 [2. 算法选择] 和 [3. 运行分析] 得到聚类结果！")
+    return
+  }
+
+  isDiffLoading.value=true
+  diffErrorMessage.value=''
+  diffResult.value=null //清空旧结果
+
+  try{
+    //从聚类结果中提取样本名和标签
+    const plotData=backendResponse.value.data.plot_data
+    const sampleNames=plotData.map(item=>item.name)
+    const clusterLabels=plotData.map(item=>item.cluster)
+
+    const res=await axios.post('http://127.0.0.1:8000/api/differential_analysis',{
+      omics_filename: uploadedFilename.value, // 使用之前上传的组学文件
+      sample: sampleNames,
+      labels: clusterLabels
+    })
+
+    diffResult.value=res.data
+    //默认选中第一个存在的簇进行火山图展示
+    const clusters=Object.keys(res.data.volcano_data).map(Number)
+    if(clusters.length>0) selectedVolcanoCluster.value = clusters[0]
+
+    await nextTick() //等待 DOM 出现
+    
+    //绘制火山图
+    renderVolcanoPlot()
+    //绘制热图
+    renderHeatmapPlot(res.data.heatmap_data)
+
+    //自动滚动到差异分析结果区域
+    if(diffAnalysisAreaRef.value){
+      diffAnalysisAreaRef.value.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+  catch(error){
+    console.error("差异分析失败:", error)
+    diffErrorMessage.value="分析失败: " + (error.response?.data?.detail || error.message)
+  }
+  finally{
+    isDiffLoading.value=false
+  }
+}
+
+//监听火山图下拉框变化，重新绘制火山图【【【【【待修改
+const handleVolcanoClusterChange= ()=>{
+  renderVolcanoPlot()
+}
+
+//绘制火山图【【【【【待修改
+const renderVolcanoPlot= ()=>{
+  if(!volcanoChartRef.value || !diffResult.value) return
+
+  //获取当前选中簇的数据
+  const clusterId=selectedVolcanoCluster.value
+  const data=diffResult.value.volcano_data[clusterId]
+  if(!data) return
+
+  const myChart=echarts.init(volcanoChartRef.value)
+
+  // 区分显著和不显著的点，用于着色
+  // 阈值：P < 0.05 (-log10P > 1.3), |LogFC| > 0.5
+  const significantUp=[]   // 上调显著 (红)
+  const significantDown=[] // 下调显著 (蓝)
+  const notSignificant=[]  // 不显著 (灰)
+
+  data.forEach(item =>{
+    // item: {gene, logFC, t_pvalue, negLog10P}
+    // ECharts scatter data: [x, y, geneName]
+    const point = [item.logFC, item.negLog10P, item.gene]
+    
+    if(item.t_pvalue<0.05 && item.logFC>0.5){
+      significantUp.push(point)
+    }
+    else if(item.t_pvalue<0.05 && item.logFC<-0.5){
+      significantDown.push(point)
+    }
+    else{
+      notSignificant.push(point)
+    }
+  })
+
+  myChart.setOption({
+    title: { 
+      text: `Cluster ${clusterId} vs Others`, 
+      left: 'center',
+      textStyle: { fontSize: 14 }
+    },
+    tooltip: {
+      trigger: 'item',
+      formatter: (params)=>{
+        return `<b>${params.data[2]}</b><br/>LogFC: ${params.data[0].toFixed(3)}<br/>-Log10(P): ${params.data[1].toFixed(3)}`
+      }
+    },
+    xAxis: { name: 'Log2 Fold Change', nameLocation: 'middle', nameGap: 25 },
+    yAxis: { name: '-Log10(P-value)', nameLocation: 'middle', nameGap: 30 },
+    series: [
+      {
+        name: 'Up-regulated',
+        type: 'scatter',
+        symbolSize: 6,
+        itemStyle: { color: '#FF4757', opacity: 0.8 }, // 红色
+        data: significantUp
+      },
+      {
+        name: 'Down-regulated',
+        type: 'scatter',
+        symbolSize: 6,
+        itemStyle: { color: '#1E90FF', opacity: 0.8 }, // 蓝色
+        data: significantDown
+      },
+      {
+        name: 'Not Significant',
+        type: 'scatter',
+        symbolSize: 4,
+        itemStyle: { color: '#d1d5db', opacity: 0.5 }, // 灰色
+        data: notSignificant
+      }
+    ]
+  })
+}
+
+//绘制差异基因热图【【【【【待修改
+const renderHeatmapPlot= (heatmapData)=>{
+  if(!heatmapChartRef.value) return
+
+  const myChart = echarts.init(heatmapChartRef.value)
+  myChart.dispose() // 销毁旧实例，防止缓存干扰
+  const newChart = echarts.init(heatmapChartRef.value)
+
+  const samples = heatmapData.samples       // X轴: 样本名 (已排序)
+  const genes = heatmapData.genes           // Y轴: 基因名
+  const rawData = heatmapData.values        // 数据: [sample_idx, gene_idx, value]
+  const labels = heatmapData.sample_labels  // 样本对应的簇标签 (用于顶部注释条)
+
+  // 1. 计算簇的边界，用于画分割线 (MarkLine)
+  const markLines = []
+  let currentLabel = labels[0]
+
+  // 遍历寻找标签变化的位置
+  for (let i = 1; i < labels.length; i++) {
+    if (labels[i] !== currentLabel) {
+      // 在 i-0.5 的位置画线（即两个格子中间）
+      markLines.push({ xAxis: i - 0.5 }) 
+      currentLabel = labels[i]
+    }
+  }
+
+  // 2. 准备顶部注释条的数据
+  // ECharts 热图数据格式: [x, y, value]
+  // 这里 y 只有一行 (0)
+  const clusterBarData = labels.map((label, index) => {
+    return [index, 0, label]
+  })
+
+  // 3. 配置项
+  const option = {
+    // 使用两个 Grid：Grid 0 是顶部的簇分类条，Grid 1 是主热图
+    grid: [
+      {
+        id: 'top_bar',   // 顶部注释条
+        height: '20px',  // 分类条高度
+        top: '50px',     // 距离顶部距离
+        left: '25%',     // 左边距 (给基因名留空间) //为了注释条、图片、分隔线对齐，这里要大一点给基因名留空间
+        right: '5%'
+      },
+      {
+        id: 'main_map',  // 主热图
+        top: '75px',     // 主热图紧贴分类条下方 (50px + 20px + 5px间隙)// 紧贴顶部条 (60 + 20 + 5px间隙)
+        bottom: '50px',
+        left: '25%', //为了对齐，必须和上面一样
+        right: '5%'
+      }
+    ],
+    tooltip: {
+      position: 'top',
+      formatter: (params) => {
+        // 自定义提示内容
+        if (params.seriesIndex === 0) { // 鼠标在分类条上
+          return `Sample: <b>${samples[params.data[0]]}</b><br/>Cluster: ${params.data[2]}`
+        }
+        else { // 鼠标在热图上
+          const sampleName = samples[params.data[0]]
+          const geneName = genes[params.data[1]]
+          const val = params.data[2].toFixed(3)
+          return `Gene: <b>${geneName}</b><br/>Sample: ${sampleName}<br/>Z-Score: ${val}`
+        }
+      }
+    },
+    // 定义两个 X 轴 (对应两个 Grid)
+    xAxis: [
+      { // Top Axis (分类条)
+        type: 'category',
+        data: samples,
+        gridIndex: 0,
+        axisLabel: { show: false }, // 不显示文字，太挤了
+        axisTick: { show: false },
+        axisLine: { show: false },
+        splitLine: { show: false } // 只要色块，不要线
+      },
+      { // Bottom Axis (主热图)
+        type: 'category',
+        data: samples,
+        gridIndex: 1,
+        axisLabel: { show: false }, // 样本太多通常不显示名，靠Tooltip
+        axisTick: { show: false },
+        splitLine: { show: false }
+      }
+    ],
+    // 定义两个 Y 轴
+    yAxis: [
+      { // Top Axis (分类条标签)
+        type: 'category',
+        data: ['Cluster'], // 显示 "Cluster" 字样
+        gridIndex: 0,
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { fontWeight: 'bold' }
+      },
+      { // Bottom Axis (基因名)
+        type: 'category',
+        data: genes,
+        gridIndex: 1,
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { 
+          fontSize: 10,
+          interval: 0 // 强制显示所有基因名
+        }, 
+        splitLine: { show: false }
+      }
+    ],
+    // 两个 VisualMap (图例映射)
+    visualMap: [
+      { // 1. 针对分类条 (离散型)
+        type: 'piecewise', // 分段型图例
+        seriesIndex: 0,    // 绑定到第一个系列 (Cluster Bar)
+        categories: [...new Set(labels)].sort(), // 获取所有簇ID
+        orient: 'horizontal',
+        top: 0,
+        right: 10,
+        dimension: 2, // 使用数据中的第3列(index=2)作为映射依据
+        inRange: {
+          color: ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de'] // ECharts 经典配色
+        },
+        text: ['Cluster ID'], // 图例标题
+        itemWidth: 15,
+        itemHeight: 15
+      },
+      { // 2. 针对主热图 (连续型)
+        type: 'continuous',
+        seriesIndex: 1,   // 绑定到第二个系列 (Main Heatmap)
+        min: -2,          // Z-score 范围通常在 -2 到 2 之间好看
+        max: 2,
+        calculable: true, // 显示拖拽手柄
+        orient: 'horizontal',
+        top: 0,
+        left: 'center',
+        inRange: {
+          // 经典的蓝-白-红配色 (Blue=Low, White=Zero, Red=High)
+          color: ['#313695', '#4575b4', '#e0f3f8', '#fee090', '#f46d43', '#a50026']
+        },
+        text: ['High Exp', 'Low Exp'], // 图例两端的文字
+        dimension: 2
+      }
+    ],
+    series: [
+      { // 系列1: 顶部簇分类条
+        name: 'Cluster Annotation',
+        type: 'heatmap',
+        xAxisIndex: 0,
+        yAxisIndex: 0,
+        data: clusterBarData,
+        label: { show: false },
+        itemStyle: {
+          borderColor: '#fff', // 色块间微小白边
+          borderWidth: 0.5
+        }
+      },
+      { // 系列2: 主基因热图
+        name: 'Gene Expression',
+        type: 'heatmap',
+        xAxisIndex: 1,
+        yAxisIndex: 1,
+        data: rawData,
+        itemStyle: {
+          borderWidth: 0 // 基因像素点之间不要边框，看起来更连贯
+        },
+        // [关键] 添加簇分割线
+        markLine: {
+          symbol: ['none', 'none'], // 线两端不要箭头
+          label: { show: false },
+          silent: true, // 鼠标悬停不触发交互
+          lineStyle: {
+            color: '#000', // 黑色分割线
+            type: 'dashed',
+            width: 1,      // 线宽
+            opacity: 1 // 不透明
+          },
+          data: markLines // 刚才计算出的边界位置
+        }
+      }
+    ]
+  }
+
+  newChart.setOption(option)
+}
 </script>
 
 <template>
@@ -665,8 +989,54 @@ const renderSurvivalChart= (kmData)=>{
               <pre>{{ backendResponse.data }}</pre>
             </details>
 
+            <div class="step-section diff-section">
+              <h3>4. 差异表达分析 (Differential Expression)</h3>
+              <p class="section-desc">
+                基于当前聚类结果，自动进行 "One-vs-Rest" 差异分析。<br>
+                点击运行将生成 <b>火山图</b> (全量基因) 和 <b>热图</b> (Top10 显著基因)。
+              </p>
+              
+              <button @click="runDifferentialAnalysis" :disabled="isDiffLoading" class="run-btn">
+                <span v-if="isDiffLoading">正在分析...</span>
+                <span v-else>运行差异分析 (Run DEA)</span>
+              </button>
+
+              <div v-if="diffErrorMessage" class="error-box">
+                {{ diffErrorMessage }}
+              </div>
+
+              <div v-if="diffResult" class="diff-result-box" ref="diffAnalysisAreaRef">
+                
+                <div class="charts-row">
+                  <div class="chart-wrapper">
+                    <div class="chart-header">
+                      <h4>🌋 火山图 (Volcano Plot)</h4>
+                      <select v-model="selectedVolcanoCluster" @change="handleVolcanoClusterChange" class="cluster-select">
+                        <option v-for="cid in Object.keys(diffResult.volcano_data)" :key="cid" :value="Number(cid)">
+                          Cluster {{ cid }} vs Others
+                        </option>
+                      </select>
+                    </div>
+                    <div ref="volcanoChartRef" class="mini-chart"></div>
+                  </div>
+                </div>
+
+                <div class="chart-wrapper heatmap-wrapper">
+                  <div class="chart-header">
+                    <h4>🔥 差异基因热图 (Top Markers)🔥 Top Marker Genes Heatmap</h4>
+                    <p>Top 10 upregulated genes per cluster (P < 0.05). Ordered by Cluster ID.</p>
+                  </div>
+                  <div ref="heatmapChartRef" class="heatmap-container"></div>
+                  <div class="data-actions">
+                    <small>提示: 红色代表高表达，蓝色代表低表达。上方色条代表样本所属的簇。</small>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
             <div class="step-section survival-section" style="margin-top: 30px; border-top: 2px dashed #ddd;">
-              <h3>4. 临床生存分析 (Clinical Analysis)</h3>
+              <h3>5. 临床生存分析 (Clinical Analysis)</h3>
 
               <!-- 临床数据格式选择区域，包含数据格式下拉选择框和示例CSV文本展示 -->
               <div class="upload-config">
@@ -1153,5 +1523,111 @@ pre {
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* 差异分析相关样式 */
+.diff-section {
+  background-color: #f3e5f5; /* 淡紫色背景 */
+  border: 1px solid #e1bee7;
+  /* 原来写在内联 style 里的间距和分割线，统一移到这里 */
+  margin-top: 30px;
+  border-top: 2px dashed #ddd;
+}
+
+.charts-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.chart-wrapper {
+  flex: 1; /* 左右平分宽度 */
+  background: white;
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+}
+
+.chart-header h4 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 16px;
+}
+
+.chart-header p {
+  margin: 5px 0 0 0;
+  font-size: 12px;
+  color: #888;
+}
+
+.cluster-select {
+  padding: 2px 5px;
+  font-size: 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* 增加高度以容纳图例和双坐标轴 */
+.mini-chart {
+  width: 100%;
+  height: 450px; /* 从 350px 增加到 450px */
+}
+
+/* 热图容器：增加高度以容纳基因名 */
+.heatmap-container {
+  width: 100%;
+  height: 600px; /* 足够高，防止基因名重叠 */
+  /* border: 1px solid #eee; 这里不需要边框，ECharts内部有留白 */ 
+}
+
+.data-actions {
+  text-align: center;
+  margin-top: 10px;
+  color: #7f8c8d;
+}
+
+.diff-section {
+  background-color: #f3f0ff; /* 淡紫色背景，与生存分析区分 */
+  border: 1px solid #dcd6f7;
+  margin-top: 30px;
+}
+
+.diff-btn {
+  background-color: #8e44ad; /* 紫色按钮 */
+}
+.diff-btn:hover:not(:disabled) {
+  background-color: #732d91;
+}
+.diff-btn:disabled {
+  background-color: #c39bd3;
+}
+
+.section-desc {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.diff-result-box {
+  margin-top: 25px;
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08); /* 稍微强一点的阴影 */
+}
+
+/* 热图外层加一点上间距，与火山图区分 */
+.heatmap-wrapper {
+  margin-top: 20px;
 }
 </style>
