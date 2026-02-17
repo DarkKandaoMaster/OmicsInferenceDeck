@@ -468,15 +468,6 @@ class DifferentialAnalysisRequest(BaseModel): #定义数据校验模型
     omics_filename: str #用户上传的使用UUID改名后的组学数据文件名
     sample: list[str] #样本名称列表
     labels: list[int] #和样本名称列表一一对应的聚类标签列表
-    # 为了与 server_.py 保持一致，我们将输入参数简化，去除多余的阈值设置，
-    # 因为参考逻辑中是后端写死筛选 Top 10 的逻辑。
-    # # 设置一个P值阈值，虽然我们会在后端计算出所有特征的P值，但前端可能需要这个参数作为默认筛选标准
-    # # 虽然具体的筛选通常在前端交互完成，但后端可以使用此值来预先标记数据的状态（如UP/DOWN）
-    # p_value_threshold: float=0.05 # P值阈值，默认0.05
-    # # 设置一个Log2FoldChange阈值，通常取 0.58 (即1.5倍差异) 或 1.0 (2倍差异)【【【【【注意这里和AI的换了一下
-    # # log2fc=1 表示差异倍数(Fold Change)为2倍 (2^1=2)。
-    # # 大于此值视为显著上调，小于负的此值视为显著下调。
-    # log2fc_threshold: float=1.0 # Log2 FoldChange 阈值，默认1.0（即2倍差异）
 
 @app.post("/api/differential_analysis")
 async def run_differential_analysis(request: DifferentialAnalysisRequest):
