@@ -18,6 +18,7 @@ import torch
 from lifelines import KaplanMeierFitter
 from lifelines.statistics import multivariate_logrank_test
 from typing import List
+from scipy import stats
 
 # =============================================================================
 # 应用程序初始化
@@ -441,7 +442,7 @@ async def run_survival_analysis(request: SurvivalRequest):
             #此时使用kmf.survival_function_就能返回一个DataFrame，索引代表时间轴、列代表生存概率、列名代表上一句代码中我们传入的label。当然，整个DataFrame只有一列数据
             #接下来我们来计算删失点的坐标
             censored_times=subset[subset["OS"]==0]   ["OS.time"].tolist() #筛选出subset中删失（OS==0）的样本，取OS.time那一列，把那一列转换为列表并返回
-            censored_probs=kmf.survival_function_at_times(censored_times).values.tolist() #获取删失点对应的生存概率 #.survival_function_at_times()返回的是Series，需要用.values转换为numpy数组
+            censored_probs=kmf.survival_function_at_times(censored_times).values.tolist() #获取删失点对应的生存概率 #.survival_function_at_times()返回的是pandas.Series，需要用.values转换为numpy数组
             plot_data.append({
                 "name": f"Cluster {cluster_id}", #这条曲线的名称
                 "times": kmf.survival_function_.index.tolist(), #时间轴，作为生存曲线中的x轴坐标
@@ -459,6 +460,211 @@ async def run_survival_analysis(request: SurvivalRequest):
     except Exception as e:
         print(f"[生存分析错误] {str(e)}")
         raise HTTPException(status_code=400,detail=str(e))
+
+# =============================================================================
+# 接口：差异表达分析
+# =============================================================================
+class DifferentialAnalysisRequest(BaseModel): #定义数据校验模型
+    omics_filename: str #用户上传的使用UUID改名后的组学数据文件名
+    sample: list[str] #样本名称列表
+    labels: list[int] #和样本名称列表一一对应的聚类标签列表
+    # 为了与 server_.py 保持一致，我们将输入参数简化，去除多余的阈值设置，
+    # 因为参考逻辑中是后端写死筛选 Top 10 的逻辑。
+    # # 设置一个P值阈值，虽然我们会在后端计算出所有特征的P值，但前端可能需要这个参数作为默认筛选标准
+    # # 虽然具体的筛选通常在前端交互完成，但后端可以使用此值来预先标记数据的状态（如UP/DOWN）
+    # p_value_threshold: float=0.05 # P值阈值，默认0.05
+    # # 设置一个Log2FoldChange阈值，通常取 0.58 (即1.5倍差异) 或 1.0 (2倍差异)【【【【【注意这里和AI的换了一下
+    # # log2fc=1 表示差异倍数(Fold Change)为2倍 (2^1=2)。
+    # # 大于此值视为显著上调，小于负的此值视为显著下调。
+    # log2fc_threshold: float=1.0 # Log2 FoldChange 阈值，默认1.0（即2倍差异）
+
+@app.post("/api/differential_analysis")
+async def run_differential_analysis(request: DifferentialAnalysisRequest):
+    print(f"\n[后端日志] 收到差异分析请求，处理文件: {request.omics_filename}")
+
+    #接下来我们打算：
+    # 1.读取"/api/upload"已经处理好的组学数据文件，得到df
+    # 2.把前端传过来的样本名称列表、聚类标签列表整理成一个cluster_info
+    # 3.把df和cluster_info合并起来，得到merged_df
+    # 4.计算差异倍数（Log2 Fold Change）。这是火山图的x轴数据
+    # 5.计算T检验P值，然后把它处理成-Log10(P-value)。这是火山图的y轴数据
+    # 6.保存用来绘制火山图的数据。然后就已经可以绘制火山图了
+    # 7.筛选一下数据，每个簇挑10个基因名称（特征名称）。这是差异基因热图的y轴数据
+    # 8.在merged_df中把刚才挑出来的基因名称、以及"Cluster"列筛选出来，然后计算Z-score。这个Z-score决定了差异基因热图对应位置的颜色
+    # 9.整理一下我们刚才得到的数据，然后提取样本名称、样本对应的簇。这个样本名称就是差异基因热图的x轴数据。也就是说如果你输入了1031个样本，差异基因热图的x轴就会有1031列
+    # 10.然后我们再整理一下刚才得到的数据，得到差异基因热图中所有点对应的坐标和Z-score。然后就已经可以绘制差异基因热图了
+    # 11.返回结果
+
+    try:
+        # 1.读取"/api/upload"已经处理好的组学数据文件
+        file_path=os.path.join("upload",request.omics_filename) #"/api/upload"已经处理好的组学数据文件的所在路径
+        if not os.path.exists(file_path):
+            raise FileNotFoundError("找不到组学数据文件")
+        df=pd.read_csv(file_path,header=0,index_col=0,sep=',') #因为"/api/upload"已经处理好文件了，所以这里可以直接这么读取输入数据
+
+        # 2.把前端传过来的样本名称列表、聚类标签列表整理成一个cluster_info
+        #创建一个DataFrame对象，同时传入一个字典。于是字典的key就会变成列名，value就会变成列的数据
+        cluster_info=pd.DataFrame({
+            "SampleID": request.sample, #样本名称列表
+            "Cluster": request.labels #聚类标签列表
+        })
+        cluster_info.set_index("SampleID",inplace=True) #.set_index()可以将cluster_info的"SampleID"列设置为索引列；inplace=True表示直接在原对象上修改
+
+        # 3.把df和cluster_info合并起来，得到merged_df
+        merged_df=df.join(cluster_info,how="inner") #how='inner'表示取索引的交集，即“如果病人名称有对不上的，那么取病人名称的交集”
+        if merged_df.empty:
+            raise ValueError("样本名称无法匹配，请检查数据一致性。")
+
+        genes=merged_df.columns[:-1] #获取所有特征名称，也就是获取除了最后一列之外的所有列名。因为最后一列是我们刚刚加进去的"Cluster"
+        unique_clusters=sorted(merged_df["Cluster"].unique()) #获取簇编号。先获取merged_df中"Cluster"列的值，然后对它去除重复值，再对它排个序。结果类似于[0,1,2]
+        volcano_data={} #存放每个簇的用来绘制火山图的数据
+        top_genes_set=set() #存放后面筛选出来的基因名称（特征名称）。这是差异基因热图的y轴数据
+
+        #遍历每一个簇，进行“一对多”比较，找出每个簇特有的特征【【【【【以后或许可以在这里加一个“一对一”比较
+        for target_cluster in unique_clusters:
+            group_a_df=merged_df[merged_df["Cluster"]==target_cluster][genes] #首先筛选出属于当前簇的样本，然后只保留所有特征列
+            group_b_df=merged_df[merged_df["Cluster"]!=target_cluster][genes] #首先筛选出不属于当前簇的样本，然后只保留所有特征列
+            if len(group_a_df)<2 or len(group_b_df)<2: #如果任意一组样本数量少于2，就没法做T检验
+                print(f"[警告] Cluster {target_cluster} 样本数不足，跳过该簇")
+                volcano_data[int(target_cluster)]=[] #给这个簇一个空列表，防止前端报错
+                continue
+            # 4.计算差异倍数（Log2 Fold Change）。这是火山图的x轴数据
+            mean_a=group_a_df.mean(axis=0) #对a组每一列求平均值
+            mean_b=group_b_df.mean(axis=0) #对b组每一列求平均值
+            log_fc=mean_a-mean_b #pandas会自动按索引对齐相减 #这里我们先假设数据已经log2处理过，于是log2(A)-log2(B)=log2(A/B)，这样就能计算出差异倍数。下载下来的数据集一般都是已经Log2处理过的 #如果是原始count数据，这里应该用np.log2(mean_a/mean_b)【【【【【看看学长的代码有没有处理Log2
+
+            # 5.计算T检验P值，然后把它处理成-Log10(P-value)。这是火山图的y轴数据
+            t_stat,t_pvalue=stats.ttest_ind(group_a_df,group_b_df,axis=0,equal_var=False,nan_policy='omit') #比较a组和b组的每一列数据，得到T检验P值。equal_var=False表示不假设两组方差相等；nan_policy='omit'表示如果数据中有缺失值，那么自动忽略，防止报错
+            #我们先把刚才计算出来的东西放进pd.DataFrame里，方便后续处理
+            cluster_res_df=pd.DataFrame({ #还是和之前一样，字典的key就会变成列名，value就会变成列的数据
+                "gene": genes,
+                "logFC": log_fc.values, #.values可以把pandas.Series转换成numpy数组
+                "t_pvalue": t_pvalue #把原始T检验P值也传给前端，于是前端会把t_pvalue<0.05的点涂成红色和蓝色，其他点涂成灰色
+            })
+            cluster_res_df["t_pvalue"]=cluster_res_df["t_pvalue"].fillna(1.0) #计算出的T检验P值可能含有NaN，所以我们来处理一下它，把NaN填为1.0（最大值，代表完全不显著）
+            cluster_res_df["negLog10P"]=-np.log10(cluster_res_df["t_pvalue"]+1e-300) #然后我们把它-log10一下，就能得到-Log10(P-value)。加上1e-300是为了防止P值为0时算出负无穷，于是无法绘图
+
+            # 6.保存用来绘制火山图的数据。此时就已经可以绘制火山图了
+            volcano_data[int(target_cluster)]=cluster_res_df.to_dict(orient="records") #.to_dict(orient="records")可以把pd.DataFrame转换为字典列表，也就是[{"gene":"A","logFC":...},{"gene":"B"...}]
+
+            # 7.筛选一下数据，每个簇挑10个基因名称（特征名称）。这是差异基因热图的y轴数据
+            top_genes_set.update(   cluster_res_df[(cluster_res_df["t_pvalue"]<0.05)&(cluster_res_df["logFC"]>0)]   .sort_values(by="logFC",ascending=False).head(10)["gene"].tolist()   ) #首先筛选出cluster_res_df中t_pvalue<0.05且logFC>0的数据，然后把它们按"LogFC"列降序排序，取前10行，然后只保留"gene"列，然后转换成列表，最后.update()会自动把列表中的元素逐个加入集合，并自动去重
+
+        # 8.在merged_df中把刚才挑出来的基因名称、以及"Cluster"列筛选出来，然后计算Z-score。这个Z-score决定了差异基因热图对应位置的颜色
+        top_genes_list=list(top_genes_set) #首先我们把top_genes_set集合转换成列表
+        if not top_genes_list: #如果列表为空，那么直接返回空热图数据
+            print("[警告] 未检测到显著差异基因，返回空热图数据")
+            return{
+                "status": "success",
+                "volcano_data": volcano_data,
+                "heatmap_data": {"samples":[],"sample_labels":[],"genes":[],"values":[]}
+            }
+        heatmap_df=merged_df[top_genes_list+["Cluster"]].copy() #首先把两个列表top_genes_list、["Cluster"]拼接一下，然后在merged_df中把这些列筛选出来，最后.copy()一下
+        #为什么这里要用.copy()？因为Pandas有一个很容易让人困惑的机制：视图（View）vs副本（Copy）。不知道的话自己去搜，反正你只要知道：
+        # 修改数据时我们最好不要在原始数据上修改，而是创建一个副本，在副本上修改。基于这个原则：
+        #  不修改具体单元格的值（比如筛选、排序、改列名、计算平均值）：可以不用.copy()。因为它们默认情况下会直接返回一个新DataFrame对象，不会修改原始数据
+        #  要修改具体单元格的值：必须用.copy()。不然会修改原始数据，Pandas也会弹出著名的SettingWithCopyWarning警告
+        heatmap_df[top_genes_list]=( heatmap_df[top_genes_list] - heatmap_df[top_genes_list].mean() ) / heatmap_df[top_genes_list].std() #首先在heatmap_df中把top_genes_list这些列筛选出来（因为不能让"Cluster"列也参与运算），然后计算Z-score：(值-平均值)/标准差，最后把它赋值回去。这是能减得起来的，因为Pandas有广播机制 #此时这些值都会被压缩到大致-2 ~ 2的区间内
+
+        # 9.整理一下我们刚才得到的数据，然后提取样本名称、样本对应的簇。这个样本名称就是差异基因热图的x轴数据
+        heatmap_df=heatmap_df.sort_values(by="Cluster") #把heatmap_df按"Cluster"列升序排序，这样就能把同一个簇的数据排在一起
+        sorted_samples=heatmap_df.index.tolist() #提取样本名称（也就是行索引）
+        sorted_labels=heatmap_df["Cluster"].tolist() #提取样本对应的簇
+
+        # 10.然后我们再整理一下刚才得到的数据，得到差异基因热图中所有点对应的坐标和Z-score。然后就已经可以绘制差异基因热图了
+        heatmap_values_df=heatmap_df.drop(columns=["Cluster"]) #删除"Cluster"列
+        matrix_values=heatmap_values_df.fillna(0).values #把heatmap_values_df中的NaN填为0，然后把heatmap_values_df转换成numpy数组
+        flat_values=matrix_values.ravel() #按行展平matrix_values，也就是把1,2,3\n4,5,6展平为1,2,3,4,5,6
+        #现在我们就已经按行展平matrix_values了。但如果直接把flat_values返回给前端，前端是不知道flat_values中的某元素在matrix_values中是第几行第几列的。所以接下来我们把flat_values中的某元素在matrix_values中是第几行第几列也返回给前端
+        #假设matrix_values有1031个样本、30个基因
+        #请想象一个1031行、30列的矩阵，把它按行展平后，第一行第一列应为(0,0)，第一行最后一列应为(0,29)，第二行第一列应为(1,0)，第二行最后一列应为(1,29)，以此类推
+        #也就是说我们要生成并返回的是[[0,0,某元素],[0,1,某元素],...,[0,29,某元素],[1,0,某元素],[1,1,某元素],...[1030,0,某元素],[1030,1,某元素],...,[1030,29,某元素]]。事实上，如果我们真的把这东西返回给前端，前端直接把它传给echarts就能绘制出热图了，而不需要对它做额外的处理
+        #也就是说首先我们要生成[0,0,0,...,1,1,1,...,1030,1030,1030,...]和[0,1,2,...,29,0,1,2,...,29,...]
+        n_rows,n_cols=matrix_values.shape #获取matrix_values的行数和列数。于是此时n_rows为1031，n_cols为30
+        xs=np.repeat(np.arange(n_rows),n_cols) #np.arange(1031)会生成[0,1,2,...,1030]这个numpy数组，np.repeat会把每个元素重复30次，最终变成[0,0,0,...,1,1,1,...,1030,1030,1030,...]，长度是1031*30==295320 #给它命名为xs是因为在差异基因热图中该数组对应的是x轴
+        ys=np.tile(np.arange(n_cols),n_rows) #np.arange(30)会生成[0,1,2,...,29]这个numpy数组，np.tile会把整个数组平铺1031次，最终变成[0,1,2,...,29,0,1,2,...,29,...]，长度是30*1031==295320
+        heatmap_matrix=np.column_stack([xs,ys,flat_values]).tolist() #首先把xs、ys、flat_values放进列表里，同时传入np.column_stack，于是np.column_stack可以将这三个一维数组竖着拼成一个295320*3的矩阵，最后把它转换成列表，就能成功得到我们想要的返回给前端的东西了
+
+        return{
+            "status": "success",
+            "volcano_data": volcano_data, #每个簇的用来绘制火山图的数据
+            "heatmap_data": {
+                "samples": sorted_samples, #提取出来的样本名称，也就是差异基因热图的x轴数据
+                "sample_labels": sorted_labels, #提取出来的样本对应的簇，用于画差异基因热图的分组颜色条
+                "genes": heatmap_values_df.columns.tolist(), #挑出来的基因名称，也就是差异基因热图的y轴数据
+                "values": heatmap_matrix #差异基因热图中所有点对应的坐标和Z-score
+            }
+        }
+    except Exception as e:
+        print(f"[差异分析错误] {str(e)}")
+        raise HTTPException(status_code=400,detail=str(e))
+
+# # =============================================================================
+# # 接口：富集分析 (GO & KEGG)
+# # =============================================================================
+# # [新增] 定义富集分析的请求体
+# class EnrichmentRequest(BaseModel):
+#     gene_list: list[str] # 前端传来的差异特征列表（通常是 log2fc > 1 且 P < 0.05 的特征）
+#     database: str = "GO_Biological_Process_2021" # 选择数据库：GO 或 KEGG
+
+# @app.post("/api/enrichment_analysis")
+# async def run_enrichment_analysis(request: EnrichmentRequest):
+#     print(f"\n[后端日志] 收到富集分析请求，特征数量: {len(request.gene_list)}")
+#     print(f"[后端日志] 目标数据库: {request.database}")
+
+#     if len(request.gene_list) < 5:
+#         # 特征太少算不出富集，直接返回空
+#         return {"status": "warning", "message": "输入特征数量太少，无法进行富集分析", "data": []}
+
+#     try:
+#         # 使用 gseapy 进行富集分析
+#         # gseapy.enrichr 是在线分析，需要联网访问 Enrichr 数据库（速度快，数据库最新）
+#         # 如果是内网环境，需要下载 gmt 文件并改用 gp.enrich()
+#         enr = gp.enrichr(
+#             gene_list=request.gene_list, # 差异特征列表
+#             gene_sets=request.database,  # 数据库名称，例如 'KEGG_2021_Human' 或 'GO_Biological_Process_2021'
+#             organism='human', # 物种，默认人类
+#             outdir=None, # 不输出文件到磁盘
+#         )
+
+#         # 提取结果
+#         results_df = enr.results
+        
+#         # 筛选显著富集的通路 (例如 P-value < 0.05)
+#         # 并在结果中按 P-value 从小到大排序（最显著的排前面）
+#         if not results_df.empty:
+#             filtered_results = results_df[results_df["P-value"] < 0.05].sort_values("P-value")
+            
+#             # 取前 20 条最显著的通路用于画图
+#             top_results = filtered_results.head(20)
+            
+#             # 整理返回给前端的数据格式
+#             plot_data = []
+#             for index, row in top_results.iterrows():
+#                 plot_data.append({
+#                     "Term": row["Term"], # 通路名称
+#                     "t_pvalue": row["P-value"], # P值
+#                     "AdjustedP": row["Adjusted P-value"], # 校正后的P值
+#                     "Overlap": row["Overlap"], # 重叠特征比例 (例如 "10/500")
+#                     "genes": row["genes"] # 命中的具体特征 (例如 "TP53;BRCA1")
+#                 })
+#         else:
+#             plot_data = []
+
+#         return {
+#             "status": "success",
+#             "database": request.database,
+#             "data": plot_data # 前端拿这个数据就可以直接画条形图或气泡图了
+#         }
+
+#     except Exception as e:
+#         print(f"[富集分析错误] {str(e)}")
+#         # 富集分析失败通常是因为网络问题（访问不了 Enrichr）或者特征名不标准
+#         return {
+#             "status": "error", 
+#             "message": f"富集分析失败: {str(e)}. 请检查网络连接或特征名称格式。",
+#             "data": []
+#         }
 
 # =============================================================================
 # 程序入口
