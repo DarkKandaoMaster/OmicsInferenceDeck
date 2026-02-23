@@ -1,0 +1,6 @@
+https://maayanlab.cloud/Enrichr/#libraries
+
+Ctrl+F搜索GO_Biological_Process_2025，点击右边的下载按钮，得到GO_Biological_Process_2025.txt
+继续搜索GO_Cellular_Component_2025，点击右边的下载按钮，得到GO_Cellular_Component_2025.txt
+继续搜索GO_Molecular_Function_2025，点击右边的下载按钮，得到GO_Molecular_Function_2025.txt
+继续搜索KEGG_2026，点击右边的下载按钮，得到KEGG_2026.txt

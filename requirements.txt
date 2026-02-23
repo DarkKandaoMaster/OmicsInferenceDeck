@@ -1,9 +1,11 @@
 后端：
 openpyxl
 umap-learn
-lifelines（需要Python3.11以上版本）
+lifelines （需要Python3.11以上版本）
+gseapy
 
 前端：（npm install echarts）
 echarts
+npm install echarts-gl --legacy-peer-deps （如果以后echarts-gl兼容echarts6.0了，那么去掉上面的“--legacy-peer-deps”）
 
 之后记得补充一下其他东西
