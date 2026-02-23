@@ -2,6 +2,7 @@
 import { ref,computed,nextTick } from 'vue' //引入Vue框架的核心函数 //ref：用于定义基本类型的响应式数据（数据变化时视图自动更新） //computed：用于定义计算属性（依赖其他数据变化而自动重新计算并缓存结果） //nextTick：用于确保DOM元素渲染完成后再执行绘图代码
 import axios from 'axios' //引入 axios 库，用于在浏览器端发送 HTTP 请求，与后端服务器进行数据交互
 import * as echarts from 'echarts' //引入整个echarts库，命名为echarts //为什么不这么写“import echarts from 'echarts'”？这是因为不同的库有不同的导出策略
+import 'echarts-gl' // [新增] 引入 echarts-gl 用于渲染 3D 曲面图。
 
 // ===================== 状态定义区 =====================
 
@@ -50,6 +51,34 @@ const selectedVolcanoCluster = ref(0) // 用户当前选择查看哪个簇的火
 const volcanoChartRef = ref(null) // 火山图 DOM 引用
 const heatmapChartRef = ref(null) // 热图 DOM 引用  绑定热图DOM
 const diffErrorMessage = ref('') // 差异分析错误信息
+// *********************************************
+
+// *********************************************
+// [修改] 富集分析相关状态
+const enrichmentResult = ref(null) // 存储富集分析结果，现在它是一个包含所有簇的字典：{"0": [...], "1": [...]}
+const isEnrichmentLoading = ref(false) // 富集分析加载状态
+const enrichmentChartRef = ref(null) // 富集分析图表 DOM 引用
+// [新增] 绑定富集分析气泡图的DOM元素，用于渲染气泡图
+const enrichmentBubbleChartRef = ref(null)
+const enrichmentType = ref('') // 当前展示的是 GO 还是 KEGG
+const enrichmentAreaRef = ref(null) // 滚动定位用
+const selectedEnrichmentCluster = ref(0) // 新增：单独用于富集分析的簇选择绑定变量
+// [新增] 气泡图显示模式状态
+const bubbleChartMode = ref('combined') // 定义响应式变量，默认'combined'，表示复刻 Combined_KEGG_enrichment.pdf；'by_gene' 表示复刻单簇气泡图效果并用图例控制
+// *********************************************
+
+// *********************************************
+// [新增] 测试模式（参数敏感性分析）相关状态
+const isTestMode = ref(false) // 布尔变量，用于控制是否开启测试模式，通过复选框双向绑定
+const testNClusters = ref('2,3,4,5') // 存储用户输入的聚类簇数测试范围（逗号分隔的字符串）
+const testMaxIter = ref('100,200,300') // 存储用户输入的最大迭代次数测试范围（逗号分隔的字符串）
+
+const psResult = ref(null) // 存储后端返回的敏感性分析（Parameter Search）结果数据
+const isPsLoading = ref(false) // 敏感性分析的加载状态，防止用户重复点击
+
+const psParam1 = ref('n_clusters') // 敏感性分析图中选中的 X 轴参数，默认 K 值
+const psParam2 = ref('max_iter') // 敏感性分析图中选中的 Y 轴参数，默认最大迭代。如果选空或选相同则绘制 2D 图
+const psChartRef = ref(null) // 绑定敏感性分析图表容器的 DOM 引用
 // *********************************************
 
 // ===================== 数据格式处理区【【【【【这几个区改一下名 =====================
@@ -858,6 +887,598 @@ const renderHeatmapPlot= (heatmapData)=>{
 
   newChart.setOption(option)
 }
+
+// *********************************************
+// [修改] 运行富集分析函数
+// type 参数决定是跑 'GO' 还是 'KEGG'
+const runEnrichmentAnalysis = async (type) => {
+  // 1. 前置检查：必须先有差异分析的结果，因为我们要用到火山图里的数据
+  if (!diffResult.value || !diffResult.value.volcano_data) {
+    alert("请先运行步骤 4 的差异分析！我们需要差异基因列表才能做富集分析。")
+    return
+  }
+
+  isEnrichmentLoading.value = true // 开启加载动画
+  enrichmentType.value = type // 记录当前点击的是 GO 还是 KEGG
+  enrichmentResult.value = null // 清空旧的图表数据，防止切换时闪烁
+
+  try {
+    const clusterGenesDict = {} // 新增：用于存放所有簇的显著上调基因字典
+
+    // 2. 遍历火山图的所有簇数据，提取每个簇特有的显著上调基因
+    for (const [clusterId, clusterData] of Object.entries(diffResult.value.volcano_data)) {
+      // 筛选逻辑：P < 0.05 且 LogFC > 0.5 (代表在该簇中显著高表达的基因)
+      const geneList = clusterData
+        .filter(item => item.t_pvalue < 0.05 && item.logFC > 0.5)
+        .map(item => item.gene) // 只提取基因名称字符串
+      
+      clusterGenesDict[clusterId] = geneList // 存入对应簇的键值对中
+    }
+
+    // 3. 发送请求给后端，把所有簇的基因字典一次性发过去
+    const res = await axios.post('http://127.0.0.1:8000/api/enrichment_analysis', {
+      cluster_genes: clusterGenesDict,
+      database: type // 传入 'GO' 或 'KEGG'，后端去判断对应哪个文件
+    })
+
+    // 4. 处理返回结果
+    if (res.data.status === 'success') {
+      enrichmentResult.value = res.data.data // 保存包含所有簇结果的字典
+      
+      // 默认选中第一个存在的簇（将键名转为数字以便在下拉框中正确匹配）
+      const clusters = Object.keys(res.data.data).map(Number)
+      if(clusters.length > 0) {
+        selectedEnrichmentCluster.value = clusters[0]
+      }
+
+      await nextTick() // 等待 Vue 完成 DOM 更新
+      renderEnrichmentChart() // 绘制当前选中簇的图表
+      // *********************************************
+      // [修改] 调用绘制全簇气泡图的函数。去除了原有的传参，因为该函数内部会直接遍历读取所有簇的数据 enrichmentResult.value
+      renderEnrichmentBubbleChart() 
+      // *********************************************
+      
+      // 自动平滑滚动到显示区域
+      if (enrichmentAreaRef.value) {
+        enrichmentAreaRef.value.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    } else {
+      alert(res.data.message)
+    }
+
+  } catch (error) {
+    console.error("富集分析失败:", error)
+    alert("富集分析失败: " + (error.response?.data?.detail || error.message))
+  } finally {
+    isEnrichmentLoading.value = false // 结束加载动画
+  }
+}
+
+// [新增] 监听富集分析下拉框变化，重新绘制富集图
+const handleEnrichmentClusterChange = () => {
+  renderEnrichmentChart() // 当用户在下拉框选了其他簇时，直接用已缓存的数据重新画图
+}
+
+// [修改] 绘制富集分析条形图
+const renderEnrichmentChart = () => {
+  // 防御性检查：确保 DOM 存在且有数据
+  if (!enrichmentChartRef.value || !enrichmentResult.value) return
+  
+  const clusterId = selectedEnrichmentCluster.value // 获取用户当前在下拉框里选择的簇
+  const data = enrichmentResult.value[clusterId] // 从字典中提取对应簇的画图数据
+  
+  // 如果该簇没有数据或者空列表，显示提示文字
+  if (!data || data.length === 0) {
+    const myChart = echarts.init(enrichmentChartRef.value)
+    myChart.clear() // 清空画布
+    myChart.setOption({
+      title: { 
+        text: `Cluster ${clusterId} 未找到显著富集的通路 (基因数量可能不足)`, 
+        left: 'center', top: 'center', textStyle: { color: '#888', fontWeight: 'normal' }
+      }
+    })
+    return
+  }
+
+  const myChart = echarts.init(enrichmentChartRef.value)
+  myChart.dispose() // 销毁旧实例，防止图表重叠
+  const newChart = echarts.init(enrichmentChartRef.value)
+
+  // *********************************************
+  // [修改] 准备数据：为了符合PDF从上到下 BP -> CC -> MF 的顺序
+  let plotData = []
+  if (enrichmentType.value === 'GO') {
+    // ECharts 是从下往上画的，所以数组的末尾会在图表的顶部。
+    // 我们希望顶上是 BP，中间 CC，底下 MF。所以定义一个排序权重，MF在最前（画在最底下），CC居中，BP最后（画在最顶上）
+    const order = { 'MF': 1, 'CC': 2, 'BP': 3 }
+    // 复制数组并排序
+    plotData = [...data].sort((a, b) => order[a.Category] - order[b.Category])
+  } else {
+    // KEGG的话按显著性排序，最显著的放顶部即可（数据已经在后端排过序，这里直接反转）
+    plotData = [...data].reverse() 
+  }
+  // *********************************************
+  
+  // 处理通路名称，太长的话截断并加上省略号，防止挤压图表区域
+  const terms = plotData.map(item => {
+    const name = item.Term.split(' (GO')[0] // 去掉尾巴上的GO编号
+    return name.length > 40 ? name.substring(0, 40) + '...' : name
+  })
+
+  // *********************************************
+  // [修改] 根据当前数据库类型，配置统一的系列(series)和图例
+  let seriesConfig = []
+  let xAxisName = 'Gene Number' // GO 和 KEGG 统一使用基因数量作为 X 轴
+
+  // 动态确定当前需要展示的分类和颜色
+  let categories = []
+  let colorMap = {}
+
+  if (enrichmentType.value === 'GO') {
+    categories = ['BP', 'CC', 'MF']
+    colorMap = { 'BP': '#6fc3a1', 'CC': '#8fa5d2', 'MF': '#fb9570' } // GO 的专属颜色
+  } else {
+    categories = ['KEGG']
+    colorMap = { 'KEGG': '#3498db' } // KEGG 的专属颜色（使用蓝色系呼应按钮颜色）
+  }
+
+  // 统一开启图例
+  let legendConfig = {
+    show: true,
+    data: categories, // 动态使用 ['BP', 'CC', 'MF'] 或 ['KEGG']
+    orient: 'vertical', // 垂直排列
+    right: '2%', // 靠右放
+    top: 'center' // 垂直居中
+  }
+
+  // 统一生成 series (利用循环：GO 循环3次，KEGG 循环1次)
+  categories.forEach((cat) => {
+    seriesConfig.push({
+      name: cat,
+      type: 'bar',
+      barGap: '-100%', // 核心代码：让同一行的柱子互相重叠（主要针对GO，KEGG写了也不受影响）
+      // 如果属于当前分类，则填入基因数量；否则填入空值('-')，ECharts 遇到空值会跳过渲染
+      data: plotData.map(item => item.Category === cat ? item.Gene_Count : '-'),
+      itemStyle: { 
+        color: colorMap[cat],
+        barBorderRadius: [0, 5, 5, 0] // 柱子右侧统一加一点圆角更好看
+      },
+      label: {
+        show: true,
+        position: 'right',
+        formatter: (params) => params.value !== '-' ? params.value : '' // 只在有数值的地方显示具体的基因数
+      }
+    })
+  })
+  // *********************************************
+
+  const option = {
+    title: {
+      text: `${enrichmentType.value} Enrichment (Cluster ${clusterId})`, // 标题动态显示当前正在看的簇
+      left: 'center',
+      textStyle: { fontSize: 16 }
+    },
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params) => {
+        // *********************************************
+        // [修改] 提取悬停时的数据，无论怎么拆分系列，下标对齐原始 plotData
+        const index = params[0].dataIndex
+        const item = plotData[index]
+        return `
+          <b>${item.Term}</b><br/>
+          P-value: ${item.P_value.toExponential(2)}<br/>
+        `
+        // *********************************************
+      }
+    },
+    // *********************************************
+    // [修改] 引入动态配好的图例
+    legend: legendConfig,
+    // *********************************************
+    grid: {
+      left: '35%', // 调整左侧留出空间给通路名称
+      right: '12%', // 右侧留点空间给图例和基因数量文字
+      bottom: '10%',
+      top: '15%'
+    },
+    xAxis: {
+      type: 'value',
+      name: xAxisName, // 使用动态计算的 X 轴名称
+      nameLocation: 'middle',
+      nameGap: 25
+    },
+    yAxis: {
+      type: 'category',
+      data: terms,
+      axisLabel: {
+        interval: 0, // 强制显示所有的标签文字
+        fontSize: 11,
+        width: 250, // 限制最大宽度
+        overflow: 'truncate' // 超过宽度就截断
+      }
+    },
+    // *********************************************
+    // [修改] 使用动态生成的 series 配置
+    series: seriesConfig
+    // *********************************************
+  }
+
+  newChart.setOption(option)
+}
+
+// *********************************************
+// [修改] 绘制全簇通路富集气泡图（支持两种视图模式切换）
+const renderEnrichmentBubbleChart = () => {
+  if (!enrichmentBubbleChartRef.value || !enrichmentResult.value) return // 防御性检查
+
+  const myChart = echarts.init(enrichmentBubbleChartRef.value)
+  myChart.dispose() // 销毁旧实例，防止多次点击导致图表缓存或重叠干扰
+  const newChart = echarts.init(enrichmentBubbleChartRef.value) 
+
+  // 1. 获取所有的 Cluster ID 并排序
+  const clusters = Object.keys(enrichmentResult.value).map(Number).sort() 
+
+  // 2. 提取所有的通路名称 (Term)，用于生成气泡图的 Y 轴
+  const allTermsSet = new Set() 
+  clusters.forEach(cid => { 
+    enrichmentResult.value[cid].forEach(item => { 
+      let name = item.Term.split(' (GO')[0] 
+      if (name.length > 50) name = name.substring(0, 50) + '...' 
+      allTermsSet.add(name) 
+    })
+  })
+  // 逆序排列，这样 ECharts 在从下往上画 Y 轴时，最先出现的显著通路会展示在图表最上方
+  const allTerms = Array.from(allTermsSet).reverse()
+
+  // *********************************************
+  // [修改开始] 根据用户选中的模式，分别构建 ECharts 需要的 Series、X轴、Y轴、图例和网格配置
+  let scatterSeries = []
+  let xAxisOption = {}
+  let yAxisOption = {}
+  let legendOption = null // 专门留给模式2（按基因数）的图例
+  let minP = 1, maxP = 0 
+
+  if (bubbleChartMode.value === 'combined') {
+    // === 模式 1: 按簇平铺 (复刻 Combined_KEGG_enrichment.pdf) ===
+    
+    const scatterData = []
+    // 为了让点在网格线上，且外围有边距，给数组头尾增加一个空字符串
+    const displayClusters = ['', ...clusters.map(String), '']
+    const displayTerms = ['', ...allTerms, '']
+
+    clusters.forEach((cid, xIdx) => { 
+      enrichmentResult.value[cid].forEach(item => {
+        let name = item.Term.split(' (GO')[0] 
+        if (name.length > 50) name = name.substring(0, 50) + '...'
+        const yIdx = allTerms.indexOf(name) 
+        const pVal = item.Adjusted_P || item.P_value
+
+        if (pVal < minP) minP = pVal
+        if (pVal > maxP) maxP = pVal
+
+        // ECharts Scatter 数据格式: [X轴, Y轴, pVal, geneCount, name, clusterId]
+        scatterData.push([
+          xIdx + 1,       // X轴坐标 (避开头部占位符)
+          yIdx + 1,       // Y轴坐标 (避开头部占位符)
+          pVal,           
+          item.Gene_Count,
+          name,           
+          cid             
+        ])
+      })
+    })
+
+    // 模式1只需单个 Series 包含所有点
+    scatterSeries = [{
+      name: 'Enrichment Bubble', 
+      type: 'scatter', 
+      data: scatterData, 
+      itemStyle: { opacity: 0.9, borderColor: 'transparent' }
+    }]
+
+    // 模式1的坐标轴是类别型 (Category)，对应簇ID和通路名
+    xAxisOption = { 
+      type: 'category',
+      data: displayClusters,
+      boundaryGap: false, // 关闭留白，让点压在网格线上
+      name: 'Cluster', 
+      nameLocation: 'middle', 
+      nameGap: 30, 
+      nameTextStyle: { fontWeight: 'bold', fontSize: 14, color: '#000' }, 
+      axisLine: { show: false }, 
+      axisTick: { show: true, alignWithLabel: true, inside: false, lineStyle: { color: '#000' } }, 
+      axisLabel: { color: '#000', fontSize: 12, interval: 0, formatter: (val) => val === '' ? '' : val },
+      splitLine: { show: true, lineStyle: { type: 'solid', color: '#eaeaea' } }
+    }
+    
+    yAxisOption = { 
+      type: 'category',
+      data: displayTerms,
+      boundaryGap: false,
+      name: enrichmentType.value === 'GO' ? 'GO Pathways' : 'KEGG Pathways',
+      nameLocation: 'middle',
+      nameGap: 220, 
+      nameTextStyle: { fontWeight: 'bold', fontSize: 14, color: '#000' },
+      axisLine: { show: false },
+      axisTick: { show: true, alignWithLabel: true, inside: false, lineStyle: { color: '#000' } },
+      axisLabel: { color: '#000', fontSize: 12, interval: 0, formatter: (val) => val === '' ? '' : val }, 
+      splitLine: { show: true, lineStyle: { type: 'solid', color: '#eaeaea' } }
+    }
+
+  } else {
+    // === 模式 2: 按基因数分布 (复刻单簇 PDF 的效果，并通过图例切换) ===
+    
+    const legendData = []
+
+    // 遍历每一个簇，将其作为一个独立的 Series 处理，这样 ECharts 的图例才能做到单独点击切换隐藏
+    clusters.forEach(cid => {
+      const clusterData = []
+      
+      enrichmentResult.value[cid].forEach(item => {
+        let name = item.Term.split(' (GO')[0]
+        if (name.length > 50) name = name.substring(0, 50) + '...'
+        const pVal = item.Adjusted_P || item.P_value
+
+        if (pVal < minP) minP = pVal
+        if (pVal > maxP) maxP = pVal
+
+        // 依然保持 [X轴, Y轴, pVal, geneCount, name, cid] 的结构，但 X 轴变成了基因数，Y 轴直接放字符串
+        clusterData.push([
+          item.Gene_Count, // X 轴变为具体的数值 (基因数)
+          name,            // Y 轴可以直接接受 Category 类型的字符串名称
+          pVal,
+          item.Gene_Count,
+          name,
+          cid
+        ])
+      })
+
+      // 将该簇作为独立的图表系列压入数组
+      scatterSeries.push({
+        name: `Cluster ${cid}`, // 这将显示在图例上
+        type: 'scatter',
+        data: clusterData,
+        itemStyle: { opacity: 0.9, borderColor: 'transparent' }
+      })
+      // 将图例名称加入图例数组
+      legendData.push(`Cluster ${cid}`)
+    })
+
+    // 激活原生图例组件，允许用户点击隐藏/显示某个簇
+    legendOption = {
+      data: legendData,
+      orient: 'vertical',
+      right: '15%',
+      top: '5%',
+      textStyle: { fontWeight: 'bold', color: '#000' }
+    }
+
+    // 模式2的 X 轴是数值型 (Value)
+    xAxisOption = {
+      type: 'value',
+      name: 'Gene Number',
+      nameLocation: 'middle',
+      nameGap: 30,
+      nameTextStyle: { fontWeight: 'bold', fontSize: 14, color: '#000' },
+      axisLine: { show: true, lineStyle: { color: '#000' } },
+      axisTick: { show: true, lineStyle: { color: '#000' } },
+      axisLabel: { color: '#000', fontSize: 12 },
+      splitLine: { show: true, lineStyle: { type: 'dashed', color: '#eaeaea' } } // 模拟单簇PDF通常用的虚线
+    }
+
+    // 模式2的 Y 轴是普通的类别型，不需要补首尾空字符
+    yAxisOption = {
+      type: 'category',
+      data: allTerms,
+      name: enrichmentType.value === 'GO' ? 'GO Pathways' : 'KEGG Pathways',
+      nameLocation: 'middle',
+      nameGap: 220,
+      nameTextStyle: { fontWeight: 'bold', fontSize: 14, color: '#000' },
+      axisLine: { show: false },
+      axisTick: { show: true, alignWithLabel: true, inside: false, lineStyle: { color: '#000' } },
+      axisLabel: { color: '#000', fontSize: 12, interval: 0 },
+      splitLine: { show: true, lineStyle: { type: 'solid', color: '#eaeaea' } }
+    }
+  }
+  // [修改结束]
+  // *********************************************
+
+  if (maxP < 0.05) maxP = 0.05
+
+  const option = {
+    title: {
+      text: `${enrichmentType.value} Pathway Enrichment - All Clusters`, 
+      left: 'center', 
+      textStyle: { fontSize: 16, fontFamily: 'Arial', fontWeight: 'bold', color: '#000' }
+    },
+    // *********************************************
+    // [修改] 如果存在图例（模式2），则将其加入配置中
+    legend: legendOption ? legendOption : undefined,
+    // *********************************************
+    tooltip: { 
+      trigger: 'item',
+      formatter: (params) => { 
+        // 这里的解包对两种模式的数据结构是完全兼容的
+        const d = params.data
+        return `<b>${d[4]}</b><br/>Cluster: ${d[5]}<br/>p.adjust: ${d[2].toExponential(3)}<br/>Gene Count: ${d[3]}`
+      }
+    },
+    grid: { 
+      show: true,               
+      borderColor: '#000',      
+      borderWidth: 1,           
+      left: '25%',              
+      // *********************************************
+      // [修改] 根据模式动态分配右侧边距，模式2的图例可能会更宽
+      right: bubbleChartMode.value === 'combined' ? '15%' : '25%',
+      // ********************************************* bottom: '10%',
+      top: '12%'
+    },
+    // *********************************************
+    // [修改] 引用前面处理好的动态坐标轴和Series
+    xAxis: xAxisOption,
+    yAxis: yAxisOption,
+    // *********************************************
+    visualMap: [ 
+      {
+        type: 'continuous', 
+        dimension: 2, 
+        min: minP, 
+        max: maxP, 
+        inverse: true, 
+        orient: 'vertical', 
+        top: '20%', 
+        right: '2%', 
+        inRange: {
+          color: ['#ff0000', '#0000ff'] 
+        },
+        text: ['p.adjust', ''], 
+        textStyle: { fontWeight: 'bold', color: '#000' },
+        calculable: false, 
+        itemWidth: 15,
+        itemHeight: 100, 
+        formatter: (value) => {
+          return value < 0.001 ? value.toExponential(2) : value.toFixed(2)
+        }
+      },
+      {
+        type: 'piecewise', 
+        dimension: 3, 
+        orient: 'vertical', 
+        bottom: '15%', 
+        right: '2%', 
+        splitNumber: 3, 
+        inRange: {
+          symbolSize: [8, 20] 
+        },
+        text: ['\nGene Count', ''], 
+        textStyle: { fontWeight: 'bold', color: '#000' },
+        itemSymbol: 'circle',
+        itemGap: 15 
+      }
+    ],
+    // *********************************************
+    // [修改] 引用动态生成的系列数组
+    series: scatterSeries
+    // *********************************************
+  }
+
+  newChart.setOption(option) 
+}
+
+// *********************************************
+// [新增] 运行测试模式（参数敏感性分析）的函数
+const runParameterSearch = async () => {
+  // 防御性检查：测试模式依赖组学数据进行聚类，依赖临床数据计算生存 P 值，必须都有
+  if(!uploadedFilename.value || !clinicalFilename.value) {
+    alert("测试模式需要计算 P-value，请确保已上传组学数据和临床数据！")
+    return
+  }
+
+  isPsLoading.value = true // 开启加载状态
+  psResult.value = null // 清空旧结果
+
+  try {
+    // 将前端绑定的逗号分隔字符串（如 "2,3,4"）分割成数组，并转换为纯数字列表
+    const n_clusters_arr = testNClusters.value.split(',').map(Number)
+    const max_iter_arr = testMaxIter.value.split(',').map(Number)
+
+    // 发送 POST 请求到后端的测试模式接口
+    const res = await axios.post('http://127.0.0.1:8000/api/parameter_search', {
+      algorithm: selectedAlgorithm.value, // 当前算法名
+      omics_filename: uploadedFilename.value, // 上传好的组学文件名
+      clinical_filename: clinicalFilename.value, // 上传好的临床文件名
+      param_grid: { // 构建需要测试的参数网格字典传给后端
+        "n_clusters": n_clusters_arr,
+        "max_iter": max_iter_arr
+      },
+      random_state: randomSeed.value // 传入随机种子
+    })
+
+    psResult.value = res.data // 将后端结果赋值给响应式变量，触发视图更新
+    await nextTick() // 等待 Vue 重新渲染 DOM 容器出现
+    renderPsChart() // 调用绘图函数渲染 2D 或 3D 图表
+  } catch (error) {
+    console.error("参数搜索失败:", error)
+    alert("测试模式运行失败: " + (error.response?.data?.detail || error.message))
+  } finally {
+    isPsLoading.value = false // 无论成功失败，关闭加载状态
+  }
+}
+
+// [新增] 绘制参数敏感性分析图表的函数
+const renderPsChart = () => {
+  // 防御性检查：确保 DOM 和 数据存在
+  if (!psChartRef.value || !psResult.value) return
+
+  const myChart = echarts.init(psChartRef.value)
+  myChart.dispose() // 销毁之前的 ECharts 实例，防止画布重叠污染
+  const newChart = echarts.init(psChartRef.value)
+
+  const all_results = psResult.value.all_results // 提取包含所有测试组合及得分的数组
+  const p1 = psParam1.value // 用户选择的 X 轴参数
+  const p2 = psParam2.value // 用户选择的 Y 轴参数
+
+  // 场景 1：用户选择了两个不相同的参数，绘制 3D 曲面图（对应上传的 PDF 效果）
+  if (p1 && p2 && p1 !== p2) {
+    // 将数据转换成 ECharts 3D surface 要求的格式：[[x, y, z], [x, y, z]...]
+    const data = all_results.map(item => [
+      item.params[p1], // X轴坐标
+      item.params[p2], // Y轴坐标
+      item.score       // Z轴坐标（这里是 -Log10 P-value）
+    ])
+
+    newChart.setOption({
+      tooltip: {}, // 开启鼠标悬停提示框
+      // visualMap 配置颜色映射，用来让高低不同的 Z 轴值显示冷暖色彩变化
+      visualMap: {
+        show: false, // 隐藏图例以节省空间
+        min: Math.min(...data.map(d => d[2])), // 数据中的最小得分
+        max: Math.max(...data.map(d => d[2])), // 数据中的最大得分
+        inRange: {
+          color: ['#313695', '#4575b4', '#e0f3f8', '#fee090', '#f46d43', '#a50026'] // 使用渐变色（蓝到红）来模拟热力高度
+        }
+      },
+      xAxis3D: { type: 'value', name: p1 }, // 3D X轴配置
+      yAxis3D: { type: 'value', name: p2 }, // 3D Y轴配置
+      zAxis3D: { type: 'value', name: '-Log10(P)' }, // 3D Z轴配置
+      grid3D: {
+        viewControl: { projection: 'perspective' } // 使用透视投影视角，让曲面更立体
+      },
+      series: [{
+        type: 'surface', // 关键参数：指定图表类型为 3D 曲面图（依赖 echarts-gl）
+        data: data,
+        // wireframe: show: true 控制是否显示曲面上的网格线，复刻 PDF 中网格布的效果
+        wireframe: { show: true, lineStyle: { color: 'rgba(0,0,0,0.3)', width: 1 } } 
+      }]
+    })
+  } 
+  // 场景 2：用户只选择了一个参数（或把两个参数选成一样的了），降维绘制 2D 折线图
+  else if (p1) {
+    // 使用 Set 提取该参数的唯一值，并从小到大排序作为 X 轴刻度
+    const unique_x = [...new Set(all_results.map(item => item.params[p1]))].sort((a,b)=>a-b)
+    
+    // 如果有多个组合（比如测试了K和MaxIter，但图表只选了K），我们取同一个 K 下最大的得分代表它的最佳潜力
+    const y_data = unique_x.map(x => {
+      const matched = all_results.filter(item => item.params[p1] === x)
+      return Math.max(...matched.map(m => m.score)) // 求该参数值下的最大得分
+    })
+
+    newChart.setOption({
+      tooltip: { trigger: 'axis' },
+      xAxis: { type: 'category', data: unique_x, name: p1, nameLocation: 'middle', nameGap: 30 },
+      yAxis: { type: 'value', name: '-Log10(P-value)', nameLocation: 'middle', nameGap: 40 },
+      series: [{
+        type: 'line', // 使用普通 2D 折线图
+        data: y_data,
+        smooth: true, // 让线条平滑曲线过渡
+        lineStyle: { width: 3 }
+      }]
+    })
+  }
+}
+// *********************************************
 </script>
 
 <template>
@@ -921,6 +1542,16 @@ const renderHeatmapPlot= (heatmapData)=>{
             </option>
           </select>
 
+          <div style="margin-bottom: 15px;">
+            <label style="font-weight: bold; color: #e74c3c; cursor: pointer;">
+              <input type="checkbox" v-model="isTestMode" /> 开启“测试模式” (参数敏感性分析)
+            </label>
+          </div>
+
+          <div v-if="!isTestMode">
+
+
+
           <div v-if="selectedAlgorithm === 'K-means'" class="params-box">
             <h4>K-means 参数配置:</h4>
 
@@ -939,17 +1570,90 @@ const renderHeatmapPlot= (heatmapData)=>{
               <input type="number" v-model="maxIter" /><!-- v-model: 双向绑定输入值到 maxIter 变量 -->
             </div>
           </div>
+
+
+
+          </div>
+          <div v-else>
+
+
+
+            <div v-if="selectedAlgorithm === 'K-means'" class="params-box">
+              <div class="param-item" style="margin-right: 20px;">
+                <label>聚类簇数测试范围 (K值, 逗号分隔):</label>
+                <input type="text" v-model="testNClusters" style="width: 150px;" placeholder="例如: 2,3,4,5" />
+              </div>
+              
+              <div class="param-item">
+                <label>最大迭代测试范围 (逗号分隔):</label>
+                <input type="text" v-model="testMaxIter" style="width: 150px;" placeholder="例如: 100,200,300" />
+              </div>
+
+              <div class="param-item" style="display: block; margin-top: 10px;">
+                <label>随机种子:</label>
+                <input type="number" v-model="randomSeed" style="width: 80px;" />
+              </div>
+              
+              <div style="margin-top: 15px; padding: 15px; background: #fff3e0; border-radius: 6px; border: 1px dashed #ffb74d;">
+                <p style="margin: 0 0 10px 0; font-size: 13px; font-weight: bold; color: #e65100;">
+                  ⚠️ 测试模式需要计算 Log-Rank P-value 以评估参数好坏，请在此先上传临床数据：
+                </p>
+                <input type="file" @change="handleClinicalFileChange" />
+                <span style="font-size: 13px; margin-left: 10px; color: #27ae60;">{{ clinicalUploadStatus }}</span>
+              </div>
+            </div>
+
+
+
+          </div>
         </div>
 
         <div class="step-section action-area">
           <h3>3. 运行分析 (Execution)</h3>
-          <button @click="runAnalysis" :disabled="isLoading" class="run-btn"><!-- :disabled: 动态绑定禁用状态，当isLoading为true时按钮禁用 -->
+          <button v-if="!isTestMode" @click="runAnalysis" :disabled="isLoading" class="run-btn"><!-- :disabled: 动态绑定禁用状态，当isLoading为true时按钮禁用 -->
             <span v-if="isLoading">正在运行...</span><!-- 根据 isLoading 状态显示不同文本 -->
             <span v-else>运行分析 (Run Analysis)</span>
           </button>
+          <button v-else @click="runParameterSearch" :disabled="isPsLoading" class="run-btn" style="background-color: #e74c3c;">
+            <span v-if="isPsLoading">正在搜索并测试最优参数...</span>
+            <span v-else>运行参数搜索 (Run Parameter Search)</span>
+          </button>
         </div>
 
-        <div v-if="backendResponse || errorMessage" class="result-area" ref="resultsAreaRef"><!-- 当后端响应成功或有错误信息时显示此区域 -->
+        <div v-if="isTestMode && psResult" class="result-area">
+          <div class="step-section diff-section" style="background-color: #fdf2e9; border-color: #fdebd0;">
+            <h3>参数敏感性分析结果 (Parameter Sensitivity Analysis)</h3>
+            
+            <div class="success-box" style="margin-bottom: 20px; border-color: #f39c12; color: #d35400;">
+              <h4 style="margin-top: 0;">🏆 最优参数组合</h4>
+              <p><b>参数:</b> {{ psResult.best_params }}</p>
+              <p><b>对应生存分析 -Log10(P-value):</b> {{ psResult.best_score.toFixed(4) }}</p>
+              <p style="font-size: 12px; margin-top: 5px;">(得分越高代表该参数聚类出来的生存差异越显著)</p>
+            </div>
+            
+            <div class="chart-wrapper">
+              <div class="chart-header">
+                <h4>📈 参数敏感性分布图</h4>
+                <div style="font-size: 13px;">
+                  <label>X轴参数: </label>
+                  <select v-model="psParam1" @change="renderPsChart" class="cluster-select">
+                    <option value="n_clusters">K值 (n_clusters)</option>
+                    <option value="max_iter">最大迭代 (max_iter)</option>
+                  </select>
+                  <label style="margin-left: 15px;">Y轴参数 (选无则画2D): </label>
+                  <select v-model="psParam2" @change="renderPsChart" class="cluster-select">
+                    <option value="">无 (绘制2D图)</option>
+                    <option value="n_clusters">K值 (n_clusters)</option>
+                    <option value="max_iter">最大迭代 (max_iter)</option>
+                  </select>
+                </div>
+              </div>
+              <div ref="psChartRef" style="width: 100%; height: 500px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="!isTestMode && (backendResponse || errorMessage)" class="result-area" ref="resultsAreaRef"><!-- 当后端响应成功或有错误信息时显示此区域 -->
           <h3>后端响应结果:</h3>
           <div v-if="backendResponse" class="success-box"><!-- 显示成功结果 -->
 
@@ -1023,7 +1727,7 @@ const renderHeatmapPlot= (heatmapData)=>{
 
                 <div class="chart-wrapper heatmap-wrapper">
                   <div class="chart-header">
-                    <h4>🔥 差异基因热图 (Top Markers)🔥 Top Marker Genes Heatmap</h4>
+                    <h4>🔥 差异基因热图</h4>
                     <p>Top 10 upregulated genes per cluster (P < 0.05). Ordered by Cluster ID.</p>
                   </div>
                   <div ref="heatmapChartRef" class="heatmap-container"></div>
@@ -1034,6 +1738,54 @@ const renderHeatmapPlot= (heatmapData)=>{
 
               </div>
             </div>
+
+            <div class="step-section enrichment-section" v-if="diffResult"> <h3>功能富集分析 (Enrichment Analysis)</h3>
+            <p class="section-desc">
+              针对各个簇的高表达基因进行功能注释。<br>
+              请点击下方按钮查询离线数据库 (GO Biological Process 或 KEGG Pathways)。
+            </p>
+            
+            <div class="button-row">
+              <button @click="runEnrichmentAnalysis('GO')" :disabled="isEnrichmentLoading" class="run-btn go-btn">
+                <span v-if="isEnrichmentLoading && enrichmentType==='GO'">正在查询...</span>
+                <span v-else>运行 GO 分析</span>
+              </button>
+
+              <button @click="runEnrichmentAnalysis('KEGG')" :disabled="isEnrichmentLoading" class="run-btn kegg-btn">
+                <span v-if="isEnrichmentLoading && enrichmentType==='KEGG'">正在查询...</span>
+                <span v-else>运行 KEGG 分析</span>
+              </button>
+            </div>
+
+            <div v-if="enrichmentResult" class="enrichment-result-box" ref="enrichmentAreaRef">
+              <div class="chart-header">
+                <h4>📊 富集分析结果 (Enrichment Plot)</h4>
+                <select v-model="selectedEnrichmentCluster" @change="handleEnrichmentClusterChange" class="cluster-select">
+                  <option v-for="cid in Object.keys(enrichmentResult)" :key="cid" :value="Number(cid)">
+                    Cluster {{ cid }} Enrichment
+                  </option>
+                </select>
+              </div>
+              <div ref="enrichmentChartRef" class="enrichment-chart"></div>
+
+              <hr class="chart-divider" />
+              <div class="chart-header">
+                <h4>🎈 全簇通路富集气泡图 (Pathway Enrichment - All Clusters)</h4>
+                <div style="margin-bottom: 10px;">
+                  <label style="margin-right: 15px; cursor: pointer;">
+                    <input type="radio" v-model="bubbleChartMode" value="combined" @change="renderEnrichmentBubbleChart">
+                    按簇平铺
+                  </label>
+                  <label style="cursor: pointer;">
+                    <input type="radio" v-model="bubbleChartMode" value="by_gene" @change="renderEnrichmentBubbleChart">
+                    按基因数分布
+                  </label>
+                </div>
+                <p>横轴为不同的聚类簇或基因数，纵轴为富集的通路。气泡大小代表命中基因数，颜色代表 P 值显著性。在“按基因数分布”模式下，点击右侧图例可显示或隐藏对应簇。</p>
+              </div>
+              <div ref="enrichmentBubbleChartRef" class="enrichment-bubble-chart"></div>
+            </div>
+          </div>
 
             <div class="step-section survival-section" style="margin-top: 30px; border-top: 2px dashed #ddd;">
               <h3>5. 临床生存分析 (Clinical Analysis)</h3>
@@ -1629,5 +2381,59 @@ pre {
 /* 热图外层加一点上间距，与火山图区分 */
 .heatmap-wrapper {
   margin-top: 20px;
+}
+
+/* ********************************************* */
+/* [新增] 富集分析样式 */
+.enrichment-section {
+  background-color: #e3f2fd; /* 淡蓝色背景 */
+  border: 1px solid #bbdefb;
+  margin-top: 30px;
+  border-top: 2px dashed #ddd;
+}
+
+.button-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.go-btn {
+  background-color: #e67e22; /* 橙色 */
+}
+.go-btn:hover:not(:disabled) {
+  background-color: #d35400;
+}
+
+.kegg-btn {
+  background-color: #3498db; /* 蓝色 */
+}
+.kegg-btn:hover:not(:disabled) {
+  background-color: #2980b9;
+}
+
+.enrichment-result-box {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.enrichment-chart {
+  width: 100%;
+  height: 500px; /* 足够的高度展示条形图 */
+}
+
+/* ********************************************* */
+/* [新增] 气泡图与分割线对应的 CSS 样式 */
+.chart-divider {
+  border: none;
+  border-top: 1px solid #eee; /* 浅灰色实线分割，让上下图表保持独立视觉 */
+  margin: 30px 0; /* 增加上下留白 */
+}
+
+.enrichment-bubble-chart {
+  width: 100%; /* 横向占满容器 */
+  height: 600px; /* 气泡图 Y 轴因为挤着大量通路名称，需要更高的高度，否则 ECharts 会自动隐藏文字 */
 }
 </style>
