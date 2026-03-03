@@ -20,10 +20,7 @@ from lifelines.statistics import multivariate_logrank_test
 from typing import List
 from scipy import stats
 import gseapy as gp
-# *********************************************
-# [新增] 引入 itertools 模块，用于生成参数的所有可能组合（笛卡尔积）
 import itertools
-# *********************************************
 
 # =============================================================================
 # 应用程序初始化
