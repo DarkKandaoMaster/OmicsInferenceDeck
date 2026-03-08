@@ -12,7 +12,7 @@ const isLoading=ref(false) //定义布尔类型的响应式变量，用于控制
 
 const errorMessage=ref('') //定义字符串变量，用于存储请求失败时的错误描述信息，以便在前端界面显示错误提示
 
-const selectedAlgorithm=ref('') //定义当前选中的算法，默认值为空 //双向绑定到界面的下拉选择框
+const selectedAlgorithm=ref([]) // 定义当前选中的算法数组，默认值为空数组
 
 const algorithms=['K-means', 'PIntMF', 'Subtype-GAN', 'NEMO', 'SNF'] //定义算法候选数组，供下拉框渲染使用 //这些算法对应论文表3和表5中提到的 "11种前沿多组学聚类算法" 及基础算法
 
@@ -292,8 +292,15 @@ const runAnalysis= async ()=>{
     alert("请先上传数据文件！")
     return
   }
-  if(!selectedAlgorithm.value){ //判断用户是否已经选择了算法
-    alert("请先选择一种算法！")
+// ======================== 修改代码 ========================
+  // 为什么要这么写：判断 selectedAlgorithm 数组的 length 属性是否为 0，以此校验用户是否勾选了复选框。
+  if(selectedAlgorithm.value.length === 0){ 
+    alert("请先选择至少一种算法！")
+    return
+  }
+  // 为什么要这么写：判断 selectedAlgorithm 数组的 length 属性是否大于 1，实现业务需求中的“暂时不能多选”拦截机制，阻止函数继续执行并弹出提示。
+  if(selectedAlgorithm.value.length > 1){
+    alert("暂时不能多选算法，请只选择一种！")
     return
   }
 
@@ -307,7 +314,7 @@ const runAnalysis= async ()=>{
     // 参数1：接口URL
     // 参数2：请求体
     const res= await axios.post('http://127.0.0.1:8000/api/run',{
-      algorithm: selectedAlgorithm.value, //用户选中的算法名称
+      algorithm: selectedAlgorithm.value[0], //用户选中的算法名称 // 为什么要这么写：由于上方逻辑已经确保了数组长度必然为 1，通过索引 [0] 获取数组中唯一的字符串元素，以匹配后端 pydantic 模型 AnalysisRequest 中 algorithm 为 str 类型的要求。
       timestamp: new Date().toISOString(), //当前时间戳，格式为ISO 8601
       filename: uploadedFilename.value, //要处理的文件名
       n_clusters: kValue.value, //用户自定义的K值
@@ -1375,6 +1382,16 @@ const runParameterSearch = async () => {
     alert("测试模式需要计算 P-value，请确保已上传组学数据和临床数据！")
     return
   }
+  // ======================== 修改代码 ========================
+  // 为什么要这么写：与普通运行分析同理，针对测试模式下的算法请求，同样基于数组 length 属性进行边界检查，拦截空选与多选行为。
+  if(selectedAlgorithm.value.length === 0){
+    alert("请先选择至少一种算法！")
+    return
+  }
+  if(selectedAlgorithm.value.length > 1){
+    alert("测试模式暂时不能多选算法，请只选择一种！")
+    return
+  }
 
   isPsLoading.value = true // 开启加载状态
   psResult.value = null // 清空旧结果
@@ -1386,7 +1403,7 @@ const runParameterSearch = async () => {
 
     // 发送 POST 请求到后端的测试模式接口
     const res = await axios.post('http://127.0.0.1:8000/api/parameter_search', {
-      algorithm: selectedAlgorithm.value, // 当前算法名
+      algorithm: selectedAlgorithm.value[0], // 当前算法名 // 为什么要这么写：同样使用索引 [0] 提取选中的算法名称作为字符串数据格式传递，满足后端 ParameterSearchRequest 接口规范。
       omics_filename: uploadedFilename.value, // 上传好的组学文件名
       clinical_filename: clinicalFilename.value, // 上传好的临床文件名
       param_grid: { // 构建需要测试的参数网格字典传给后端
@@ -1555,13 +1572,6 @@ const renderPsChart = () => {
           <div class="column">
             <h3>⚙️ 选择算法</h3>
             <div class="upload-card algo-card">
-              <label style="font-weight: bold; margin-bottom: 10px; display: block; color: #34495e;">目标聚类算法：</label>
-              <select v-model="selectedAlgorithm" class="format-select" style="width: 100%; margin-bottom: 20px;">
-                <option value="" disabled>请选择算法...</option>
-                <option v-for="algo in algorithms" :key="algo" :value="algo">
-                  {{ algo }}
-                </option>
-              </select>
 
               <div class="checkbox-wrapper">
                 <label style="font-weight: bold; color: #e74c3c; cursor: pointer; display: flex; align-items: center; gap: 8px;">
@@ -1569,16 +1579,26 @@ const renderPsChart = () => {
                   开启“测试模式” (参数敏感性分析)
                 </label>
               </div>
+
+              <label style="font-weight: bold; margin-bottom: 10px; display: block; color: #34495e;">聚类算法选择：</label>
+
+              <div style="margin-bottom: 20px; text-align: left;">
+                <label v-for="algo in algorithms" :key="algo" style="display: block; margin-bottom: 8px; cursor: pointer;">
+                  <input type="checkbox" v-model="selectedAlgorithm" :value="algo" style="margin-right: 8px;" />
+                  {{ algo }}
+                </label>
+              </div>
+
             </div>
           </div>
 
           <div class="column">
             <h3>🎛️ 参数配置</h3>
-            
-            <div v-if="selectedAlgorithm" class="upload-card params-inner-card">
-              
+
+            <div v-if="selectedAlgorithm.length>0" class="upload-card params-inner-card">
+
               <div v-if="!isTestMode">
-                <div v-if="selectedAlgorithm === 'K-means'" class="params-box-clean">
+                <div v-if="selectedAlgorithm.includes('K-means')" class="params-box-clean">
                   <div class="param-item-vertical">
                     <label>聚类簇数 (K值):</label>
                     <input type="number" v-model="kValue" />
@@ -1595,9 +1615,9 @@ const renderPsChart = () => {
               </div>
 
               <div v-else>
-                <div v-if="selectedAlgorithm === 'K-means'" class="params-box-clean">
+                <div v-if="selectedAlgorithm.includes('K-means')" class="params-box-clean">
                   <p style="font-size: 12px; color: #e65100; margin-bottom: 15px; font-weight: bold;">
-                    ⚠️ 测试模式需依赖临床数据计算 P-value，请确保左侧已上传。
+                    ⚠️ 测试模式需要临床数据文件计算P-value，请确保临床数据文件已上传。
                   </p>
                   <div class="param-item-vertical">
                     <label>聚类簇数测试范围 (逗号分隔):</label>
@@ -1617,7 +1637,7 @@ const renderPsChart = () => {
             </div>
 
             <div v-else class="empty-params">
-              👈 请先在中间选择一种算法
+              👈 请先选择一种算法
             </div>
           </div>
           
