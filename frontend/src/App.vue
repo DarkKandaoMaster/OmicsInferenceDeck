@@ -6,6 +6,13 @@ import 'echarts-gl' // [新增] 引入 echarts-gl 用于渲染 3D 曲面图。
 
 // ===================== 状态定义区 =====================
 
+// ======================== 新增代码 ========================
+// 为什么要这么写：使用 ref() 函数创建一个具有响应式特性的基本类型变量 activeTab，用于存储当前处于激活状态的导航标签名称。
+// 响应式（Reactive）意味着当 activeTab 的值在 JavaScript 中发生改变时，Vue 底层会通过依赖收集机制自动追踪这一变化，并触发绑定了该变量的 DOM 结构进行重新渲染。
+// 将其初始参数设置为 'Home'，以此满足“初始界面为Home界面”的需求。
+const activeTab = ref('Home')
+// ==========================================================
+
 const backendResponse=ref(null) //定义响应式变量，用于存储从后端 API 接收到的 JSON 响应数据 //对应论文图3中后端返回的 "Clustering results"
 
 const isLoading=ref(false) //定义布尔类型的响应式变量，用于控制“加载中”状态（如禁用按钮、显示Loading动画） //防止用户在分析计算过程中重复点击
@@ -83,21 +90,39 @@ const psChartRef = ref(null) // 绑定敏感性分析图表容器的 DOM 引用
 
 // ===================== 数据格式处理区【【【【【这几个区改一下名 =====================
 
-const dataFormat=ref('row_sample_yes_yes') //定义组学数据的数据格式选项，默认'row_sample_yes_yes'
+// 组学数据格式的三个复选框绑定变量（默认全为true）
+const omicsIsRowSample=ref(true)//true：行代表特征，列代表病人；false：行代表病人，列代表特征
+const omicsHasHeader=ref(true)//true：有表头行
+const omicsHasIndex=ref(true)//true：有索引列
 
-const clinicalDataFormat=ref('row_sample_yes_yes') //定义临床数据的数据格式选项，默认'row_sample_yes_yes'
+// 临床数据格式的三个复选框绑定变量（默认全为true）
+const clinicalIsRowSample=ref(true)
+const clinicalHasHeader=ref(true)
+const clinicalHasIndex=ref(true)
 
-//组学和临床数据的数据格式
-const dataFormatOptions=[
-  { label: '行代表病人，列代表特征。有表头行✅、有索引列✅', value: 'row_sample_yes_yes' },
-  { label: '行代表病人，列代表特征。有表头行✅、无索引列❌', value: 'row_sample_yes_no' },
-  { label: '行代表病人，列代表特征。无表头行❌、有索引列✅', value: 'row_sample_no_yes' },
-  { label: '行代表病人，列代表特征。无表头行❌、无索引列❌', value: 'row_sample_no_no' },
-  { label: '行代表特征，列代表病人。有表头行✅、有索引列✅', value: 'row_feature_yes_yes' },
-  { label: '行代表特征，列代表病人。有表头行✅、无索引列❌', value: 'row_feature_yes_no' },
-  { label: '行代表特征，列代表病人。无表头行❌、有索引列✅', value: 'row_feature_no_yes' },
-  { label: '行代表特征，列代表病人。无表头行❌、无索引列❌', value: 'row_feature_no_no' },
-]
+// 使用 computed 自动将复选框的布尔值拼接成后端和示例所需的字符串格式
+const dataFormat=computed(()=>{
+  const part1=omicsIsRowSample.value ? 'row_feature' : 'row_sample'
+  const part2=omicsHasHeader.value ? 'yes' : 'no'
+  const part3=omicsHasIndex.value ? 'yes' : 'no'
+  return `${part1}_${part2}_${part3}`
+})
+
+const clinicalDataFormat=computed(()=>{
+  const part1=clinicalIsRowSample.value ? 'row_feature' : 'row_sample'
+  const part2=clinicalHasHeader.value ? 'yes' : 'no'
+  const part3=clinicalHasIndex.value ? 'yes' : 'no'
+  return `${part1}_${part2}_${part3}`
+})
+
+//如果用户选择的数据格式为：行代表病人，列代表特征。有表头行✅、有索引列✅。那么拼接出来的字符串是'row_sample_yes_yes'
+//如果用户选择的数据格式为：行代表病人，列代表特征。有表头行✅、无索引列❌。那么拼接出来的字符串是'row_sample_yes_no'
+//如果用户选择的数据格式为：行代表病人，列代表特征。无表头行❌、有索引列✅。那么拼接出来的字符串是'row_sample_no_yes'
+//如果用户选择的数据格式为：行代表病人，列代表特征。无表头行❌、无索引列❌。那么拼接出来的字符串是'row_sample_no_no'
+//如果用户选择的数据格式为：行代表特征，列代表病人。有表头行✅、有索引列✅。那么拼接出来的字符串是'row_feature_yes_yes'
+//如果用户选择的数据格式为：行代表特征，列代表病人。有表头行✅、无索引列❌。那么拼接出来的字符串是'row_feature_yes_no'
+//如果用户选择的数据格式为：行代表特征，列代表病人。无表头行❌、有索引列✅。那么拼接出来的字符串是'row_feature_no_yes'
+//如果用户选择的数据格式为：行代表特征，列代表病人。无表头行❌、无索引列❌。那么拼接出来的字符串是'row_feature_no_no'
 
 //根据用户选择的组学数据格式，使用不同的示例CSV文本
 const exampleText=computed(()=>{
@@ -211,7 +236,7 @@ const handleFileChange= (event)=>{
   }
 }
 
-//定义事件处理函数，监听组学数据格式下拉菜单的change事件，用户改变选项时触发【【【【【或许可以考虑把这个if换掉？
+//定义事件处理函数，监听组学数据格式选择复选框的change事件，用户改变选项时触发【【【【【或许可以考虑把这个if换掉？
 const handleFormatChange= ()=>{
   if(selectedFiles.value.length>0){ //判断用户是否已经选择了输入文件，如果是，那么说明用户想用新格式重新解析这个文件；如果不是，那么不需要任何操作
     console.log("格式已变更，正在重新校验文件...") //在控制台打印日志
@@ -388,7 +413,7 @@ const handleClinicalFileChange= (event)=>{
   }
 }
 
-//定义事件处理函数，监听临床数据格式下拉菜单的change事件，用户改变选项时触发【【【【【或许可以考虑把这个if换掉？
+//定义事件处理函数，监听临床数据格式选择复选框的change事件，用户改变选项时触发【【【【【或许可以考虑把这个if换掉？
 const handleClinicalFormatChange= ()=>{
   if(clinicalFile.value){ //判断用户是否已经选中了输入文件，如果是，那么说明用户想用新格式重新解析这个文件；如果不是，那么不需要任何操作
     console.log("临床数据格式已变更，正在重新解析...")
@@ -1508,20 +1533,20 @@ const renderPsChart = () => {
     <header class="header">
       <div class="logo">InferenceDeck</div>
       <nav class="nav">
-        <span>Home</span>
-        <span class="active">Analysis</span>
-        <span>Resources</span>
-        <span>Help</span>
+        <span @click="activeTab = 'Home'" :class="{ active: activeTab === 'Home' }">Home</span>
+        <span @click="activeTab = 'Analysis'" :class="{ active: activeTab === 'Analysis' }">Analysis</span>
+        <span @click="activeTab = 'Resources'" :class="{ active: activeTab === 'Resources' }">Resources</span>
+        <span @click="activeTab = 'Help'" :class="{ active: activeTab === 'Help' }">Help</span>
       </nav>
     </header>
 
     <main class="main-content">
-      <div class="analysis-panel">
+
+      <div v-if="activeTab === 'Home'">
         <h1>多组学癌症亚型分析</h1>
-        <p class="description">
-          基于多组学数据的癌症分型方法评估及平台研发。
-          <br>请在下方完成配置并点击提交。
-        </p>
+      </div>
+
+      <div v-else class="analysis-panel">
 
         <div class="layout-three-columns">
           
@@ -1531,12 +1556,22 @@ const renderPsChart = () => {
             <div class="upload-card">
               <h4>🧬 组学数据</h4>
               <div class="config-item mini-config">
-                <label>数据格式：</label>
-                <select v-model="dataFormat" @change="handleFormatChange" class="format-select">
-                  <option v-for="opt in dataFormatOptions" :key="opt.value" :value="opt.value">
-                    {{ opt.label }}
-                  </option>
-                </select>
+                <label style="margin-bottom: 8px;">数据格式：</label>
+                <div style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #444; text-align: left;">
+                  <label style="cursor: pointer;">
+                    <input type="checkbox" v-model="omicsIsRowSample" @change="handleFormatChange" />
+                    行代表特征，列代表病人<br>
+                    (不勾选则为行代表病人，列代表特征)
+                  </label>
+                  <label style="cursor: pointer;">
+                    <input type="checkbox" v-model="omicsHasHeader" @change="handleFormatChange" />
+                    有表头行
+                  </label>
+                  <label style="cursor: pointer;">
+                    <input type="checkbox" v-model="omicsHasIndex" @change="handleFormatChange" />
+                    有索引列
+                  </label>
+                </div>
               </div>
               <div class="example-box mini-example">
                 <pre class="example-content">{{ exampleText }}</pre>
@@ -1551,12 +1586,22 @@ const renderPsChart = () => {
             <div class="upload-card">
               <h4>🏥 临床数据 <span style="font-size: 12px; color: #888; font-weight: normal;">(生存分析/测试模式必填)</span></h4>
               <div class="config-item mini-config">
-                <label>数据格式：</label>
-                <select v-model="clinicalDataFormat" @change="handleClinicalFormatChange" class="format-select">
-                  <option v-for="opt in dataFormatOptions" :key="opt.value" :value="opt.value">
-                    {{ opt.label }}
-                  </option>
-                </select>
+                <label style="margin-bottom: 8px;">数据格式：</label>
+                <div style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #444; text-align: left;">
+                  <label style="cursor: pointer;">
+                    <input type="checkbox" v-model="clinicalIsRowSample" @change="handleClinicalFormatChange" />
+                    行代表特征，列代表病人<br>
+                    (不勾选则为行代表病人，列代表特征)
+                  </label>
+                  <label style="cursor: pointer;">
+                    <input type="checkbox" v-model="clinicalHasHeader" @change="handleClinicalFormatChange" />
+                    有表头行
+                  </label>
+                  <label style="cursor: pointer;">
+                    <input type="checkbox" v-model="clinicalHasIndex" @change="handleClinicalFormatChange" />
+                    有索引列
+                  </label>
+                </div>
               </div>
               <div class="example-box mini-example">
                 <pre class="example-content">{{ clinicalExampleText }}</pre>
