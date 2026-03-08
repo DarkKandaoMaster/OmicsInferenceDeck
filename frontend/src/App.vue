@@ -95,8 +95,8 @@ const omicsIsRowSample=ref(true)//true：行代表特征，列代表病人；fal
 const omicsHasHeader=ref(true)//true：有表头行
 const omicsHasIndex=ref(true)//true：有索引列
 
-// 临床数据格式的三个复选框绑定变量（默认全为true）
-const clinicalIsRowSample=ref(true)
+// 临床数据格式的三个复选框绑定变量（默认全为true） //【【【【【之后改一下？
+const clinicalIsRowSample=ref(false)
 const clinicalHasHeader=ref(true)
 const clinicalHasIndex=ref(true)
 
@@ -1584,7 +1584,7 @@ const renderPsChart = () => {
             </div>
 
             <div class="upload-card">
-              <h4>🏥 临床数据 <span style="font-size: 12px; color: #888; font-weight: normal;">(生存分析/测试模式必填)</span></h4>
+              <h4>🏥 临床数据 <span style="font-size: 12px; color: #888; font-weight: normal;">(可选)</span></h4>
               <div class="config-item mini-config">
                 <label style="margin-bottom: 8px;">数据格式：</label>
                 <div style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #444; text-align: left;">
