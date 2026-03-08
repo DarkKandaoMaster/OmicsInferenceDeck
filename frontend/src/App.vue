@@ -1481,6 +1481,10 @@ const renderPsChart = () => {
 // *********************************************
 </script>
 
+
+
+
+
 <template>
   <div class="container">
 
@@ -1499,127 +1503,136 @@ const renderPsChart = () => {
         <h1>多组学癌症亚型分析</h1>
         <p class="description">
           基于多组学数据的癌症分型方法评估及平台研发。
-          <br>请选择算法并点击运行以测试后端连接。
+          <br>请在下方完成配置并点击提交。
         </p>
 
-        <div class="step-section upload-section">
-          <h3>1. 组学数据上传 (Data Upload)</h3>
+        <div class="layout-three-columns">
+          
+          <div class="column">
+            <h3>📂 数据上传</h3>
+            
+            <div class="upload-card">
+              <h4>🧬 组学数据</h4>
+              <div class="config-item mini-config">
+                <label>数据格式：</label>
+                <select v-model="dataFormat" @change="handleFormatChange" class="format-select">
+                  <option v-for="opt in dataFormatOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
+                </select>
+              </div>
+              <div class="example-box mini-example">
+                <pre class="example-content">{{ exampleText }}</pre>
+              </div>
+              <div class="upload-controls">
+                <input type="file" @change="handleFileChange" multiple />
+              </div>
+              <p style="font-size: 11px; color: #888; margin-top: 5px;">* 支持多文件上传，按样本名称自动合并。</p>
+              <p class="status-message" :class="{ 'error-text': uploadStatus.startsWith('❌') }">{{ uploadStatus }}</p>
+            </div>
 
-          <!-- 组学数据格式选择区域，包含数据格式下拉选择框和示例CSV文本展示 -->
-          <div class="upload-config">
-            <div class="config-item">
-              <label>我的数据格式是</label>
-              <select v-model="dataFormat" @change="handleFormatChange" class="format-select"><!-- v-model: 双向绑定选择框的值到 dataFormat 变量 -->
-                <option v-for="opt in dataFormatOptions" :key="opt.value" :value="opt.value"><!-- v-for遍历dataFormatOptions数组生成8个选项 --><!-- :key为每个选项提供唯一标识 --><!-- :value动态绑定选项的值 -->
-                  {{ opt.label }}
+            <div class="upload-card">
+              <h4>🏥 临床数据 <span style="font-size: 12px; color: #888; font-weight: normal;">(生存分析/测试模式必填)</span></h4>
+              <div class="config-item mini-config">
+                <label>数据格式：</label>
+                <select v-model="clinicalDataFormat" @change="handleClinicalFormatChange" class="format-select">
+                  <option v-for="opt in dataFormatOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
+                </select>
+              </div>
+              <div class="example-box mini-example">
+                <pre class="example-content">{{ clinicalExampleText }}</pre>
+              </div>
+              <div class="upload-controls">
+                <input type="file" @change="handleClinicalFileChange" />
+              </div>
+              <p style="font-size: 11px; color: #888; margin-top: 5px;">* 需包含 OS(状态) 和 OS.time(时间)。</p>
+              <p class="status-message" :class="{ 'error-text': clinicalUploadStatus.startsWith('❌') }">{{ clinicalUploadStatus }}</p>
+            </div>
+          </div>
+
+          <div class="column">
+            <h3>⚙️ 选择算法</h3>
+            <div class="upload-card algo-card">
+              <label style="font-weight: bold; margin-bottom: 10px; display: block; color: #34495e;">目标聚类算法：</label>
+              <select v-model="selectedAlgorithm" class="format-select" style="width: 100%; margin-bottom: 20px;">
+                <option value="" disabled>请选择算法...</option>
+                <option v-for="algo in algorithms" :key="algo" :value="algo">
+                  {{ algo }}
                 </option>
               </select>
-            </div>
-            <div class="example-box">
-              <span class="example-label">示例CSV文本</span>
-              <pre class="example-content">{{ exampleText }}</pre><!-- pre 元素: 保留文本的空格和换行格式 -->
-            </div>
-          </div>
 
-          <!-- 包含上传组学数据的输入框和提示文本 -->
-          <div class="upload-controls">
-            <input type="file" @change="handleFileChange" multiple />
-          </div>
-          <p style="font-size: 12px; color: #888; margin-top: 5px;">
-            * 支持多文件上传。系统将根据<b>样本名称</b>自动合并数据。
-          </p>
-          <p class="status-message" :class="{ 'error-text': uploadStatus.startsWith('❌') }"><!-- :class 动态绑定: 当 uploadStatus 以 '❌' 开头时，添加 'error-text' 类名【【【【【这是啥？ -->
-            {{ uploadStatus }}
-          </p>
-        </div>
-
-        <div class="step-section control-group">
-          <h3>2. 算法选择 (Clustering Method)</h3>
-          <label>选择算法：</label>
-          <select v-model="selectedAlgorithm"><!-- v-model: 双向绑定选择框的值到 selectedAlgorithm 变量 -->
-            <option v-for="algo in algorithms" :key="algo" :value="algo"><!-- v-for: 遍历 algorithms 数组生成选项 -->
-              {{ algo }}
-            </option>
-          </select>
-
-          <div style="margin-bottom: 15px;">
-            <label style="font-weight: bold; color: #e74c3c; cursor: pointer;">
-              <input type="checkbox" v-model="isTestMode" /> 开启“测试模式” (参数敏感性分析)
-            </label>
-          </div>
-
-          <div v-if="!isTestMode">
-
-
-
-          <div v-if="selectedAlgorithm === 'K-means'" class="params-box">
-            <h4>K-means 参数配置:</h4>
-
-            <div class="param-item">
-              <label>聚类簇数 (K值):</label>
-              <input type="number" v-model="kValue" /><!-- v-model: 双向绑定输入值到 kValue 变量 -->
-            </div>
-
-            <div class="param-item">
-              <label>随机种子 (-1表示None):</label>
-              <input type="number" v-model="randomSeed" /><!-- v-model: 双向绑定输入值到 randomSeed 变量 -->
-            </div>
-
-            <div class="param-item">
-              <label>最大迭代:</label>
-              <input type="number" v-model="maxIter" /><!-- v-model: 双向绑定输入值到 maxIter 变量 -->
-            </div>
-          </div>
-
-
-
-          </div>
-          <div v-else>
-
-
-
-            <div v-if="selectedAlgorithm === 'K-means'" class="params-box">
-              <div class="param-item" style="margin-right: 20px;">
-                <label>聚类簇数测试范围 (K值, 逗号分隔):</label>
-                <input type="text" v-model="testNClusters" style="width: 150px;" placeholder="例如: 2,3,4,5" />
+              <div class="checkbox-wrapper">
+                <label style="font-weight: bold; color: #e74c3c; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                  <input type="checkbox" v-model="isTestMode" style="transform: scale(1.2);" /> 
+                  开启“测试模式” (参数敏感性分析)
+                </label>
               </div>
+            </div>
+          </div>
+
+          <div class="column">
+            <h3>🎛️ 参数配置</h3>
+            
+            <div v-if="selectedAlgorithm" class="upload-card params-inner-card">
               
-              <div class="param-item">
-                <label>最大迭代测试范围 (逗号分隔):</label>
-                <input type="text" v-model="testMaxIter" style="width: 150px;" placeholder="例如: 100,200,300" />
+              <div v-if="!isTestMode">
+                <div v-if="selectedAlgorithm === 'K-means'" class="params-box-clean">
+                  <div class="param-item-vertical">
+                    <label>聚类簇数 (K值):</label>
+                    <input type="number" v-model="kValue" />
+                  </div>
+                  <div class="param-item-vertical">
+                    <label>随机种子 (-1表示None):</label>
+                    <input type="number" v-model="randomSeed" />
+                  </div>
+                  <div class="param-item-vertical">
+                    <label>最大迭代:</label>
+                    <input type="number" v-model="maxIter" />
+                  </div>
+                </div>
               </div>
 
-              <div class="param-item" style="display: block; margin-top: 10px;">
-                <label>随机种子:</label>
-                <input type="number" v-model="randomSeed" style="width: 80px;" />
+              <div v-else>
+                <div v-if="selectedAlgorithm === 'K-means'" class="params-box-clean">
+                  <p style="font-size: 12px; color: #e65100; margin-bottom: 15px; font-weight: bold;">
+                    ⚠️ 测试模式需依赖临床数据计算 P-value，请确保左侧已上传。
+                  </p>
+                  <div class="param-item-vertical">
+                    <label>聚类簇数测试范围 (逗号分隔):</label>
+                    <input type="text" v-model="testNClusters" placeholder="如: 2,3,4,5" />
+                  </div>
+                  <div class="param-item-vertical">
+                    <label>最大迭代测试范围 (逗号分隔):</label>
+                    <input type="text" v-model="testMaxIter" placeholder="如: 100,200,300" />
+                  </div>
+                  <div class="param-item-vertical">
+                    <label>随机种子:</label>
+                    <input type="number" v-model="randomSeed" />
+                  </div>
+                </div>
               </div>
-              
-              <div style="margin-top: 15px; padding: 15px; background: #fff3e0; border-radius: 6px; border: 1px dashed #ffb74d;">
-                <p style="margin: 0 0 10px 0; font-size: 13px; font-weight: bold; color: #e65100;">
-                  ⚠️ 测试模式需要计算 Log-Rank P-value 以评估参数好坏，请在此先上传临床数据：
-                </p>
-                <input type="file" @change="handleClinicalFileChange" />
-                <span style="font-size: 13px; margin-left: 10px; color: #27ae60;">{{ clinicalUploadStatus }}</span>
-              </div>
+
             </div>
 
-
-
+            <div v-else class="empty-params">
+              👈 请先在中间选择一种算法
+            </div>
           </div>
+          
         </div>
-
-        <div class="step-section action-area">
-          <h3>3. 运行分析 (Execution)</h3>
-          <button v-if="!isTestMode" @click="runAnalysis" :disabled="isLoading" class="run-btn"><!-- :disabled: 动态绑定禁用状态，当isLoading为true时按钮禁用 -->
-            <span v-if="isLoading">正在运行...</span><!-- 根据 isLoading 状态显示不同文本 -->
-            <span v-else>运行分析 (Run Analysis)</span>
+        <div class="submit-area">
+          <button v-if="!isTestMode" @click="runAnalysis" :disabled="isLoading" class="run-btn submit-btn">
+            <span v-if="isLoading">正在运行分析...</span>
+            <span v-else>🚀 提 交 (Submit)</span>
           </button>
-          <button v-else @click="runParameterSearch" :disabled="isPsLoading" class="run-btn" style="background-color: #e74c3c;">
+          
+          <button v-else @click="runParameterSearch" :disabled="isPsLoading" class="run-btn submit-btn test-btn">
             <span v-if="isPsLoading">正在搜索并测试最优参数...</span>
-            <span v-else>运行参数搜索 (Run Parameter Search)</span>
+            <span v-else>🚀 运行参数搜索 (Submit Search)</span>
           </button>
         </div>
-
         <div v-if="isTestMode && psResult" class="result-area">
           <div class="step-section diff-section" style="background-color: #fdf2e9; border-color: #fdebd0;">
             <h3>参数敏感性分析结果 (Parameter Sensitivity Analysis)</h3>
@@ -1653,13 +1666,11 @@ const renderPsChart = () => {
           </div>
         </div>
 
-        <div v-if="!isTestMode && (backendResponse || errorMessage)" class="result-area" ref="resultsAreaRef"><!-- 当后端响应成功或有错误信息时显示此区域 -->
+        <div v-if="!isTestMode && (backendResponse || errorMessage)" class="result-area" ref="resultsAreaRef">
           <h3>后端响应结果:</h3>
-          <div v-if="backendResponse" class="success-box"><!-- 显示成功结果 -->
+          <div v-if="backendResponse" class="success-box">
 
-
-
-            <div v-if="backendResponse.data.metrics" class="metrics-container"><!-- 当响应数据中包含 metrics 对象时显示评估指标 -->
+            <div v-if="backendResponse.data.metrics" class="metrics-container">
               <h4>📊 聚类效果评估 (Evaluation Metrics)</h4>
               <div class="metrics-grid">
                 <div class="metric-card">
@@ -1680,21 +1691,21 @@ const renderPsChart = () => {
             <div class="reduction-controls">
               <span class="reduction-label">降维算法:</span>
               <div class="btn-group">
-                <button @click="switchReduction('PCA')" :class="{ active: currentReduction==='PCA' }" :disabled="isLoading">PCA</button><!-- 当用户点击这个按钮时，vue会执行函数switchReduction，并把字符串'PCA'作为参数传进去 --><!-- 如果用户选择的降维算法为'PCA'，那么给这个按钮加上一个名为“active”的CSS类 --><!-- 当isLoading为true时按钮禁用 -->
+                <button @click="switchReduction('PCA')" :class="{ active: currentReduction==='PCA' }" :disabled="isLoading">PCA</button>
                 <button @click="switchReduction('t-SNE')" :class="{ active: currentReduction==='t-SNE' }" :disabled="isLoading">t-SNE</button>
                 <button @click="switchReduction('UMAP')" :class="{ active: currentReduction==='UMAP' }" :disabled="isLoading">UMAP</button>
               </div>
             </div>
 
-            <div ref="chartRef" class="chart-container"></div><!-- ref: 模板引用，将此 DOM 元素存储到 chartRef 变量中，用于把这个div渲染成散点图 -->
+            <div ref="chartRef" class="chart-container"></div>
 
-            <details><!-- details 元素: 可折叠的详情区域 -->
+            <details>
               <summary>查看原始 JSON 数据</summary>
               <pre>{{ backendResponse.data }}</pre>
             </details>
 
             <div class="step-section diff-section">
-              <h3>4. 差异表达分析 (Differential Expression)</h3>
+              <h3>差异表达分析 (Differential Expression)</h3>
               <p class="section-desc">
                 基于当前聚类结果，自动进行 "One-vs-Rest" 差异分析。<br>
                 点击运行将生成 <b>火山图</b> (全量基因) 和 <b>热图</b> (Top10 显著基因)。
@@ -1710,7 +1721,6 @@ const renderPsChart = () => {
               </div>
 
               <div v-if="diffResult" class="diff-result-box" ref="diffAnalysisAreaRef">
-                
                 <div class="charts-row">
                   <div class="chart-wrapper">
                     <div class="chart-header">
@@ -1735,87 +1745,63 @@ const renderPsChart = () => {
                     <small>提示: 红色代表高表达，蓝色代表低表达。上方色条代表样本所属的簇。</small>
                   </div>
                 </div>
-
               </div>
             </div>
 
-            <div class="step-section enrichment-section" v-if="diffResult"> <h3>功能富集分析 (Enrichment Analysis)</h3>
-            <p class="section-desc">
-              针对各个簇的高表达基因进行功能注释。<br>
-              请点击下方按钮查询离线数据库 (GO Biological Process 或 KEGG Pathways)。
-            </p>
-            
-            <div class="button-row">
-              <button @click="runEnrichmentAnalysis('GO')" :disabled="isEnrichmentLoading" class="run-btn go-btn">
-                <span v-if="isEnrichmentLoading && enrichmentType==='GO'">正在查询...</span>
-                <span v-else>运行 GO 分析</span>
-              </button>
+            <div class="step-section enrichment-section" v-if="diffResult"> 
+              <h3>功能富集分析 (Enrichment Analysis)</h3>
+              <p class="section-desc">
+                针对各个簇的高表达基因进行功能注释。<br>
+                请点击下方按钮查询离线数据库 (GO Biological Process 或 KEGG Pathways)。
+              </p>
+              
+              <div class="button-row">
+                <button @click="runEnrichmentAnalysis('GO')" :disabled="isEnrichmentLoading" class="run-btn go-btn">
+                  <span v-if="isEnrichmentLoading && enrichmentType==='GO'">正在查询...</span>
+                  <span v-else>运行 GO 分析</span>
+                </button>
 
-              <button @click="runEnrichmentAnalysis('KEGG')" :disabled="isEnrichmentLoading" class="run-btn kegg-btn">
-                <span v-if="isEnrichmentLoading && enrichmentType==='KEGG'">正在查询...</span>
-                <span v-else>运行 KEGG 分析</span>
-              </button>
-            </div>
-
-            <div v-if="enrichmentResult" class="enrichment-result-box" ref="enrichmentAreaRef">
-              <div class="chart-header">
-                <h4>📊 富集分析结果 (Enrichment Plot)</h4>
-                <select v-model="selectedEnrichmentCluster" @change="handleEnrichmentClusterChange" class="cluster-select">
-                  <option v-for="cid in Object.keys(enrichmentResult)" :key="cid" :value="Number(cid)">
-                    Cluster {{ cid }} Enrichment
-                  </option>
-                </select>
+                <button @click="runEnrichmentAnalysis('KEGG')" :disabled="isEnrichmentLoading" class="run-btn kegg-btn">
+                  <span v-if="isEnrichmentLoading && enrichmentType==='KEGG'">正在查询...</span>
+                  <span v-else>运行 KEGG 分析</span>
+                </button>
               </div>
-              <div ref="enrichmentChartRef" class="enrichment-chart"></div>
 
-              <hr class="chart-divider" />
-              <div class="chart-header">
-                <h4>🎈 全簇通路富集气泡图 (Pathway Enrichment - All Clusters)</h4>
-                <div style="margin-bottom: 10px;">
-                  <label style="margin-right: 15px; cursor: pointer;">
-                    <input type="radio" v-model="bubbleChartMode" value="combined" @change="renderEnrichmentBubbleChart">
-                    按簇平铺
-                  </label>
-                  <label style="cursor: pointer;">
-                    <input type="radio" v-model="bubbleChartMode" value="by_gene" @change="renderEnrichmentBubbleChart">
-                    按基因数分布
-                  </label>
-                </div>
-                <p>横轴为不同的聚类簇或基因数，纵轴为富集的通路。气泡大小代表命中基因数，颜色代表 P 值显著性。在“按基因数分布”模式下，点击右侧图例可显示或隐藏对应簇。</p>
-              </div>
-              <div ref="enrichmentBubbleChartRef" class="enrichment-bubble-chart"></div>
-            </div>
-          </div>
-
-            <div class="step-section survival-section" style="margin-top: 30px; border-top: 2px dashed #ddd;">
-              <h3>5. 临床生存分析 (Clinical Analysis)</h3>
-
-              <!-- 临床数据格式选择区域，包含数据格式下拉选择框和示例CSV文本展示 -->
-              <div class="upload-config">
-                <div class="config-item">
-                  <label>我的临床数据格式是</label>
-                  <select v-model="clinicalDataFormat" @change="handleClinicalFormatChange" class="format-select"><!-- 下拉选择框，v-model双向绑定到clinicalDataFormat变量；@change监听用户改变选项时触发handleClinicalFormatChange函数 -->
-                    <option v-for="opt in dataFormatOptions" :key="opt.value" :value="opt.value"><!-- v-for遍历dataFormatOptions数组生成8个选项 --><!-- :key为每个选项提供唯一标识 --><!-- :value动态绑定选项的值 -->
-                      {{ opt.label }}
+              <div v-if="enrichmentResult" class="enrichment-result-box" ref="enrichmentAreaRef">
+                <div class="chart-header">
+                  <h4>📊 富集分析结果 (Enrichment Plot)</h4>
+                  <select v-model="selectedEnrichmentCluster" @change="handleEnrichmentClusterChange" class="cluster-select">
+                    <option v-for="cid in Object.keys(enrichmentResult)" :key="cid" :value="Number(cid)">
+                      Cluster {{ cid }} Enrichment
                     </option>
                   </select>
                 </div>
-                <div class="example-box">
-                  <span class="example-label">示例CSV文本</span>
-                  <pre class="example-content">{{ clinicalExampleText }}</pre><!-- pre元素保留文本的空格和换行，显示根据clinicalDataFormat动态计算的示例文本 -->
-                </div>
-              </div>
+                <div ref="enrichmentChartRef" class="enrichment-chart"></div>
 
-              <!-- 包含上传临床数据的输入框和提示文本 -->
-              <p style="font-size:13px; color:#666;">
-                请上传包含 <b>OS</b> (状态) 和 <b>OS.time</b> (时间) 的 CSV 文件。
-                <br>每一行应为一个样本，且样本名称需与组学数据一致。
-              </p>
-              <div class="upload-controls">
-                <input type="file" @change="handleClinicalFileChange" />
+                <hr class="chart-divider" />
+                <div class="chart-header">
+                  <h4>🎈 全簇通路富集气泡图 (Pathway Enrichment - All Clusters)</h4>
+                  <div style="margin-bottom: 10px;">
+                    <label style="margin-right: 15px; cursor: pointer;">
+                      <input type="radio" v-model="bubbleChartMode" value="combined" @change="renderEnrichmentBubbleChart">
+                      按簇平铺
+                    </label>
+                    <label style="cursor: pointer;">
+                      <input type="radio" v-model="bubbleChartMode" value="by_gene" @change="renderEnrichmentBubbleChart">
+                      按基因数分布
+                    </label>
+                  </div>
+                  <p>横轴为不同的聚类簇或基因数，纵轴为富集的通路。气泡大小代表命中基因数，颜色代表 P 值显著性。</p>
+                </div>
+                <div ref="enrichmentBubbleChartRef" class="enrichment-bubble-chart"></div>
               </div>
-              <p class="status-message" :class="{ 'error-text': clinicalUploadStatus.startsWith('❌') }">
-                {{ clinicalUploadStatus }}
+            </div>
+
+            <div class="step-section survival-section" style="margin-top: 30px; border-top: 2px dashed #ddd;">
+              <h3>临床生存分析 (Clinical Analysis)</h3>
+
+              <p style="font-size:13px; color:#666;">
+                系统将使用您在左侧上传的临床数据进行生存分析。
               </p>
 
               <div style="margin-top:15px;">
@@ -1829,18 +1815,16 @@ const renderPsChart = () => {
                 <div class="p-value-tag">
                   Log-Rank P-value: 
                   <span :class="{'highlight-p': survivalResult.p_value<0.05}">
-                    {{ survivalResult.p_value<0.0001 ? survivalResult.p_value.toExponential(4) : survivalResult.p_value.toFixed(4) }}<!-- 如果P值小于0.0001，那么显示科学计数法；否则直接显示小数 -->
+                    {{ survivalResult.p_value<0.0001 ? survivalResult.p_value.toExponential(4) : survivalResult.p_value.toFixed(4) }}
                   </span>
                 </div>
                 <div ref="survivalChartRef" class="chart-container" style="height: 450px;"></div>
               </div>
             </div>
 
-
-
           </div>
 
-          <div v-if="errorMessage" class="error-box"><!-- 显示错误结果 -->
+          <div v-if="errorMessage" class="error-box">
             {{ errorMessage }}
           </div>
         </div>
@@ -1850,10 +1834,18 @@ const renderPsChart = () => {
   </div>
 </template>
 
-<style scoped>
-/* style scoped 表示这里的 CSS 样式仅应用于当前组件，不污染全局样式【【【【【额额有什么用？ */
 
-/* 整体容器布局，设置字体、最小高度和背景色 */
+
+
+
+<style>
+body{ /*默认情况下绝大多数浏览器都会给HTML的<body>标签自动加上8px的外边距。所以如果不写这段代码，网页四周就会出现一圈空白*/
+  margin: 0;
+  padding: 0;
+}
+</style>
+
+<style scoped>
 .container {
   font-family: 'Helvetica Neue', Arial, sans-serif;
   color: #333;
@@ -1861,16 +1853,18 @@ const renderPsChart = () => {
   background-color: #f5f7fa;
 }
 
-/* 头部样式 - 模仿论文图14的简约风格 */
 .header {
-  background-color: #2c3e50; /* 深色背景 */
+  background-color: #2c3e50;
   color: white;
   padding: 0 40px;
   height: 60px;
-  display: flex; /* Flexbox 布局 */
-  align-items: center; /* 垂直居中 */
-  justify-content: space-between; /* 两端对齐 */
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* 底部阴影 */
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  position: sticky; /* 设置为粘性定位，让导航栏在滚动时始终吸附于顶部 */
+  top: 0;           /* 距离顶部 0 像素时吸附 */
+  z-index: 1000;    /* 确保确保导航栏永远浮在所有内容之上 */
 }
 
 .logo {
@@ -1886,29 +1880,37 @@ const renderPsChart = () => {
   font-size: 16px;
 }
 
-/* 导航项悬停和激活状态样式 */
 .nav span:hover, .nav span.active {
   opacity: 1;
   font-weight: bold;
-  border-bottom: 2px solid #42b983; /* 绿色下划线 */
+  border-bottom: 2px solid #42b983;
 }
 
-/* 主内容区域，居中显示 */
 .main-content {
   display: flex;
   justify-content: center;
-  padding-top: 60px;
+  padding-top: 40px;
+  padding-bottom: 60px;
 }
 
-/* 分析面板卡片样式 */
 .analysis-panel {
   background: white;
-  width: 800px;
-  padding: 40px;
-  border-radius: 8px; /* 圆角 */
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05); /* 柔和阴影 */
+  width: 95vw;
+  max-width: 1300px;
+  padding: 30px 40px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
   text-align: center;
 }
+
+/* 
+.analysis-panel {
+  width: 95vw;
+  max-width: 1300px;
+  padding: 10px 20px;
+  text-align: center;
+}
+ */
 
 h1 {
   color: #2c3e50;
@@ -1921,211 +1923,224 @@ h1 {
   line-height: 1.6;
 }
 
-/* 步骤模块的通用样式，使界面看起来像分步骤操作 */
-.step-section {
-  text-align: left; /* 内容左对齐 */
-  background-color: #f8f9fa; /* 浅灰色背景区分模块 */
-  padding: 20px; /* 内边距 */
-  margin-bottom: 20px; /* 底部间距 */
-  border-radius: 8px; /* 圆角 */
-  border: 1px solid #e9ecef; /* 细边框 */
+/* ================== 新增：三栏布局样式 ================== */
+.layout-three-columns {
+  display: flex;
+  gap: 20px;
+  align-items: stretch;
+  margin-bottom: 30px;
 }
 
-.step-section h3 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  font-size: 16px;
-  color: #2c3e50;
-  border-bottom: 2px solid #42b983; /* 标题下划线装饰 */
-  padding-bottom: 5px;
-  display: inline-block;
-}
-
-/* 上传配置区样式 */
-.upload-config {
-  margin-bottom: 20px;
-  padding-bottom: 20px;
-  border-bottom: 1px dashed #ddd; /* 加个虚线分割线，区分配置和文件选择 */
-}
-
-.config-item {
-  margin-bottom: 15px;
+.column {
+  flex: 1;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
   text-align: left;
 }
 
-/* 格式选择下拉框样式 */
+.column h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 18px;
+  color: #2c3e50;
+  border-bottom: 2px solid #42b983;
+  padding-bottom: 10px;
+}
+
+/* 左侧栏和中间栏 卡片样式 */
+.upload-card {
+  background: #fff;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.upload-card h4 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  color: #34495e;
+}
+
+.mini-config {
+  margin-bottom: 10px;
+}
+
+.mini-config label {
+  font-size: 13px;
+  color: #555;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.mini-example {
+  padding: 8px !important;
+  font-size: 12px !important;
+  margin-bottom: 10px;
+}
+
+/* 参数配置卡片样式 (去掉了虚线，更加清爽) */
+.params-inner-card {
+  flex: 1; 
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+.params-box-clean {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.param-item-vertical {
+  display: flex;
+  flex-direction: column;
+}
+
+.param-item-vertical label {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.param-item-vertical input {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 空状态占位提示 */
+.empty-params {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #95a5a6;
+  font-size: 15px;
+  background: #fff;
+  border: 1px dashed #bdc3c7;
+  border-radius: 6px;
+  min-height: 150px;
+}
+
+/* 提交按钮区域 */
+.submit-area {
+  padding: 30px 0;
+  border-top: 1px dashed #ccc;
+  border-bottom: 1px dashed #ccc;
+  margin: 10px 0 40px 0;
+  background-color: #fafbfc;
+  border-radius: 8px;
+}
+
+.submit-btn {
+  font-size: 20px;
+  padding: 15px 50px;
+  border-radius: 30px;
+  box-shadow: 0 4px 15px rgba(66, 185, 131, 0.3);
+  letter-spacing: 1px;
+}
+
+.submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(66, 185, 131, 0.4);
+}
+
+.test-btn {
+  background-color: #e74c3c;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+}
+
+.test-btn:hover:not(:disabled) {
+  background-color: #c0392b;
+  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+}
+/* ================== 新增：三栏布局样式结束 ================== */
+
+
+/* 以下为保留的原有样式 */
 .format-select {
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  width: 100%; /* 下拉框占满容器宽度 */
-  max-width: 400px;
+  width: 100%;
   font-size: 14px;
 }
 
-/* 示例代码块容器 */
 .example-box {
-  background-color: #fff;
+  background-color: #f1f1f1;
   border: 1px solid #eee;
   padding: 10px;
   border-radius: 4px;
   text-align: left;
-  display: flex;
-  align-items: flex-start;
 }
 
-.example-label {
-  font-weight: bold;
-  color: #555;
-  margin-right: 10px;
-  white-space: nowrap; /* 防止标签换行 */
-}
-
-/* 示例内容（pre标签）样式 */
 .example-content {
   margin: 0;
-  background: none; /* 去掉 pre 默认的灰色背景，融合进 box */
-  padding: 0;
-  font-family: Consolas, Monaco, 'Courier New', monospace; /* 等宽字体 */
+  font-family: Consolas, Monaco, monospace;
   color: #2c3e50;
-  font-size: 13px;
   border: none;
+  background: none;
 }
 
-/* 上传控件布局容器 */
-.upload-controls {
-  display: flex; /* 弹性布局 */
-  gap: 15px; /* 子控件之间的间距 */
-  align-items: center; /* 垂直居中 */
+.upload-controls input[type="file"] {
+  width: 100%;
+  font-size: 13px;
 }
 
-/* 已经废弃的上传按钮样式（因为逻辑改为自动上传，所以样式保留供参考） */
-.upload-btn {
-  background-color: #3498db; /* 蓝色背景 */
-  color: white; /* 白色文字 */
-  border: none; /* 无边框 */
-  padding: 8px 16px; /* 内边距 */
-  border-radius: 4px; /* 圆角 */
-  cursor: pointer; /* 鼠标悬停手势 */
-  transition: background-color 0.3s; /* 颜色渐变动画 */
-}
-
-.upload-btn:hover:not(:disabled) {
-  background-color: #2980b9; /* 悬停深蓝色 */
-}
-
-.upload-btn:disabled {
-  background-color: #bdc3c7; /* 禁用时灰色 */
-  cursor: not-allowed; /* 禁用鼠标手势 */
-}
-
-/* 状态反馈消息样式 */
 .status-message {
   margin-top: 10px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: bold;
-  color: #27ae60; /* 成功状态绿色文字 */
-  white-space: pre-wrap; /* 允许错误信息自动换行，防止太长溢出 */
-  word-break: break-all; /* 允许在单词内换行，防止文件名过长溢出 */
+  color: #27ae60;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
-/* 错误状态文本红色样式，使用 !important 提高优先级 */
 .error-text {
-  color: #e74c3c !important; /* 强制使用红色 */
+  color: #e74c3c !important;
 }
 
-.control-group {
-  margin-bottom: 20px;
-}
-
-/* 动态参数配置区域的样式 */
-.params-box {
-  margin-top: 15px;       /* 与上方下拉框保持距离 */
-  padding: 15px;          /* 内部留白 */
-  background-color: #fff; /* 白色背景 */
-  border: 1px dashed #bbb;/* 虚线边框，表示这是可选配置区 */
-  border-radius: 6px;     /* 圆角 */
-}
-
-/* 标题样式 */
-.params-box h4 {
-  margin-top: 0;
-  margin-bottom: 10px;
-  font-size: 14px;
-  color: #555;
-}
-
-/* 单个参数项的布局：使用 inline-block 让它们横向排列 */
-.param-item {
-  display: inline-block; /* 水平排列，让输入框在一行显示 */
-  margin-right: 20px; /*这一项与下一项的间距 */
-  margin-bottom: 5px;
-}
-
-/* 参数标签样式 */
-.param-item label {
-  font-size: 14px;
-  margin-right: 8px; /* 标签与输入框的距离 */
-  color: #666;
-}
-
-/* 输入框样式 */
-.param-item input {
-  width: 60px; /* 限制输入框宽度 */
-  padding: 5px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-select {
-  padding: 8px 12px;
-  font-size: 16px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  width: 200px;
-}
-
-/* 主要操作按钮（运行分析）样式 */
 .run-btn {
-  background-color: #42b983; /* Vue的主题色，也适合科研平台的清新感 */
+  background-color: #42b983;
   color: white;
   border: none;
   padding: 12px 30px;
   font-size: 18px;
   border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.3s; /* 背景色过渡动画 */
-}
-
-.run-btn:hover:not(:disabled) {
-  background-color: #3aa876;
+  transition: all 0.3s;
 }
 
 .run-btn:disabled {
-  background-color: #a8d5c2; /* 禁用时的浅绿色 */
+  background-color: #a8d5c2;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
-/* 结果显示区域样式 */
 .result-area {
-  margin-top: 40px;
   text-align: left;
-  border-top: 1px solid #eee; /* 顶部分隔线 */
-  padding-top: 20px;
 }
 
-/* 成功结果容器 */
 .success-box {
-  background-color: #e8f5e9; /* 浅绿背景 */
+  background-color: #e8f5e9;
   border: 1px solid #c8e6c9;
   padding: 15px;
   border-radius: 4px;
   color: #2e7d32;
 }
 
-/* 错误结果容器 */
 .error-box {
-  background-color: #ffebee; /* 浅红背景 */
+  background-color: #ffebee;
   border: 1px solid #ffcdd2;
   padding: 15px;
   border-radius: 4px;
@@ -2136,10 +2151,9 @@ pre {
   background: #f1f1f1;
   padding: 10px;
   border-radius: 4px;
-  overflow-x: auto; /* 内容过宽时显示滚动条 */
+  overflow-x: auto;
 }
 
-/* 指标容器布局 */
 .metrics-container {
   margin-bottom: 30px;
   background: white;
@@ -2155,14 +2169,12 @@ pre {
   padding-bottom: 10px;
 }
 
-/* 网格布局，让三个指标横向排列 */
 .metrics-grid {
   display: flex;
-  justify-content: space-around; /* 平均分布 */
+  justify-content: space-around;
   margin-top: 15px;
 }
 
-/* 单个指标卡片样式 */
 .metric-card {
   display: flex;
   flex-direction: column;
@@ -2182,26 +2194,24 @@ pre {
 .m-value {
   font-size: 20px;
   font-weight: bold;
-  color: #42b983; /* 使用主题绿色 */
+  color: #42b983;
 }
 
-/* 图表容器样式：必须指定高度，否则 echarts 无法显示 */
 .chart-container {
   width: 100%;
-  height: 400px; /* 设定高度为 400px */
+  height: 400px;
   background-color: #fff;
   border: 1px solid #eee;
   border-radius: 4px;
   margin-bottom: 20px;
 }
 
-/* PCA/t-SNE/UMAP按钮样式 */
 .reduction-controls {
-  display: flex; /* 弹性布局，让标签和按钮组水平排列 */
-  align-items: center; /* 垂直居中 */
-  justify-content: center; /* 水平居中 */
-  margin-bottom: 15px; /* 与下方图表保持间距 */
-  background-color: #f8f9fa; /* 浅灰背景衬托 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 15px;
+  background-color: #f8f9fa;
   padding: 10px;
   border-radius: 6px;
 }
@@ -2210,20 +2220,20 @@ pre {
   font-size: 14px;
   font-weight: bold;
   color: #555;
-  margin-right: 15px; /* 标签与按钮组的间距 */
+  margin-right: 15px;
 }
 
 .btn-group {
   display: flex;
-  border: 1px solid #ddd; /* 整体边框 */
-  border-radius: 4px; /* 整体圆角 */
-  overflow: hidden; /* 保证子按钮的直角不溢出圆角边框 */
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
 .btn-group button {
   background-color: white;
-  border: none; /* 去掉默认边框 */
-  border-right: 1px solid #ddd; /* 按钮之间的分割线 */
+  border: none;
+  border-right: 1px solid #ddd;
   padding: 8px 16px;
   cursor: pointer;
   font-size: 13px;
@@ -2232,29 +2242,24 @@ pre {
 }
 
 .btn-group button:last-child {
-  border-right: none; /* 最后一个按钮不需要右分割线 */
+  border-right: none;
 }
 
 .btn-group button:hover:not(:disabled) {
-  background-color: #f0f0f0; /* 悬停时的浅灰 */
+  background-color: #f0f0f0;
 }
 
-/* 选中状态的样式 */
 .btn-group button.active {
-  background-color: #42b983; /* 激活时变成主题绿 */
-  color: white; /* 文字变白 */
+  background-color: #42b983;
+  color: white;
   font-weight: bold;
 }
 
-.btn-group button:disabled {
-  cursor: wait;
-  opacity: 0.6;
-}
-
-/* 生存分析区域样式 */
 .survival-section {
-  background-color: #fff9f0; /* 这里的背景色稍微不同，区分功能区 */
+  background-color: #fff9f0;
   border: 1px solid #ffe0b2;
+  padding: 20px;
+  border-radius: 8px;
 }
 
 .p-value-tag {
@@ -2265,7 +2270,7 @@ pre {
 }
 
 .highlight-p {
-  color: #e74c3c; /* 显著的P值显示为红色 */
+  color: #e74c3c;
   font-weight: 800;
 }
 
@@ -2277,13 +2282,12 @@ pre {
   box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
-/* 差异分析相关样式 */
 .diff-section {
-  background-color: #f3e5f5; /* 淡紫色背景 */
-  border: 1px solid #e1bee7;
-  /* 原来写在内联 style 里的间距和分割线，统一移到这里 */
+  background-color: #f3f0ff;
+  border: 1px solid #dcd6f7;
+  padding: 20px;
+  border-radius: 8px;
   margin-top: 30px;
-  border-top: 2px dashed #ddd;
 }
 
 .charts-row {
@@ -2293,7 +2297,7 @@ pre {
 }
 
 .chart-wrapper {
-  flex: 1; /* 左右平分宽度 */
+  flex: 1;
   background: white;
   padding: 10px;
   border-radius: 8px;
@@ -2328,39 +2332,20 @@ pre {
   border-radius: 4px;
 }
 
-/* 增加高度以容纳图例和双坐标轴 */
 .mini-chart {
   width: 100%;
-  height: 450px; /* 从 350px 增加到 450px */
+  height: 450px;
 }
 
-/* 热图容器：增加高度以容纳基因名 */
 .heatmap-container {
   width: 100%;
-  height: 600px; /* 足够高，防止基因名重叠 */
-  /* border: 1px solid #eee; 这里不需要边框，ECharts内部有留白 */ 
+  height: 600px;
 }
 
 .data-actions {
   text-align: center;
   margin-top: 10px;
   color: #7f8c8d;
-}
-
-.diff-section {
-  background-color: #f3f0ff; /* 淡紫色背景，与生存分析区分 */
-  border: 1px solid #dcd6f7;
-  margin-top: 30px;
-}
-
-.diff-btn {
-  background-color: #8e44ad; /* 紫色按钮 */
-}
-.diff-btn:hover:not(:disabled) {
-  background-color: #732d91;
-}
-.diff-btn:disabled {
-  background-color: #c39bd3;
 }
 
 .section-desc {
@@ -2375,21 +2360,19 @@ pre {
   background: white;
   padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.08); /* 稍微强一点的阴影 */
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
 }
 
-/* 热图外层加一点上间距，与火山图区分 */
 .heatmap-wrapper {
   margin-top: 20px;
 }
 
-/* ********************************************* */
-/* [新增] 富集分析样式 */
 .enrichment-section {
-  background-color: #e3f2fd; /* 淡蓝色背景 */
+  background-color: #e3f2fd;
   border: 1px solid #bbdefb;
   margin-top: 30px;
-  border-top: 2px dashed #ddd;
+  padding: 20px;
+  border-radius: 8px;
 }
 
 .button-row {
@@ -2398,19 +2381,10 @@ pre {
   margin-bottom: 20px;
 }
 
-.go-btn {
-  background-color: #e67e22; /* 橙色 */
-}
-.go-btn:hover:not(:disabled) {
-  background-color: #d35400;
-}
-
-.kegg-btn {
-  background-color: #3498db; /* 蓝色 */
-}
-.kegg-btn:hover:not(:disabled) {
-  background-color: #2980b9;
-}
+.go-btn { background-color: #e67e22; }
+.go-btn:hover:not(:disabled) { background-color: #d35400; }
+.kegg-btn { background-color: #3498db; }
+.kegg-btn:hover:not(:disabled) { background-color: #2980b9; }
 
 .enrichment-result-box {
   background: white;
@@ -2421,19 +2395,17 @@ pre {
 
 .enrichment-chart {
   width: 100%;
-  height: 500px; /* 足够的高度展示条形图 */
+  height: 500px;
 }
 
-/* ********************************************* */
-/* [新增] 气泡图与分割线对应的 CSS 样式 */
 .chart-divider {
   border: none;
-  border-top: 1px solid #eee; /* 浅灰色实线分割，让上下图表保持独立视觉 */
-  margin: 30px 0; /* 增加上下留白 */
+  border-top: 1px solid #eee;
+  margin: 30px 0;
 }
 
 .enrichment-bubble-chart {
-  width: 100%; /* 横向占满容器 */
-  height: 600px; /* 气泡图 Y 轴因为挤着大量通路名称，需要更高的高度，否则 ECharts 会自动隐藏文字 */
+  width: 100%;
+  height: 600px;
 }
 </style>
