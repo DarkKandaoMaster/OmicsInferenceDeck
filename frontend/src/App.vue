@@ -1726,7 +1726,7 @@ const renderPsChart = () => {
                   </select>
                 </div>
               </div>
-              <div ref="psChartRef" style="width: 100%; height: 500px;"></div>
+              <div ref="psChartRef" style="width: 800px; height: 600px; margin: 0 auto;"></div>
             </div>
           </div>
         </div>
@@ -2251,8 +2251,9 @@ pre {
 }
 
 .chart-container {
-  width: 100%;
-  height: 400px;
+  width: 800px;
+  height: 600px;
+  margin: 0 auto 20px auto;
   background-color: #fff;
   border: 1px solid #eee;
   border-radius: 4px;
@@ -2386,13 +2387,15 @@ pre {
 }
 
 .mini-chart {
-  width: 100%;
-  height: 450px;
+  width: 800px;
+  height: 600px;
+  margin: 0 auto;
 }
 
 .heatmap-container {
-  width: 100%;
+  width: 800px;
   height: 600px;
+  margin: 0 auto;
 }
 
 .data-actions {
@@ -2447,8 +2450,9 @@ pre {
 }
 
 .enrichment-chart {
-  width: 100%;
-  height: 500px;
+  width: 800px;
+  height: 600px;
+  margin: 0 auto 20px auto;
 }
 
 .chart-divider {
@@ -2458,7 +2462,8 @@ pre {
 }
 
 .enrichment-bubble-chart {
-  width: 100%;
+  width: 800px;
   height: 600px;
+  margin: 0 auto 20px auto;
 }
 </style>
