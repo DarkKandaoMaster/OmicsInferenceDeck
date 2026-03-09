@@ -21,7 +21,7 @@ const errorMessage=ref('') //定义字符串变量，用于存储请求失败时
 
 const selectedAlgorithm=ref([]) // 定义当前选中的算法数组，默认值为空数组
 
-const algorithms=['K-means', 'PIntMF', 'Subtype-GAN', 'NEMO', 'SNF'] //定义算法候选数组，供下拉框渲染使用 //这些算法对应论文表3和表5中提到的 "11种前沿多组学聚类算法" 及基础算法
+const algorithms=['K-means', 'Spectral Clustering', 'PIntMF', 'Subtype-GAN', 'NEMO', 'SNF'] //定义算法候选数组，供下拉框渲染使用 //这些算法对应论文表3和表5中提到的 "11种前沿多组学聚类算法" 及基础算法
 
 const selectedFiles=ref([]) //用于存储用户通过文件输入框选择的各个文件对象
 
@@ -79,6 +79,8 @@ const bubbleChartMode = ref('combined') // 定义响应式变量，默认'combin
 const isTestMode = ref(false) // 布尔变量，用于控制是否开启测试模式，通过复选框双向绑定
 const testNClusters = ref('2,3,4,5') // 存储用户输入的聚类簇数测试范围（逗号分隔的字符串）
 const testMaxIter = ref('100,200,300') // 存储用户输入的最大迭代次数测试范围（逗号分隔的字符串）
+// 【新增】谱聚类测试范围
+const testNNeighbors = ref('5,10,15')
 
 const psResult = ref(null) // 存储后端返回的敏感性分析（Parameter Search）结果数据
 const isPsLoading = ref(false) // 敏感性分析的加载状态，防止用户重复点击
@@ -177,6 +179,9 @@ const clinicalExampleText=computed(()=>{
 const kValue=ref(3) //定义簇的数量 (K值)，初始值3 //对应论文 2.1.2 节中提到的 "最大簇数(K值)" 或论文表2中的 K 值设定
 
 const maxIter=ref(300) //定义最大迭代次数，初始值300，用于控制算法收敛前的最大循环数，防止死循环
+
+// 【新增】谱聚类参数
+const nNeighbors=ref(10)
 
 const randomSeed=ref(42) //定义随机种子，初始值42 //确保算法结果的可复现性（论文 2.1.2 提到 Consensus Clustering 需要重采样，种子很重要）
 
@@ -345,6 +350,7 @@ const runAnalysis= async ()=>{
       n_clusters: kValue.value, //用户自定义的K值
       random_state: randomSeed.value, //用户自定义的随机种子
       max_iter: maxIter.value, //用户自定义的最大迭代次数
+      n_neighbors: nNeighbors.value, // 【新增】传入谱聚类所需的参数
       reduction: currentReduction.value //用户选择的降维算法
     })
     backendResponse.value=res.data //请求成功后，将后端返回的数据赋值给backendResponse。此时前端界面也会更新
@@ -1422,19 +1428,39 @@ const runParameterSearch = async () => {
   psResult.value = null // 清空旧结果
 
   try {
-    // 将前端绑定的逗号分隔字符串（如 "2,3,4"）分割成数组，并转换为纯数字列表
-    const n_clusters_arr = testNClusters.value.split(',').map(Number)
-    const max_iter_arr = testMaxIter.value.split(',').map(Number)
+    // // 将前端绑定的逗号分隔字符串（如 "2,3,4"）分割成数组，并转换为纯数字列表
+    // const n_clusters_arr = testNClusters.value.split(',').map(Number)
+    // const max_iter_arr = testMaxIter.value.split(',').map(Number)
+
+    // 【修改】根据所选算法动态构建测试的 param_grid 和默认坐标轴
+    let paramGridObj = {}
+    if(selectedAlgorithm.value[0] === 'K-means') {
+      paramGridObj = {
+        "n_clusters": testNClusters.value.split(',').map(Number),
+        "max_iter": testMaxIter.value.split(',').map(Number)
+      }
+      psParam1.value = 'n_clusters'
+      psParam2.value = 'max_iter'
+    }
+    else if (selectedAlgorithm.value[0] === 'Spectral Clustering') {
+      paramGridObj = {
+        "n_clusters": testNClusters.value.split(',').map(Number),
+        "n_neighbors": testNNeighbors.value.split(',').map(Number)
+      }
+      psParam1.value = 'n_clusters'
+      psParam2.value = 'n_neighbors'
+    }
 
     // 发送 POST 请求到后端的测试模式接口
     const res = await axios.post('http://127.0.0.1:8000/api/parameter_search', {
       algorithm: selectedAlgorithm.value[0], // 当前算法名 // 为什么要这么写：同样使用索引 [0] 提取选中的算法名称作为字符串数据格式传递，满足后端 ParameterSearchRequest 接口规范。
       omics_filename: uploadedFilename.value, // 上传好的组学文件名
       clinical_filename: clinicalFilename.value, // 上传好的临床文件名
-      param_grid: { // 构建需要测试的参数网格字典传给后端
-        "n_clusters": n_clusters_arr,
-        "max_iter": max_iter_arr
-      },
+      param_grid: paramGridObj, // 【修改】传入动态构建的网格字典
+      // param_grid: { // 构建需要测试的参数网格字典传给后端
+      //   "n_clusters": n_clusters_arr,
+      //   "max_iter": max_iter_arr
+      // },
       random_state: randomSeed.value // 传入随机种子
     })
 
@@ -1643,7 +1669,9 @@ const renderPsChart = () => {
             <div v-if="selectedAlgorithm.length>0" class="upload-card params-inner-card">
 
               <div v-if="!isTestMode">
+
                 <div v-if="selectedAlgorithm.includes('K-means')" class="params-box-clean">
+                  <label>K-means:</label>
                   <div class="param-item-vertical">
                     <label>聚类簇数 (K值):</label>
                     <input type="number" v-model="kValue" />
@@ -1657,13 +1685,32 @@ const renderPsChart = () => {
                     <input type="number" v-model="maxIter" />
                   </div>
                 </div>
+
+                <div v-if="selectedAlgorithm.includes('Spectral Clustering')" class="params-box-clean">
+                  <label>Spectral Clustering:</label>
+                  <div class="param-item-vertical">
+                    <label>聚类簇数 (K值):</label>
+                    <input type="number" v-model="kValue" />
+                  </div>
+                  <div class="param-item-vertical">
+                    <label>邻居数 (n_neighbors):</label>
+                    <input type="number" v-model="nNeighbors" />
+                  </div>
+                  <div class="param-item-vertical">
+                    <label>随机种子 (-1表示None):</label>
+                    <input type="number" v-model="randomSeed" />
+                  </div>
+                </div>
+
               </div>
 
               <div v-else>
+                <p style="font-size: 12px; color: #e65100; margin-bottom: 15px; font-weight: bold;">
+                  ⚠️ 测试模式需要临床数据文件计算P-value，请确保临床数据文件已上传。
+                </p>
+
                 <div v-if="selectedAlgorithm.includes('K-means')" class="params-box-clean">
-                  <p style="font-size: 12px; color: #e65100; margin-bottom: 15px; font-weight: bold;">
-                    ⚠️ 测试模式需要临床数据文件计算P-value，请确保临床数据文件已上传。
-                  </p>
+                  <label>K-means:</label>
                   <div class="param-item-vertical">
                     <label>聚类簇数测试范围 (逗号分隔):</label>
                     <input type="text" v-model="testNClusters" placeholder="如: 2,3,4,5" />
@@ -1677,6 +1724,23 @@ const renderPsChart = () => {
                     <input type="number" v-model="randomSeed" />
                   </div>
                 </div>
+
+                <div v-if="selectedAlgorithm.includes('Spectral Clustering')" class="params-box-clean">
+                  <label>Spectral Clustering:</label>
+                  <div class="param-item-vertical">
+                    <label>聚类簇数测试范围 (逗号分隔):</label>
+                    <input type="text" v-model="testNClusters" placeholder="如: 2,3,4,5" />
+                  </div>
+                  <div class="param-item-vertical">
+                    <label>邻居数测试范围 (逗号分隔):</label>
+                    <input type="text" v-model="testNNeighbors" placeholder="如: 5,10,15" />
+                  </div>
+                  <div class="param-item-vertical">
+                    <label>随机种子:</label>
+                    <input type="number" v-model="randomSeed" />
+                  </div>
+                </div>
+
               </div>
 
             </div>
@@ -1717,12 +1781,14 @@ const renderPsChart = () => {
                   <select v-model="psParam1" @change="renderPsChart" class="cluster-select">
                     <option value="n_clusters">K值 (n_clusters)</option>
                     <option value="max_iter">最大迭代 (max_iter)</option>
+                    <option value="n_neighbors">邻居数 (谱聚类)</option>
                   </select>
                   <label style="margin-left: 15px;">Y轴参数 (选无则画2D): </label>
                   <select v-model="psParam2" @change="renderPsChart" class="cluster-select">
                     <option value="">无 (绘制2D图)</option>
                     <option value="n_clusters">K值 (n_clusters)</option>
                     <option value="max_iter">最大迭代 (max_iter)</option>
+                    <option value="n_neighbors">邻居数 (谱聚类)</option>
                   </select>
                 </div>
               </div>
