@@ -1554,410 +1554,448 @@ const renderPsChart = () => {
 
 
 <template>
-  <div class="container">
-
-    <header class="header">
-      <div class="logo">InferenceDeck</div>
-      <nav class="nav">
-        <span @click="activeTab = 'Home'" :class="{ active: activeTab === 'Home' }">Home</span>
-        <span @click="activeTab = 'Analysis'" :class="{ active: activeTab === 'Analysis' }">Analysis</span>
-        <span @click="activeTab = 'Resources'" :class="{ active: activeTab === 'Resources' }">Resources</span>
-        <span @click="activeTab = 'Help'" :class="{ active: activeTab === 'Help' }">Help</span>
-      </nav>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="header-content">
+        <div class="logo">
+          InferenceDeck
+        </div>
+        <nav class="app-nav">
+          <button @click="activeTab = 'Home'" :class="{ active: activeTab === 'Home' }">Home</button>
+          <button @click="activeTab = 'Analysis'" :class="{ active: activeTab === 'Analysis' }">Analysis</button>
+          <button @click="activeTab = 'Resources'" :class="{ active: activeTab === 'Resources' }">Resources</button>
+          <button @click="activeTab = 'Help'" :class="{ active: activeTab === 'Help' }">Help</button>
+        </nav>
+      </div>
     </header>
 
     <main class="main-content">
-
-      <div v-if="activeTab === 'Home'">
-        <h1>多组学癌症亚型分析</h1>
+      <div v-if="activeTab === 'Home'" class="hero-section">
+        <div class="hero-content">
+          <h1>多组学癌症亚型分析平台</h1>
+          <p>基于前沿算法与多组学数据，快速、精准识别癌症分子亚型</p>
+          <button class="action-btn primary large" @click="activeTab = 'Analysis'">开始分析之旅</button>
+        </div>
       </div>
 
-      <div v-else class="analysis-panel">
+      <div v-else class="analysis-dashboard">
+        <div class="dashboard-header">
+          <h2>数据配置与算法引擎</h2>
+          <p>请依次上传数据、选择聚类算法并配置参数以启动分析管线。</p>
+        </div>
 
-        <div class="layout-three-columns">
+        <div class="config-grid">
           
-          <div class="column">
-            <h3>📂 数据上传</h3>
-            
-            <div class="upload-card">
-              <h4>🧬 组学数据</h4>
-              <div class="config-item mini-config">
-                <label style="margin-bottom: 8px;">数据格式：</label>
-                <div style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #444; text-align: left;">
-                  <label style="cursor: pointer;">
+          <div class="config-card">
+            <div class="card-header">
+              <span class="icon">📂</span>
+              <h3>1. 数据上传</h3>
+            </div>
+            <div class="card-body">
+              
+              <div class="upload-section">
+                <h4>🧬 组学数据 <span class="badge required">必填</span></h4>
+                <div class="format-toggles">
+                  <label class="toggle-label" :class="{ 'is-checked': omicsIsRowSample }">
                     <input type="checkbox" v-model="omicsIsRowSample" @change="handleFormatChange" />
-                    行代表特征，列代表病人<br>
-                    (不勾选则为行代表病人，列代表特征)
+                    行代表特征, 列代表病人
                   </label>
-                  <label style="cursor: pointer;">
+                  <label class="toggle-label" :class="{ 'is-checked': omicsHasHeader }">
                     <input type="checkbox" v-model="omicsHasHeader" @change="handleFormatChange" />
-                    有表头行
+                    包含表头行
                   </label>
-                  <label style="cursor: pointer;">
+                  <label class="toggle-label" :class="{ 'is-checked': omicsHasIndex }">
                     <input type="checkbox" v-model="omicsHasIndex" @change="handleFormatChange" />
-                    有索引列
+                    包含索引列
                   </label>
                 </div>
-              </div>
-              <div class="example-box mini-example">
-                <pre class="example-content">{{ exampleText }}</pre>
-              </div>
-              <div class="upload-controls">
-                <input type="file" @change="handleFileChange" multiple />
-              </div>
-              <p style="font-size: 11px; color: #888; margin-top: 5px;">* 支持多文件上传，按样本名称自动合并。</p>
-              <p class="status-message" :class="{ 'error-text': uploadStatus.startsWith('❌') }">{{ uploadStatus }}</p>
-            </div>
+                
+                <div class="code-preview">
+                  <div class="preview-header">CSV 格式预览</div>
+                  <pre>{{ exampleText }}</pre>
+                </div>
 
-            <div class="upload-card">
-              <h4>🏥 临床数据 <span style="font-size: 12px; color: #888; font-weight: normal;">(可选)</span></h4>
-              <div class="config-item mini-config">
-                <label style="margin-bottom: 8px;">数据格式：</label>
-                <div style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #444; text-align: left;">
-                  <label style="cursor: pointer;">
+                <div class="file-drop-zone">
+                  <input type="file" @change="handleFileChange" multiple class="file-input" id="omics-file"/>
+                  <label for="omics-file" class="file-label">
+                    <span class="upload-icon">📥</span>
+                    <span class="upload-text">点击选择组学文件 (支持多选)</span>
+                  </label>
+                </div>
+                <div class="status-msg" :class="{ 'is-error': uploadStatus.startsWith('❌'), 'is-success': uploadStatus.startsWith('✅') }" v-show="uploadStatus">
+                  {{ uploadStatus }}
+                </div>
+              </div>
+
+              <hr class="divider" />
+
+              <div class="upload-section">
+                <h4>🏥 临床数据 <span class="badge optional">可选</span></h4>
+                <div class="format-toggles">
+                  <label class="toggle-label" :class="{ 'is-checked': clinicalIsRowSample }">
                     <input type="checkbox" v-model="clinicalIsRowSample" @change="handleClinicalFormatChange" />
-                    行代表特征，列代表病人<br>
-                    (不勾选则为行代表病人，列代表特征)
+                    行代表特征, 列代表病人
                   </label>
-                  <label style="cursor: pointer;">
+                  <label class="toggle-label" :class="{ 'is-checked': clinicalHasHeader }">
                     <input type="checkbox" v-model="clinicalHasHeader" @change="handleClinicalFormatChange" />
-                    有表头行
+                    包含表头行
                   </label>
-                  <label style="cursor: pointer;">
+                  <label class="toggle-label" :class="{ 'is-checked': clinicalHasIndex }">
                     <input type="checkbox" v-model="clinicalHasIndex" @change="handleClinicalFormatChange" />
-                    有索引列
+                    包含索引列
                   </label>
                 </div>
+                
+                <div class="code-preview">
+                  <div class="preview-header">CSV 格式预览</div>
+                  <pre>{{ clinicalExampleText }}</pre>
+                </div>
+
+                <div class="file-drop-zone">
+                  <input type="file" @change="handleClinicalFileChange" class="file-input" id="clinical-file"/>
+                  <label for="clinical-file" class="file-label">
+                    <span class="upload-icon">📥</span>
+                    <span class="upload-text">点击选择临床文件</span>
+                    <small>需包含 OS 和 OS.time</small>
+                  </label>
+                </div>
+                <div class="status-msg" :class="{ 'is-error': clinicalUploadStatus.startsWith('❌'), 'is-success': clinicalUploadStatus.startsWith('✅') }" v-show="clinicalUploadStatus">
+                  {{ clinicalUploadStatus }}
+                </div>
               </div>
-              <div class="example-box mini-example">
-                <pre class="example-content">{{ clinicalExampleText }}</pre>
-              </div>
-              <div class="upload-controls">
-                <input type="file" @change="handleClinicalFileChange" />
-              </div>
-              <p style="font-size: 11px; color: #888; margin-top: 5px;">* 需包含 OS(状态) 和 OS.time(时间)。</p>
-              <p class="status-message" :class="{ 'error-text': clinicalUploadStatus.startsWith('❌') }">{{ clinicalUploadStatus }}</p>
+
             </div>
           </div>
 
-          <div class="column">
-            <h3>⚙️ 选择算法</h3>
-            <div class="upload-card algo-card">
+          <div class="config-card">
+            <div class="card-header">
+              <span class="icon">⚙️</span>
+              <h3>2. 算法选择</h3>
+            </div>
+            <div class="card-body">
+              <div class="test-mode-switch" :class="{ 'is-active': isTestMode }">
+                <label class="switch-container">
+                  <input type="checkbox" v-model="isTestMode" />
+                  <span class="slider round"></span>
+                </label>
+                <div class="switch-info">
+                  <strong>开启测试模式</strong>
+                  <span>执行参数敏感性分析</span>
+                </div>
+              </div>
 
-              <div class="checkbox-wrapper">
-                <label style="font-weight: bold; color: #e74c3c; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                  <input type="checkbox" v-model="isTestMode" style="transform: scale(1.2);" /> 
-                  开启“测试模式” (参数敏感性分析)
+              <div class="algo-list">
+                <h4 class="section-subtitle">可用聚类算法</h4>
+                <label 
+                  v-for="algo in algorithms" 
+                  :key="algo" 
+                  class="algo-item"
+                  :class="{ 'is-selected': selectedAlgorithm.includes(algo) }"
+                >
+                  <input type="checkbox" v-model="selectedAlgorithm" :value="algo" />
+                  <span class="algo-name">{{ algo }}</span>
+                  <span class="check-icon" v-if="selectedAlgorithm.includes(algo)">✓</span>
                 </label>
               </div>
-
-              <label style="font-weight: bold; margin-bottom: 10px; display: block; color: #34495e;">聚类算法选择：</label>
-
-              <div style="margin-bottom: 20px; text-align: left;">
-                <label v-for="algo in algorithms" :key="algo" style="display: block; margin-bottom: 8px; cursor: pointer;">
-                  <input type="checkbox" v-model="selectedAlgorithm" :value="algo" style="margin-right: 8px;" />
-                  {{ algo }}
-                </label>
-              </div>
-
             </div>
           </div>
 
-          <div class="column">
-            <h3>🎛️ 参数配置</h3>
-
-            <div v-if="selectedAlgorithm.length>0" class="upload-card params-inner-card">
-
-              <div v-if="!isTestMode">
-
-                <div v-if="selectedAlgorithm.includes('K-means')" class="params-box-clean">
-                  <label>K-means:</label>
-                  <div class="param-item-vertical">
-                    <label>聚类簇数 (K值):</label>
-                    <input type="number" v-model="kValue" />
-                  </div>
-                  <div class="param-item-vertical">
-                    <label>随机种子 (-1表示None):</label>
-                    <input type="number" v-model="randomSeed" />
-                  </div>
-                  <div class="param-item-vertical">
-                    <label>最大迭代:</label>
-                    <input type="number" v-model="maxIter" />
-                  </div>
-                </div>
-
-                <div v-if="selectedAlgorithm.includes('Spectral Clustering')" class="params-box-clean">
-                  <label>Spectral Clustering:</label>
-                  <div class="param-item-vertical">
-                    <label>聚类簇数 (K值):</label>
-                    <input type="number" v-model="kValue" />
-                  </div>
-                  <div class="param-item-vertical">
-                    <label>邻居数 (n_neighbors):</label>
-                    <input type="number" v-model="nNeighbors" />
-                  </div>
-                  <div class="param-item-vertical">
-                    <label>随机种子 (-1表示None):</label>
-                    <input type="number" v-model="randomSeed" />
-                  </div>
-                </div>
-
-              </div>
-
-              <div v-else>
-                <p style="font-size: 12px; color: #e65100; margin-bottom: 15px; font-weight: bold;">
-                  ⚠️ 测试模式需要临床数据文件计算P-value，请确保临床数据文件已上传。
-                </p>
-
-                <div v-if="selectedAlgorithm.includes('K-means')" class="params-box-clean">
-                  <label>K-means:</label>
-                  <div class="param-item-vertical">
-                    <label>聚类簇数测试范围 (逗号分隔):</label>
-                    <input type="text" v-model="testNClusters" placeholder="如: 2,3,4,5" />
-                  </div>
-                  <div class="param-item-vertical">
-                    <label>最大迭代测试范围 (逗号分隔):</label>
-                    <input type="text" v-model="testMaxIter" placeholder="如: 100,200,300" />
-                  </div>
-                  <div class="param-item-vertical">
-                    <label>随机种子:</label>
-                    <input type="number" v-model="randomSeed" />
-                  </div>
-                </div>
-
-                <div v-if="selectedAlgorithm.includes('Spectral Clustering')" class="params-box-clean">
-                  <label>Spectral Clustering:</label>
-                  <div class="param-item-vertical">
-                    <label>聚类簇数测试范围 (逗号分隔):</label>
-                    <input type="text" v-model="testNClusters" placeholder="如: 2,3,4,5" />
-                  </div>
-                  <div class="param-item-vertical">
-                    <label>邻居数测试范围 (逗号分隔):</label>
-                    <input type="text" v-model="testNNeighbors" placeholder="如: 5,10,15" />
-                  </div>
-                  <div class="param-item-vertical">
-                    <label>随机种子:</label>
-                    <input type="number" v-model="randomSeed" />
-                  </div>
-                </div>
-
-              </div>
-
+          <div class="config-card">
+            <div class="card-header">
+              <span class="icon">🎛️</span>
+              <h3>3. 参数配置</h3>
             </div>
-
-            <div v-else class="empty-params">
-              👈 请先选择一种算法
-            </div>
-          </div>
-          
-        </div>
-        <div class="submit-area">
-          <button v-if="!isTestMode" @click="runAnalysis" :disabled="isLoading" class="run-btn submit-btn">
-            <span v-if="isLoading">正在运行分析...</span>
-            <span v-else>🚀 提 交 (Submit)</span>
-          </button>
-          
-          <button v-else @click="runParameterSearch" :disabled="isPsLoading" class="run-btn submit-btn test-btn">
-            <span v-if="isPsLoading">正在搜索并测试最优参数...</span>
-            <span v-else>🚀 运行参数搜索 (Submit Search)</span>
-          </button>
-        </div>
-        <div v-if="isTestMode && psResult" class="result-area">
-          <div class="step-section diff-section" style="background-color: #fdf2e9; border-color: #fdebd0;">
-            <h3>参数敏感性分析结果 (Parameter Sensitivity Analysis)</h3>
-            
-            <div class="success-box" style="margin-bottom: 20px; border-color: #f39c12; color: #d35400;">
-              <h4 style="margin-top: 0;">🏆 最优参数组合</h4>
-              <p><b>参数:</b> {{ psResult.best_params }}</p>
-              <p><b>对应生存分析 -Log10(P-value):</b> {{ psResult.best_score.toFixed(4) }}</p>
-              <p style="font-size: 12px; margin-top: 5px;">(得分越高代表该参数聚类出来的生存差异越显著)</p>
-            </div>
-            
-            <div class="chart-wrapper">
-              <div class="chart-header">
-                <h4>📈 参数敏感性分布图</h4>
-                <div style="font-size: 13px;">
-                  <label>X轴参数: </label>
-                  <select v-model="psParam1" @change="renderPsChart" class="cluster-select">
-                    <option value="n_clusters">K值 (n_clusters)</option>
-                    <option value="max_iter">最大迭代 (max_iter)</option>
-                    <option value="n_neighbors">邻居数 (谱聚类)</option>
-                  </select>
-                  <label style="margin-left: 15px;">Y轴参数 (选无则画2D): </label>
-                  <select v-model="psParam2" @change="renderPsChart" class="cluster-select">
-                    <option value="">无 (绘制2D图)</option>
-                    <option value="n_clusters">K值 (n_clusters)</option>
-                    <option value="max_iter">最大迭代 (max_iter)</option>
-                    <option value="n_neighbors">邻居数 (谱聚类)</option>
-                  </select>
-                </div>
-              </div>
-              <div ref="psChartRef" style="width: 800px; height: 600px; margin: 0 auto;"></div>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="!isTestMode && (backendResponse || errorMessage)" class="result-area" ref="resultsAreaRef">
-          <h3>后端响应结果:</h3>
-          <div v-if="backendResponse" class="success-box">
-
-            <div v-if="backendResponse.data.metrics" class="metrics-container">
-              <h4>📊 聚类效果评估 (Evaluation Metrics)</h4>
-              <div class="metrics-grid">
-                <div class="metric-card">
-                  <span class="m-label">轮廓系数 (Silhouette)</span>
-                  <span class="m-value">{{ backendResponse.data.metrics.silhouette }}</span>
-                </div>
-                <div class="metric-card">
-                  <span class="m-label">CH 指数 (Calinski-Harabasz)</span>
-                  <span class="m-value">{{ backendResponse.data.metrics.calinski }}</span>
-                </div>
-                <div class="metric-card">
-                  <span class="m-label">DB 指数 (Davies-Bouldin)</span>
-                  <span class="m-value">{{ backendResponse.data.metrics.davies }}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="reduction-controls">
-              <span class="reduction-label">降维算法:</span>
-              <div class="btn-group">
-                <button @click="switchReduction('PCA')" :class="{ active: currentReduction==='PCA' }" :disabled="isLoading">PCA</button>
-                <button @click="switchReduction('t-SNE')" :class="{ active: currentReduction==='t-SNE' }" :disabled="isLoading">t-SNE</button>
-                <button @click="switchReduction('UMAP')" :class="{ active: currentReduction==='UMAP' }" :disabled="isLoading">UMAP</button>
-              </div>
-            </div>
-
-            <div ref="chartRef" class="chart-container"></div>
-
-            <details>
-              <summary>查看原始 JSON 数据</summary>
-              <pre>{{ backendResponse.data }}</pre>
-            </details>
-
-            <div class="step-section diff-section">
-              <h3>差异表达分析 (Differential Expression)</h3>
-              <p class="section-desc">
-                基于当前聚类结果，自动进行 "One-vs-Rest" 差异分析。<br>
-                点击运行将生成 <b>火山图</b> (全量基因) 和 <b>热图</b> (Top10 显著基因)。
-              </p>
+            <div class="card-body">
               
-              <button @click="runDifferentialAnalysis" :disabled="isDiffLoading" class="run-btn">
-                <span v-if="isDiffLoading">正在分析...</span>
-                <span v-else>运行差异分析 (Run DEA)</span>
-              </button>
-
-              <div v-if="diffErrorMessage" class="error-box">
-                {{ diffErrorMessage }}
+              <div v-if="selectedAlgorithm.length === 0" class="empty-state">
+                <span class="empty-icon">👈</span>
+                <p>请先在左侧选择一种算法</p>
               </div>
 
-              <div v-if="diffResult" class="diff-result-box" ref="diffAnalysisAreaRef">
-                <div class="charts-row">
-                  <div class="chart-wrapper">
-                    <div class="chart-header">
-                      <h4>🌋 火山图 (Volcano Plot)</h4>
-                      <select v-model="selectedVolcanoCluster" @change="handleVolcanoClusterChange" class="cluster-select">
-                        <option v-for="cid in Object.keys(diffResult.volcano_data)" :key="cid" :value="Number(cid)">
-                          Cluster {{ cid }} vs Others
-                        </option>
-                      </select>
+              <div v-else class="params-container">
+                <template v-if="!isTestMode">
+                  <div v-if="selectedAlgorithm.includes('K-means')" class="param-group">
+                    <h4 class="algo-badge">K-means 参数</h4>
+                    <div class="input-field">
+                      <label>聚类簇数 (K值)</label>
+                      <input type="number" v-model="kValue" />
                     </div>
-                    <div ref="volcanoChartRef" class="mini-chart"></div>
+                    <div class="input-field">
+                      <label>随机种子 (-1表示None)</label>
+                      <input type="number" v-model="randomSeed" />
+                    </div>
+                    <div class="input-field">
+                      <label>最大迭代</label>
+                      <input type="number" v-model="maxIter" />
+                    </div>
                   </div>
-                </div>
 
-                <div class="chart-wrapper heatmap-wrapper">
-                  <div class="chart-header">
-                    <h4>🔥 差异基因热图</h4>
-                    <p>Top 10 upregulated genes per cluster (P < 0.05). Ordered by Cluster ID.</p>
+                  <div v-if="selectedAlgorithm.includes('Spectral Clustering')" class="param-group">
+                    <h4 class="algo-badge">Spectral Clustering 参数</h4>
+                    <div class="input-field">
+                      <label>聚类簇数 (K值)</label>
+                      <input type="number" v-model="kValue" />
+                    </div>
+                    <div class="input-field">
+                      <label>邻居数 (n_neighbors)</label>
+                      <input type="number" v-model="nNeighbors" />
+                    </div>
+                    <div class="input-field">
+                      <label>随机种子 (-1表示None)</label>
+                      <input type="number" v-model="randomSeed" />
+                    </div>
                   </div>
-                  <div ref="heatmapChartRef" class="heatmap-container"></div>
-                  <div class="data-actions">
-                    <small>提示: 红色代表高表达，蓝色代表低表达。上方色条代表样本所属的簇。</small>
+                </template>
+
+                <template v-else>
+                  <div class="alert-box warning">
+                    ⚠️ 测试模式需利用临床文件计算P-value，请确保已上传。
+                  </div>
+
+                  <div v-if="selectedAlgorithm.includes('K-means')" class="param-group test-params">
+                    <h4 class="algo-badge">K-means 测试范围</h4>
+                    <div class="input-field">
+                      <label>聚类簇数范围 (逗号分隔)</label>
+                      <input type="text" v-model="testNClusters" placeholder="如: 2,3,4,5" />
+                    </div>
+                    <div class="input-field">
+                      <label>最大迭代范围 (逗号分隔)</label>
+                      <input type="text" v-model="testMaxIter" placeholder="如: 100,200,300" />
+                    </div>
+                    <div class="input-field">
+                      <label>随机种子</label>
+                      <input type="number" v-model="randomSeed" />
+                    </div>
+                  </div>
+
+                  <div v-if="selectedAlgorithm.includes('Spectral Clustering')" class="param-group test-params">
+                    <h4 class="algo-badge">Spectral Clustering 测试范围</h4>
+                    <div class="input-field">
+                      <label>聚类簇数范围 (逗号分隔)</label>
+                      <input type="text" v-model="testNClusters" placeholder="如: 2,3,4,5" />
+                    </div>
+                    <div class="input-field">
+                      <label>邻居数范围 (逗号分隔)</label>
+                      <input type="text" v-model="testNNeighbors" placeholder="如: 5,10,15" />
+                    </div>
+                    <div class="input-field">
+                      <label>随机种子</label>
+                      <input type="number" v-model="randomSeed" />
+                    </div>
+                  </div>
+                </template>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="action-center">
+          <button v-if="!isTestMode" @click="runAnalysis" :disabled="isLoading" class="run-btn primary-btn">
+            <span class="btn-content">
+              <span v-if="isLoading" class="spinner"></span>
+              {{ isLoading ? '分析运行中...' : '🚀 启动聚类分析 (Run Analysis)' }}
+            </span>
+          </button>
+          
+          <button v-else @click="runParameterSearch" :disabled="isPsLoading" class="run-btn danger-btn">
+            <span class="btn-content">
+              <span v-if="isPsLoading" class="spinner"></span>
+              {{ isPsLoading ? '搜索测试中...' : '🎯 运行参数敏感性搜索' }}
+            </span>
+          </button>
+        </div>
+
+        <div v-if="errorMessage" class="global-error">
+          <span class="icon">❌</span> {{ errorMessage }}
+        </div>
+
+        <div v-if="isTestMode && psResult" class="results-container test-results fade-in">
+          <div class="result-header test-header">
+            <h3>🔬 参数敏感性分析结果 (Parameter Search)</h3>
+          </div>
+          <div class="result-body">
+            <div class="best-params-card">
+              <div class="bpc-icon">🏆</div>
+              <div class="bpc-content">
+                <h4>最优参数组合</h4>
+                <div class="bpc-details">
+                  <span class="bpc-tag"><strong>参数:</strong> {{ psResult.best_params }}</span>
+                  <span class="bpc-tag highlight"><strong>-Log10(P):</strong> {{ psResult.best_score.toFixed(4) }}</span>
+                </div>
+                <p class="bpc-hint">得分越高，代表该参数组合下聚类生成的生存差异越显著。</p>
+              </div>
+            </div>
+            
+            <div class="chart-panel">
+              <div class="chart-toolbar">
+                <div class="toolbar-title">📈 参数敏感性分布图</div>
+                <div class="toolbar-actions">
+                  <div class="select-group">
+                    <label>X轴:</label>
+                    <select v-model="psParam1" @change="renderPsChart" class="ui-select">
+                      <option value="n_clusters">K值 (n_clusters)</option>
+                      <option value="max_iter">最大迭代 (max_iter)</option>
+                      <option value="n_neighbors">邻居数 (谱聚类)</option>
+                    </select>
+                  </div>
+                  <div class="select-group">
+                    <label>Y轴:</label>
+                    <select v-model="psParam2" @change="renderPsChart" class="ui-select">
+                      <option value="">无 (绘制2D折线图)</option>
+                      <option value="n_clusters">K值 (n_clusters)</option>
+                      <option value="max_iter">最大迭代 (max_iter)</option>
+                      <option value="n_neighbors">邻居数 (谱聚类)</option>
+                    </select>
                   </div>
                 </div>
               </div>
+              <div ref="psChartRef" class="echart-wrapper"></div>
             </div>
+          </div>
+        </div>
 
-            <div class="step-section enrichment-section" v-if="diffResult"> 
-              <h3>功能富集分析 (Enrichment Analysis)</h3>
-              <p class="section-desc">
-                针对各个簇的高表达基因进行功能注释。<br>
-                请点击下方按钮查询离线数据库 (GO Biological Process 或 KEGG Pathways)。
-              </p>
+        <div v-if="!isTestMode && backendResponse" class="results-container flow-results fade-in" ref="resultsAreaRef">
+          
+          <div class="result-block clustering-block">
+            <div class="block-header">
+              <h3><span class="step-num">A</span> 聚类效果评估与降维可视化</h3>
+            </div>
+            <div class="block-body">
+              <div v-if="backendResponse.data.metrics" class="metrics-row">
+                <div class="metric-widget">
+                  <div class="mw-title">Silhouette Score</div>
+                  <div class="mw-value">{{ backendResponse.data.metrics.silhouette }}</div>
+                  <div class="mw-desc">轮廓系数</div>
+                </div>
+                <div class="metric-widget">
+                  <div class="mw-title">Calinski-Harabasz</div>
+                  <div class="mw-value">{{ backendResponse.data.metrics.calinski }}</div>
+                  <div class="mw-desc">CH 指数</div>
+                </div>
+                <div class="metric-widget">
+                  <div class="mw-title">Davies-Bouldin</div>
+                  <div class="mw-value">{{ backendResponse.data.metrics.davies }}</div>
+                  <div class="mw-desc">DB 指数</div>
+                </div>
+              </div>
+
+              <div class="chart-panel">
+                <div class="chart-toolbar">
+                  <div class="toolbar-title">🎨 样本聚类分布</div>
+                  <div class="toolbar-actions">
+                    <div class="button-group">
+                      <button @click="switchReduction('PCA')" :class="{ active: currentReduction==='PCA' }" :disabled="isLoading">PCA</button>
+                      <button @click="switchReduction('t-SNE')" :class="{ active: currentReduction==='t-SNE' }" :disabled="isLoading">t-SNE</button>
+                      <button @click="switchReduction('UMAP')" :class="{ active: currentReduction==='UMAP' }" :disabled="isLoading">UMAP</button>
+                    </div>
+                  </div>
+                </div>
+                <div ref="chartRef" class="echart-wrapper"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="result-block diff-block" ref="diffAnalysisAreaRef">
+            <div class="block-header diff-color">
+              <h3><span class="step-num">B</span> 差异表达分析 (Differential Expression)</h3>
+              <button @click="runDifferentialAnalysis" :disabled="isDiffLoading" class="mini-run-btn diff-btn">
+                {{ isDiffLoading ? '分析中...' : '运行差异分析' }}
+              </button>
+            </div>
+            <div class="block-body">
+              <p class="block-desc">基于聚类结果执行 One-vs-Rest 差异基因计算，鉴定出每个亚型的特异性高表达基因。</p>
               
-              <div class="button-row">
-                <button @click="runEnrichmentAnalysis('GO')" :disabled="isEnrichmentLoading" class="run-btn go-btn">
-                  <span v-if="isEnrichmentLoading && enrichmentType==='GO'">正在查询...</span>
-                  <span v-else>运行 GO 分析</span>
-                </button>
+              <div v-if="diffErrorMessage" class="alert-box error">{{ diffErrorMessage }}</div>
 
-                <button @click="runEnrichmentAnalysis('KEGG')" :disabled="isEnrichmentLoading" class="run-btn kegg-btn">
-                  <span v-if="isEnrichmentLoading && enrichmentType==='KEGG'">正在查询...</span>
-                  <span v-else>运行 KEGG 分析</span>
-                </button>
-              </div>
-
-              <div v-if="enrichmentResult" class="enrichment-result-box" ref="enrichmentAreaRef">
-                <div class="chart-header">
-                  <h4>📊 富集分析结果 (Enrichment Plot)</h4>
-                  <select v-model="selectedEnrichmentCluster" @change="handleEnrichmentClusterChange" class="cluster-select">
-                    <option v-for="cid in Object.keys(enrichmentResult)" :key="cid" :value="Number(cid)">
-                      Cluster {{ cid }} Enrichment
-                    </option>
-                  </select>
-                </div>
-                <div ref="enrichmentChartRef" class="enrichment-chart"></div>
-
-                <hr class="chart-divider" />
-                <div class="chart-header">
-                  <h4>🎈 全簇通路富集气泡图 (Pathway Enrichment - All Clusters)</h4>
-                  <div style="margin-bottom: 10px;">
-                    <label style="margin-right: 15px; cursor: pointer;">
-                      <input type="radio" v-model="bubbleChartMode" value="combined" @change="renderEnrichmentBubbleChart">
-                      按簇平铺
-                    </label>
-                    <label style="cursor: pointer;">
-                      <input type="radio" v-model="bubbleChartMode" value="by_gene" @change="renderEnrichmentBubbleChart">
-                      按基因数分布
-                    </label>
+              <div v-if="diffResult" class="diff-charts-grid fade-in">
+                <div class="chart-panel">
+                  <div class="chart-toolbar">
+                    <div class="toolbar-title">🌋 差异火山图</div>
+                    <select v-model="selectedVolcanoCluster" @change="handleVolcanoClusterChange" class="ui-select mini">
+                      <option v-for="cid in Object.keys(diffResult.volcano_data)" :key="cid" :value="Number(cid)">Cluster {{ cid }}</option>
+                    </select>
                   </div>
-                  <p>横轴为不同的聚类簇或基因数，纵轴为富集的通路。气泡大小代表命中基因数，颜色代表 P 值显著性。</p>
+                  <div ref="volcanoChartRef" class="echart-wrapper"></div>
                 </div>
-                <div ref="enrichmentBubbleChartRef" class="enrichment-bubble-chart"></div>
+
+                <div class="chart-panel">
+                  <div class="chart-toolbar">
+                    <div class="toolbar-title">🔥 差异基因热图 (Top 10)</div>
+                  </div>
+                  <div ref="heatmapChartRef" class="echart-wrapper"></div>
+                </div>
               </div>
             </div>
+          </div>
 
-            <div class="step-section survival-section" style="margin-top: 30px; border-top: 2px dashed #ddd;">
-              <h3>临床生存分析 (Clinical Analysis)</h3>
-
-              <p style="font-size:13px; color:#666;">
-                系统将使用您在左侧上传的临床数据进行生存分析。
-              </p>
-
-              <div style="margin-top:15px;">
-                <button @click="runSurvivalAnalysis" :disabled="isSurvivalLoading" class="run-btn" style="background-color: #3498db;">
-                  <span v-if="isSurvivalLoading">正在计算...</span>
-                  <span v-else>绘制生存曲线 (Draw KM Plot)</span>
+          <div class="result-block enrich-block" v-if="diffResult" ref="enrichmentAreaRef">
+            <div class="block-header enrich-color">
+              <h3><span class="step-num">C</span> 功能富集分析 (Enrichment Analysis)</h3>
+              <div class="mini-btn-group">
+                <button @click="runEnrichmentAnalysis('GO')" :disabled="isEnrichmentLoading" class="mini-run-btn go-btn">
+                  {{ (isEnrichmentLoading && enrichmentType==='GO') ? '查询中...' : '运行 GO' }}
+                </button>
+                <button @click="runEnrichmentAnalysis('KEGG')" :disabled="isEnrichmentLoading" class="mini-run-btn kegg-btn">
+                  {{ (isEnrichmentLoading && enrichmentType==='KEGG') ? '查询中...' : '运行 KEGG' }}
                 </button>
               </div>
+            </div>
+            <div class="block-body">
+              <p class="block-desc">针对各个簇的显著上调基因（P<0.05, LogFC>0.5），在数据库中查找显著富集的生物学通路。</p>
 
-              <div v-if="survivalResult" class="survival-result-box" ref="survivalAreaRef">
-                <div class="p-value-tag">
-                  Log-Rank P-value: 
-                  <span :class="{'highlight-p': survivalResult.p_value<0.05}">
-                    {{ survivalResult.p_value<0.0001 ? survivalResult.p_value.toExponential(4) : survivalResult.p_value.toFixed(4) }}
-                  </span>
+              <div v-if="enrichmentResult" class="enrichment-charts fade-in">
+                <div class="chart-panel">
+                  <div class="chart-toolbar">
+                    <div class="toolbar-title">📊 单簇富集条形图</div>
+                    <select v-model="selectedEnrichmentCluster" @change="handleEnrichmentClusterChange" class="ui-select mini">
+                      <option v-for="cid in Object.keys(enrichmentResult)" :key="cid" :value="Number(cid)">Cluster {{ cid }}</option>
+                    </select>
+                  </div>
+                  <div ref="enrichmentChartRef" class="echart-wrapper"></div>
                 </div>
-                <div ref="survivalChartRef" class="chart-container" style="height: 450px;"></div>
+
+                <div class="chart-panel mt-4">
+                  <div class="chart-toolbar">
+                    <div class="toolbar-title">🎈 全簇通路富集气泡图</div>
+                    <div class="toolbar-actions radio-toggles">
+                      <label class="radio-label">
+                        <input type="radio" v-model="bubbleChartMode" value="combined" @change="renderEnrichmentBubbleChart"> 按簇平铺
+                      </label>
+                      <label class="radio-label">
+                        <input type="radio" v-model="bubbleChartMode" value="by_gene" @change="renderEnrichmentBubbleChart"> 按基因分布
+                      </label>
+                    </div>
+                  </div>
+                  <div ref="enrichmentBubbleChartRef" class="echart-wrapper"></div>
+                </div>
               </div>
             </div>
-
           </div>
 
-          <div v-if="errorMessage" class="error-box">
-            {{ errorMessage }}
+          <div class="result-block survival-block" ref="survivalAreaRef">
+            <div class="block-header survival-color">
+              <h3><span class="step-num">D</span> 临床预后生存分析 (Survival Analysis)</h3>
+              <button @click="runSurvivalAnalysis" :disabled="isSurvivalLoading" class="mini-run-btn survival-btn">
+                {{ isSurvivalLoading ? '计算中...' : '绘制 KM 曲线' }}
+              </button>
+            </div>
+            <div class="block-body">
+              <p class="block-desc">基于临床数据 (OS & OS.time) 评估不同分子亚型的预后差异。</p>
+              
+              <div v-if="survivalResult" class="survival-charts fade-in">
+                <div class="p-value-banner" :class="{ 'is-significant': survivalResult.p_value < 0.05 }">
+                  <span class="banner-title">Log-Rank P-value:</span>
+                  <span class="banner-val">{{ survivalResult.p_value < 0.0001 ? survivalResult.p_value.toExponential(4) : survivalResult.p_value.toFixed(4) }}</span>
+                  <span class="banner-tag" v-if="survivalResult.p_value < 0.05">显著差异 ✨</span>
+                </div>
+                <div class="chart-panel mt-4">
+                  <div ref="survivalChartRef" class="echart-wrapper"></div>
+                </div>
+              </div>
+            </div>
           </div>
+
         </div>
 
       </div>
@@ -1977,559 +2015,553 @@ body{ /*默认情况下绝大多数浏览器都会给HTML的<body>标签自动�
 </style>
 
 <style scoped>
-.container {
-  font-family: 'Helvetica Neue', Arial, sans-serif;
-  color: #333;
+/* ================== CSS 变量定义 (全局主题) ================== */
+.app-container {
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --secondary: #3b82f6;
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --success: #10b981;
+  --warning: #f59e0b;
+  
+  --bg-page: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-hover: #f1f5f9;
+  
+  --text-main: #0f172a;
+  --text-regular: #334155;
+  --text-muted: #64748b;
+  
+  --border-light: #e2e8f0;
+  --border-focus: #93c5fd;
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: var(--text-main);
+  background-color: var(--bg-page);
   min-height: 100vh;
-  background-color: #f5f7fa;
-}
-
-.header {
-  background-color: #2c3e50;
-  color: white;
-  padding: 0 40px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  position: sticky; /* 设置为粘性定位，让导航栏在滚动时始终吸附于顶部 */
-  top: 0;           /* 距离顶部 0 像素时吸附 */
-  z-index: 1000;    /* 确保确保导航栏永远浮在所有内容之上 */
-}
-
-.logo {
-  font-size: 24px;
-  font-weight: bold;
-  letter-spacing: 1px;
-}
-
-.nav span {
-  margin-left: 30px;
-  cursor: pointer;
-  opacity: 0.8;
-  font-size: 16px;
-}
-
-.nav span:hover, .nav span.active {
-  opacity: 1;
-  font-weight: bold;
-  border-bottom: 2px solid #42b983;
-}
-
-.main-content {
-  display: flex;
-  justify-content: center;
-}
-
-.analysis-panel {
-  background: white;
-  width: 100%;
-  padding: 0px 100px;
-  text-align: center;
-  padding-top: 50px;
   padding-bottom: 60px;
 }
 
-h1 {
-  color: #2c3e50;
-  margin-bottom: 10px;
+/* ================== 通用动画 ================== */
+.fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.description {
-  color: #666;
-  margin-bottom: 30px;
-  line-height: 1.6;
+/* ================== 导航栏 ================== */
+.app-header {
+  background-color: var(--bg-card);
+  border-bottom: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
-
-/* ================== 新增：三栏布局样式 ================== */
-.layout-three-columns {
+.header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  height: 64px;
   display: flex;
-  gap: 20px;
-  align-items: stretch;
-  margin-bottom: 30px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
 }
-
-.column {
-  flex: 1;
-  background-color: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  padding: 20px;
+.logo {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary);
   display: flex;
-  flex-direction: column;
-  text-align: left;
+  align-items: center;
+  gap: 8px;
 }
-
-.column h3 {
-  margin-top: 0;
-  margin-bottom: 20px;
-  font-size: 18px;
-  color: #2c3e50;
-  border-bottom: 2px solid #42b983;
-  padding-bottom: 10px;
-}
-
-/* 左侧栏和中间栏 卡片样式 */
-.upload-card {
-  background: #fff;
-  padding: 15px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  margin-bottom: 20px;
-}
-
-.upload-card h4 {
-  margin: 0 0 15px 0;
-  font-size: 16px;
-  color: #34495e;
-}
-
-.mini-config {
-  margin-bottom: 10px;
-}
-
-.mini-config label {
-  font-size: 13px;
-  color: #555;
-  display: block;
-  margin-bottom: 5px;
-}
-
-.mini-example {
-  padding: 8px !important;
-  font-size: 12px !important;
-  margin-bottom: 10px;
-}
-
-/* 参数配置卡片样式 (去掉了虚线，更加清爽) */
-.params-inner-card {
-  flex: 1; 
+.app-nav {
   display: flex;
-  flex-direction: column;
-  margin-bottom: 0;
+  gap: 8px;
+}
+.app-nav button {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 15px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.app-nav button:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-main);
+}
+.app-nav button.active {
+  background-color: #eef2ff;
+  color: var(--primary);
 }
 
-.params-box-clean {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+/* ================== 页面框架 ================== */
+.main-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
 }
 
-.param-item-vertical {
-  display: flex;
-  flex-direction: column;
-}
-
-.param-item-vertical label {
-  font-size: 13px;
-  color: #666;
-  margin-bottom: 5px;
-}
-
-.param-item-vertical input {
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* 空状态占位提示 */
-.empty-params {
-  flex: 1;
+.hero-section {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #95a5a6;
-  font-size: 15px;
-  background: #fff;
-  border: 1px dashed #bdc3c7;
-  border-radius: 6px;
-  min-height: 150px;
+  min-height: 70vh;
+  text-align: center;
+}
+.hero-content h1 {
+  font-size: 3rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 16px;
+}
+.hero-content p {
+  font-size: 1.2rem;
+  color: var(--text-muted);
+  margin-bottom: 32px;
 }
 
-/* 提交按钮区域 */
-.submit-area {
-  padding: 30px 0;
-  border-top: 1px dashed #ccc;
-  border-bottom: 1px dashed #ccc;
-  margin: 10px 0 40px 0;
-  background-color: #fafbfc;
-  border-radius: 8px;
+.dashboard-header {
+  margin: 40px 0 32px 0;
 }
-
-.submit-btn {
-  font-size: 20px;
-  padding: 15px 50px;
-  border-radius: 30px;
-  box-shadow: 0 4px 15px rgba(66, 185, 131, 0.3);
-  letter-spacing: 1px;
+.dashboard-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
 }
-
-.submit-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(66, 185, 131, 0.4);
-}
-
-.test-btn {
-  background-color: #e74c3c;
-  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
-}
-
-.test-btn:hover:not(:disabled) {
-  background-color: #c0392b;
-  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
-}
-/* ================== 新增：三栏布局样式结束 ================== */
-
-
-/* 以下为保留的原有样式 */
-.format-select {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  width: 100%;
-  font-size: 14px;
-}
-
-.example-box {
-  background-color: #f1f1f1;
-  border: 1px solid #eee;
-  padding: 10px;
-  border-radius: 4px;
-  text-align: left;
-}
-
-.example-content {
+.dashboard-header p {
+  color: var(--text-muted);
   margin: 0;
-  font-family: Consolas, Monaco, monospace;
-  color: #2c3e50;
-  border: none;
-  background: none;
 }
 
-.upload-controls input[type="file"] {
-  width: 100%;
+/* ================== 配置网格 (三大栏) ================== */
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 32px;
+  align-items: start;
+}
+
+.config-card {
+  background-color: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.card-header {
+  background-color: var(--bg-page);
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.card-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.card-body {
+  padding: 20px;
+  flex: 1;
+}
+
+/* ================== Column 1: 上传组件 ================== */
+.upload-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+.badge.required { background-color: #fee2e2; color: #b91c1c; }
+.badge.optional { background-color: #f1f5f9; color: #475569; }
+
+.format-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 13px;
-}
-
-.status-message {
-  margin-top: 10px;
-  font-size: 13px;
-  font-weight: bold;
-  color: #27ae60;
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
-.error-text {
-  color: #e74c3c !important;
-}
-
-.run-btn {
-  background-color: #42b983;
-  color: white;
-  border: none;
-  padding: 12px 30px;
-  font-size: 18px;
-  border-radius: 6px;
+  color: var(--text-regular);
   cursor: pointer;
-  transition: all 0.3s;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  transition: all 0.2s;
 }
+.toggle-label:hover { border-color: var(--primary); }
+.toggle-label.is-checked { background-color: #eef2ff; border-color: var(--primary); color: var(--primary); font-weight: 500;}
+.toggle-label input { display: none; } /* 隐藏原生的丑陋checkbox，靠颜色区分 */
 
-.run-btn:disabled {
-  background-color: #a8d5c2;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
+.code-preview {
+  background-color: #1e293b;
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-bottom: 16px;
 }
-
-.result-area {
-  text-align: left;
+.preview-header {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
-
-.success-box {
-  background-color: #e8f5e9;
-  border: 1px solid #c8e6c9;
-  padding: 15px;
-  border-radius: 4px;
-  color: #2e7d32;
-}
-
-.error-box {
-  background-color: #ffebee;
-  border: 1px solid #ffcdd2;
-  padding: 15px;
-  border-radius: 4px;
-  color: #c62828;
-}
-
-pre {
-  background: #f1f1f1;
-  padding: 10px;
-  border-radius: 4px;
+.code-preview pre {
+  margin: 0;
+  color: #f8fafc;
+  font-family: 'Fira Code', monospace;
+  font-size: 12px;
+  line-height: 1.5;
   overflow-x: auto;
 }
 
-.metrics-container {
-  margin-bottom: 30px;
-  background: white;
-  padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+.file-drop-zone {
+  position: relative;
+  border: 2px dashed var(--border-light);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-hover);
+  transition: all 0.2s;
+  text-align: center;
 }
-
-.metrics-container h4 {
-  margin-top: 0;
-  color: #2c3e50;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 10px;
+.file-drop-zone:hover {
+  border-color: var(--primary);
+  background-color: #eef2ff;
 }
-
-.metrics-grid {
-  display: flex;
-  justify-content: space-around;
-  margin-top: 15px;
+.file-input {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  top: 0; left: 0;
 }
-
-.metric-card {
+.file-label {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  background: #f8f9fa;
-  padding: 15px 25px;
-  border-radius: 6px;
-  min-width: 120px;
+  padding: 20px;
+  pointer-events: none;
 }
+.upload-icon { font-size: 24px; margin-bottom: 4px; }
+.upload-text { font-size: 14px; font-weight: 500; color: var(--text-main); }
+.file-label small { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 
-.m-label {
+.status-msg {
+  margin-top: 8px;
   font-size: 12px;
-  color: #666;
-  margin-bottom: 5px;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  word-break: break-all;
+}
+.status-msg.is-error { background-color: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.status-msg.is-success { background-color: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+
+.divider {
+  border: none;
+  border-top: 1px dashed var(--border-light);
+  margin: 24px 0;
 }
 
-.m-value {
-  font-size: 20px;
-  font-weight: bold;
-  color: #42b983;
-}
-
-.chart-container {
-  width: 800px;
-  height: 600px;
-  margin: 0 auto 20px auto;
-  background-color: #fff;
-  border: 1px solid #eee;
-  border-radius: 4px;
-  margin-bottom: 20px;
-}
-
-.reduction-controls {
+/* ================== Column 2: 算法选择 ================== */
+.test-mode-switch {
   display: flex;
   align-items: center;
-  justify-content: center;
-  margin-bottom: 15px;
-  background-color: #f8f9fa;
-  padding: 10px;
-  border-radius: 6px;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  margin-bottom: 24px;
+  transition: all 0.3s;
+}
+.test-mode-switch.is-active {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+}
+.switch-container {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+.switch-container input { opacity: 0; width: 0; height: 0; }
+.slider {
+  position: absolute; cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #ccc; transition: .4s;
+}
+.slider:before {
+  position: absolute; content: "";
+  height: 18px; width: 18px; left: 3px; bottom: 3px;
+  background-color: white; transition: .4s;
+}
+input:checked + .slider { background-color: var(--danger); }
+input:checked + .slider:before { transform: translateX(20px); }
+.slider.round { border-radius: 24px; }
+.slider.round:before { border-radius: 50%; }
+
+.switch-info strong { display: block; font-size: 14px; color: var(--text-main); }
+.test-mode-switch.is-active .switch-info strong { color: var(--danger); }
+.switch-info span { font-size: 12px; color: var(--text-muted); }
+
+.section-subtitle {
+  font-size: 13px; color: var(--text-muted);
+  margin: 0 0 12px 0; text-transform: uppercase;
 }
 
-.reduction-label {
-  font-size: 14px;
-  font-weight: bold;
-  color: #555;
-  margin-right: 15px;
-}
-
-.btn-group {
+.algo-list {
   display: flex;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  overflow: hidden;
+  flex-direction: column;
+  gap: 8px;
 }
-
-.btn-group button {
-  background-color: white;
-  border: none;
-  border-right: 1px solid #ddd;
-  padding: 8px 16px;
+.algo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
   cursor: pointer;
-  font-size: 13px;
-  color: #666;
   transition: all 0.2s;
 }
+.algo-item:hover { border-color: var(--secondary); background-color: var(--bg-hover); }
+.algo-item.is-selected {
+  border-color: var(--primary);
+  background-color: #eef2ff;
+}
+.algo-item input { display: none; }
+.algo-name { font-size: 14px; font-weight: 500; }
+.check-icon { color: var(--primary); font-weight: bold; }
 
-.btn-group button:last-child {
-  border-right: none;
+/* ================== Column 3: 参数配置 ================== */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; color: var(--text-muted); min-height: 200px;
+}
+.empty-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.5; }
+
+.params-container {
+  display: flex; flex-direction: column; gap: 20px;
+}
+.param-group {
+  background: var(--bg-hover); padding: 16px; border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+}
+.param-group.test-params { background: #fff7ed; border-color: #ffedd5; }
+.algo-badge {
+  margin: 0 0 16px 0; font-size: 14px; color: var(--primary); font-weight: 600;
+  border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 8px;
+}
+.test-params .algo-badge { color: var(--warning); }
+
+.input-field { margin-bottom: 12px; }
+.input-field:last-child { margin-bottom: 0; }
+.input-field label {
+  display: block; font-size: 12px; color: var(--text-regular); margin-bottom: 6px;
+}
+.input-field input {
+  width: 100%; padding: 8px 12px; border: 1px solid var(--border-light);
+  border-radius: var(--radius-md); font-size: 13px; color: var(--text-main);
+  transition: all 0.2s; box-sizing: border-box;
+}
+.input-field input:focus {
+  outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
-.btn-group button:hover:not(:disabled) {
-  background-color: #f0f0f0;
+.alert-box {
+  padding: 12px; border-radius: var(--radius-md); font-size: 13px; margin-bottom: 16px;
+}
+.alert-box.warning { background-color: #fffbeb; color: #b45309; border: 1px solid #fef3c7; }
+.alert-box.error { background-color: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+
+
+/* ================== 操作按钮区 ================== */
+.action-center {
+  display: flex; justify-content: center; margin: 40px 0;
+}
+.run-btn {
+  border: none; border-radius: 30px; font-size: 16px; font-weight: 600;
+  padding: 16px 40px; cursor: pointer; transition: all 0.3s;
+  box-shadow: var(--shadow-md); color: white;
+}
+.run-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.run-btn:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; transform: none; }
+
+.primary-btn { background: linear-gradient(135deg, var(--primary), var(--secondary)); }
+.danger-btn { background: linear-gradient(135deg, var(--danger), #f59e0b); }
+.mini-run-btn {
+  border: none; border-radius: var(--radius-md); font-size: 13px; font-weight: 500;
+  padding: 8px 16px; cursor: pointer; transition: all 0.2s; color: white;
+}
+.mini-run-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btn-content { display: flex; align-items: center; gap: 8px; }
+.spinner {
+  width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 50%; border-top-color: #fff; animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 全局错误 */
+.global-error {
+  background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c;
+  padding: 16px; border-radius: var(--radius-lg); margin-bottom: 32px;
+  display: flex; align-items: center; gap: 12px; font-weight: 500;
 }
 
-.btn-group button.active {
-  background-color: #42b983;
-  color: white;
-  font-weight: bold;
+/* ================== 结果展示区块统一样式 ================== */
+.results-container {
+  display: flex; flex-direction: column; gap: 32px;
+}
+.result-block {
+  background: var(--bg-card); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md); overflow: hidden; border: 1px solid var(--border-light);
+}
+.block-header {
+  padding: 16px 24px; border-bottom: 1px solid var(--border-light);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.block-header h3 { margin: 0; font-size: 18px; display: flex; align-items: center; gap: 12px; }
+.step-num {
+  background: var(--text-main); color: white; width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 6px; font-size: 14px; font-weight: bold;
+}
+.block-body { padding: 24px; }
+.block-desc { color: var(--text-muted); font-size: 14px; margin: 0 0 20px 0; }
+
+/* 头部特征色 */
+.diff-color { background: #faf5ff; border-bottom-color: #e9d5ff; }
+.diff-color h3 { color: #7e22ce; }
+.diff-color .step-num { background: #7e22ce; }
+.diff-btn { background: #9333ea; }
+
+.enrich-color { background: #f0fdf4; border-bottom-color: #bbf7d0; }
+.enrich-color h3 { color: #15803d; }
+.enrich-color .step-num { background: #15803d; }
+.go-btn { background: #059669; }
+.kegg-btn { background: #0284c7; }
+
+.survival-color { background: #fffbeb; border-bottom-color: #fde68a; }
+.survival-color h3 { color: #b45309; }
+.survival-color .step-num { background: #b45309; }
+.survival-btn { background: #d97706; }
+
+/* ================== 图表与面板通用容器 ================== */
+.chart-panel {
+  border: 1px solid var(--border-light); border-radius: var(--radius-lg);
+  background: var(--bg-card); overflow: hidden;
+}
+.mt-4 { margin-top: 24px; }
+.chart-toolbar {
+  background: var(--bg-hover); padding: 12px 20px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.toolbar-title { font-weight: 600; font-size: 14px; color: var(--text-regular); }
+.toolbar-actions { display: flex; gap: 16px; align-items: center; }
+
+.ui-select {
+  padding: 6px 32px 6px 12px; border: 1px solid var(--border-light);
+  border-radius: var(--radius-md); font-size: 13px; background-color: #fff;
+  cursor: pointer; outline: none; transition: border-color 0.2s;
+}
+.ui-select:focus { border-color: var(--primary); }
+
+.button-group {
+  display: inline-flex; border-radius: var(--radius-md); overflow: hidden;
+  border: 1px solid var(--border-light);
+}
+.button-group button {
+  background: #fff; border: none; padding: 6px 16px; font-size: 13px;
+  color: var(--text-muted); cursor: pointer; border-right: 1px solid var(--border-light);
+  transition: all 0.2s;
+}
+.button-group button:last-child { border-right: none; }
+.button-group button:hover { background: var(--bg-hover); }
+.button-group button.active { background: var(--primary); color: white; font-weight: 500;}
+
+.echart-wrapper {
+  width: 100%; height: 500px; /* 图表基础高度 */
 }
 
-.survival-section {
-  background-color: #fff9f0;
-  border: 1px solid #ffe0b2;
-  padding: 20px;
-  border-radius: 8px;
+/* ================== 特殊组件样式 ================== */
+/* KPI 指标卡片 */
+.metrics-row {
+  display: flex; gap: 20px; margin-bottom: 24px;
 }
-
-.p-value-tag {
-  font-size: 18px;
-  font-weight: bold;
-  margin: 20px 0 10px 0;
+.metric-widget {
+  flex: 1; background: var(--bg-page); padding: 20px;
+  border-radius: var(--radius-lg); border: 1px solid var(--border-light);
   text-align: center;
 }
+.mw-title { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;}
+.mw-value { font-size: 28px; font-weight: 800; color: var(--primary); margin: 8px 0; }
+.mw-desc { font-size: 12px; color: var(--text-regular); }
 
-.highlight-p {
-  color: #e74c3c;
-  font-weight: 800;
+/* 差异网格 */
+.diff-charts-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+}
+@media (max-width: 1100px) {
+  .diff-charts-grid { grid-template-columns: 1fr; }
 }
 
-.survival-result-box {
-  margin-top: 20px;
-  padding: 10px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+/* Radio Toggles */
+.radio-toggles { display: flex; gap: 16px; }
+.radio-label {
+  font-size: 13px; color: var(--text-regular); cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
 }
 
-.diff-section {
-  background-color: #f3f0ff;
-  border: 1px solid #dcd6f7;
-  padding: 20px;
-  border-radius: 8px;
-  margin-top: 30px;
+/* P-value Banner */
+.p-value-banner {
+  background: var(--bg-hover); padding: 20px; border-radius: var(--radius-md);
+  text-align: center; border: 1px solid var(--border-light);
 }
+.p-value-banner.is-significant { background: #fffbeb; border-color: #fde68a; }
+.banner-title { font-size: 16px; color: var(--text-muted); margin-right: 12px;}
+.banner-val { font-size: 24px; font-weight: 800; color: var(--text-main); }
+.banner-tag { margin-left: 12px; background: #f59e0b; color: white; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;}
 
-.charts-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
+/* 测试模式最佳参数卡片 */
+.best-params-card {
+  display: flex; gap: 16px; background: #fff7ed; border: 1px solid #ffedd5;
+  padding: 24px; border-radius: var(--radius-lg); margin-bottom: 24px;
 }
-
-.chart-wrapper {
-  flex: 1;
-  background: white;
-  padding: 10px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 5px;
-}
-
-.chart-header h4 {
-  margin: 0;
-  color: #2c3e50;
-  font-size: 16px;
-}
-
-.chart-header p {
-  margin: 5px 0 0 0;
-  font-size: 12px;
-  color: #888;
-}
-
-.cluster-select {
-  padding: 2px 5px;
-  font-size: 12px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-.mini-chart {
-  width: 800px;
-  height: 600px;
-  margin: 0 auto;
-}
-
-.heatmap-container {
-  width: 800px;
-  height: 600px;
-  margin: 0 auto;
-}
-
-.data-actions {
-  text-align: center;
-  margin-top: 10px;
-  color: #7f8c8d;
-}
-
-.section-desc {
-  font-size: 13px;
-  color: #666;
-  margin-bottom: 20px;
-  line-height: 1.5;
-}
-
-.diff-result-box {
-  margin-top: 25px;
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-}
-
-.heatmap-wrapper {
-  margin-top: 20px;
-}
-
-.enrichment-section {
-  background-color: #e3f2fd;
-  border: 1px solid #bbdefb;
-  margin-top: 30px;
-  padding: 20px;
-  border-radius: 8px;
-}
-
-.button-row {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-.go-btn { background-color: #e67e22; }
-.go-btn:hover:not(:disabled) { background-color: #d35400; }
-.kegg-btn { background-color: #3498db; }
-.kegg-btn:hover:not(:disabled) { background-color: #2980b9; }
-
-.enrichment-result-box {
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-}
-
-.enrichment-chart {
-  width: 800px;
-  height: 600px;
-  margin: 0 auto 20px auto;
-}
-
-.chart-divider {
-  border: none;
-  border-top: 1px solid #eee;
-  margin: 30px 0;
-}
-
-.enrichment-bubble-chart {
-  width: 800px;
-  height: 600px;
-  margin: 0 auto 20px auto;
-}
+.bpc-icon { font-size: 32px; }
+.bpc-content h4 { margin: 0 0 12px 0; font-size: 18px; color: #9a3412; }
+.bpc-details { display: flex; gap: 20px; margin-bottom: 8px; }
+.bpc-tag { font-size: 15px; color: #c2410c; }
+.bpc-tag.highlight { font-weight: bold; color: var(--danger); }
+.bpc-hint { margin: 0; font-size: 13px; color: #fdba74; }
 </style>
