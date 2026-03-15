@@ -355,7 +355,7 @@ async def run_analysis(request:AnalysisRequest): #指定record的类型为Analys
         plot_data=[] #初始化一个列表，用来存放每个样本对应的信息，以便前端画散点图。在前端的散点图中，每个样本对应一个点
         for i in range(len(df)):
             plot_data.append({
-                "name": df.index[i], #样本名称
+                "name": str(df.index[i]), #样本名称
                 "x": float(coords[i,0]), #降维后的第一主成分，作为散点图中的x轴坐标
                 "y": float(coords[i,1]), #降维后的第二主成分，作为散点图中的y轴坐标
                 "cluster": int(labels[i]) #该样本所属的簇标签
@@ -367,7 +367,9 @@ async def run_analysis(request:AnalysisRequest): #指定record的类型为Analys
             "n_samples": df.shape[0], #样本总数
             "n_features": df.shape[1], #特征数量
             "labels": labels.tolist(), #将numpy数组转换为Python列表，不然numpy数组无法直接序列化为JSON
-            "cluster_counts": pd.Series(labels).value_counts().to_dict(), #统计每个类别（簇）的样本数量
+            # "cluster_counts": pd.Series(labels).value_counts().to_dict(), #统计每个类别（簇）的样本数量
+            # 👇 修改这里：使用字典推导式强制转换类型【【【【【除了列表推导式还有其他方法吗？比如使用pandas？
+            "cluster_counts": {int(k): int(v) for k, v in pd.Series(labels).value_counts().items()},
             "metrics": metrics_scores, #我们刚才计算出来的聚类评估指标
             "plot_data": plot_data #存放每个样本对应的信息的那个列表
         }
