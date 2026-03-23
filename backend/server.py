@@ -905,7 +905,9 @@ async def run_enrichment_analysis(request:EnrichmentRequest):
                 results_df=enr.results
 
                 # 如果结果不为空，进行筛选和排序
-                if not results_df.empty:
+                # if not results_df.empty:
+                # 【修改】增加类型检查：当 gseapy 找不到富集结果时，enr.results 会返回空列表 []，而不是 DataFrame
+                if isinstance(results_df, pd.DataFrame) and not results_df.empty:
                     # 筛选出 P-value < 0.05 的显著通路，并按 P值从小到大排序
                     filtered_results=results_df[results_df["P-value"]<0.05].sort_values("P-value")
 
