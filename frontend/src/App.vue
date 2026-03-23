@@ -36,7 +36,7 @@ const algorithms=['K-means', 'Spectral Clustering', 'PIntMF', 'Subtype-GAN', 'NE
 const omicsFileConfigs = ref([])
 
 // 【新增】定义系统支持的组学类型选项
-const omicsTypes = [ 'mRNA', 'miRNA', 'Methylation', 'CopyNumber', 'RPPA' , 'Proteomics', 'Unknown' ]
+const omicsTypes = [ 'CopyNumber', 'Methylation', 'miRNA', 'mRNA', 'Proteomics' , 'RPPA', 'Unknown' ]
 
 const uploadStatus=ref('') //定义字符串变量，用于向用户反馈文件上传的进度或结果（如 "上传成功" 或 错误信息）
 
@@ -1926,7 +1926,8 @@ const renderPsChart = () => {
           <p>请依次上传数据、选择聚类算法并配置参数以启动分析管线。</p>
         </div>
 
-        <div class="test-mode-switch" :class="{ 'is-active': isCustomEvalMode }" style="margin-bottom: 24px; max-width: 450px;">
+        <div class="test-mode-switch" :class="{ 'is-active': isCustomEvalMode }" style="margin: 0 auto 24px auto; max-width: 450px;">
+        <!-- <div class="test-mode-switch" :class="{ 'is-active': isCustomEvalMode }" style="margin-bottom: 24px; max-width: 450px;"> -->
           <label class="switch-container">
             <input type="checkbox" v-model="isCustomEvalMode" />
             <span class="slider round"></span>
@@ -2156,12 +2157,12 @@ const renderPsChart = () => {
             </div>
             <div class="card-body">
               <div class="upload-section">
-                <h4>📊 聚类结果与特征矩阵 <span class="badge required">必须</span></h4>
+                <h4>📊 聚类结果与特征矩阵 <span class="badge required">333</span></h4>
                 <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.6;">
                   请用你自己的算法生成一个CSV/Excel文件：<br>
                   1.从左到右分别是<br>
                   <strong>病人名称</strong>（索引列）、<br>
-                  <strong>聚类标签</strong>（第2列）、<br>
+                  <strong>聚类结果</strong>（第2列）、<br>
                   <strong>融合后的特征矩阵</strong>（第3列及之后）。<br>
                   2.行代表病人，列代表特征。有表头行、索引列。
                 </p>
