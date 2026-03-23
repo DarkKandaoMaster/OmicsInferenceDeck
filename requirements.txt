@@ -4,6 +4,7 @@ umap-learn
 lifelines （需要Python3.11以上版本）
 gseapy
 snfpy
+joblib
 
 前端：（npm install echarts）
 echarts
