@@ -756,6 +756,13 @@ async def run_differential_analysis(request:DifferentialAnalysisRequest):
             if request.omics_type not in data_dict:
                 raise ValueError(f"未找到指定的组学数据类型: {request.omics_type}")
             df = data_dict[request.omics_type]
+            # 👇 【新增】根据前端传来的 omics_type，去掉对应的组学后缀名
+            # 注意：使用 endswith 和切片，防止基因名中间刚好包含后缀字符被误删
+            # 根据前端传来的omics_type，把组学后缀名去掉。但如果omics_type为All，那么不删
+            suffix = f"_{request.omics_type}"
+            df.columns=[     col[:-len(suffix)] if str(col).endswith(suffix) else col     for col in df.columns]
+            # [ ... for col in df.columns ]
+            # 这是 Python 的列表推导式。它的意思是：把 df.columns（原数据表的所有列名）里的每一个列名拿出来，记作 col，然后通过前面的规则处理它，最后把处理完的所有名字打包成一个新的列表。
 
         # 2.把前端传过来的样本名称列表、聚类标签列表整理成一个cluster_info
         #创建一个DataFrame对象，同时传入一个字典。于是字典的key就会变成列名，value就会变成列的数据
