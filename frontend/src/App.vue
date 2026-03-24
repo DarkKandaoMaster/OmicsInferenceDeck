@@ -2162,7 +2162,7 @@ const renderPsChart = () => {
               <div class="upload-section">
                 <h4>📊 聚类结果与特征矩阵 <span class="badge required">333</span></h4>
                 <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.6;">
-                  请用你自己的算法生成一个CSV/Excel文件：<br>
+                  请把你上传的组学数据作为输入，用你自己的算法，生成一个CSV/Excel文件：<br>
                   1.从左到右分别是<br>
                   <strong>病人名称</strong>（索引列）、<br>
                   <strong>聚类结果</strong>（第2列）、<br>
