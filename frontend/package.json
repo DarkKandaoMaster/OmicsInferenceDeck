@@ -12,6 +12,7 @@
     "axios": "^1.13.2",
     "echarts": "^6.0.0",
     "echarts-gl": "^2.0.9",
+    "uuid": "^13.0.0",
     "vue": "^3.5.26"
   },
   "devDependencies": {

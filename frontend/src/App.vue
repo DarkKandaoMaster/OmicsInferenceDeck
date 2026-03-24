@@ -1,14 +1,17 @@
+<!-- 192.168.10.8 -->
+
 <script setup>
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 // import { ref,computed,nextTick } from 'vue' //引入Vue框架的核心函数 //ref：用于定义基本类型的响应式数据（数据变化时视图自动更新） //computed：用于定义计算属性（依赖其他数据变化而自动重新计算并缓存结果） //nextTick：用于确保DOM元素渲染完成后再执行绘图代码
 import axios from 'axios' //引入 axios 库，用于在浏览器端发送 HTTP 请求，与后端服务器进行数据交互
 import * as echarts from 'echarts' //引入整个echarts库，命名为echarts //为什么不这么写“import echarts from 'echarts'”？这是因为不同的库有不同的导出策略
 import 'echarts-gl' // [新增] 引入 echarts-gl 用于渲染 3D 曲面图。
+import * as uuid from 'uuid'
 
 // ===================== 状态定义区 =====================
 
 //代表当前会话的UUID
-const sessionId=ref(crypto.randomUUID())
+const sessionId=ref(uuid.v4())
 
 // 【新增】标记数据状态，用于判断在点击 Run 时是否需要真正发送 Upload 请求
 const isOmicsUploaded = ref(false)
@@ -223,7 +226,7 @@ const cleanupSession = () => {
   // 【关键技术】使用 navigator.sendBeacon 
   // 当浏览器页面卸载、关闭或刷新时，普通的 axios/fetch 异步请求大概率会被浏览器直接取消掉。
   // sendBeacon 是专门为此场景设计的原生 API，可以确保请求在后台可靠地发送给后端。
-  navigator.sendBeacon('http://127.0.0.1:8000/api/cleanup', formData)
+  navigator.sendBeacon('http://192.168.10.8:8000/api/cleanup', formData)
 }
 
 // 组件挂载时，监听浏览器的关闭/刷新事件 (beforeunload)
@@ -258,7 +261,7 @@ const uploadFile = async () => {
 
   uploadStatus.value = "正在上传组学数据..."
   try {
-    const res = await axios.post('http://127.0.0.1:8000/api/upload', formData, {
+    const res = await axios.post('http://192.168.10.8:8000/api/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
 
@@ -299,7 +302,7 @@ const uploadFile = async () => {
 //     // 参数1：接口URL
 //     // 参数2：请求体，就是那个formData
 //     // 参数3：配置对象，显式指定Content-Type头部，确保后端能正确解析文件流
-//     const res=await axios.post('http://127.0.0.1:8000/api/upload',formData,{
+//     const res=await axios.post('http://192.168.10.8:8000/api/upload',formData,{
 //       headers:{
 //         'Content-Type': 'multipart/form-data' //显式指定请求头，确保后端能正确解析文件流
 //       }
@@ -327,7 +330,7 @@ const handleFileChange = (event) => {
   if(files.length > 0){
     // 【修改】构建包含 UUID 的文件配置对象
     omicsFileConfigs.value = files.map(f => ({
-      id: crypto.randomUUID(), // 为每个文件生成 UUID
+      id: uuid.v4(), // 为每个文件生成 UUID
       file: f,
       originalName: f.name,
       type: 'Unknown' // 默认选项设为 Unknown
@@ -473,7 +476,7 @@ const runAnalysis = async () => {
       formData.append('reduction', currentReduction.value)
       formData.append('random_state', randomSeed.value)
 
-      const res = await axios.post('http://127.0.0.1:8000/api/evaluate_custom', formData, {
+      const res = await axios.post('http://192.168.10.8:8000/api/evaluate_custom', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
 
@@ -513,7 +516,7 @@ const runAnalysis = async () => {
       await uploadFile() 
     }
 
-    const res = await axios.post('http://127.0.0.1:8000/api/run', {
+    const res = await axios.post('http://192.168.10.8:8000/api/run', {
       algorithm: selectedAlgorithm.value[0], 
       timestamp: new Date().toISOString(), 
       session_id: sessionId.value,
@@ -566,7 +569,7 @@ const runAnalysis = async () => {
 //     //使用axios发送POST请求到后端接口"/api/run"
 //     // 参数1：接口URL
 //     // 参数2：请求体
-//     const res= await axios.post('http://127.0.0.1:8000/api/run',{
+//     const res= await axios.post('http://192.168.10.8:8000/api/run',{
 //       algorithm: selectedAlgorithm.value[0], //用户选中的算法名称 // 为什么要这么写：由于上方逻辑已经确保了数组长度必然为 1，通过索引 [0] 获取数组中唯一的字符串元素，以匹配后端 pydantic 模型 AnalysisRequest 中 algorithm 为 str 类型的要求。
 //       timestamp: new Date().toISOString(), //当前时间戳，格式为ISO 8601
 //       filename: uploadedFilename.value, //要处理的文件名
@@ -614,7 +617,7 @@ const uploadClinicalFile = async () => {
 
   clinicalUploadStatus.value = "正在上传临床数据..."
   try {
-    const res = await axios.post('http://127.0.0.1:8000/api/upload', formData, {
+    const res = await axios.post('http://192.168.10.8:8000/api/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
     clinicalUploadStatus.value = `✅ 临床数据就绪: ${res.data.original_filename}`
@@ -653,7 +656,7 @@ const handleClinicalFormatChange = () => {
 
 //   try{
 //     clinicalUploadStatus.value="正在上传临床数据..."
-//     const res=await axios.post('http://127.0.0.1:8000/api/upload',formData,{
+//     const res=await axios.post('http://192.168.10.8:8000/api/upload',formData,{
 //       headers:{
 //         'Content-Type': 'multipart/form-data'
 //       }
@@ -711,7 +714,7 @@ const runSurvivalAnalysis = async () => {
     const sampleNames = plotData.map(item => item.name)
     const clusterLabels = plotData.map(item => item.cluster)
 
-    const res = await axios.post('http://127.0.0.1:8000/api/survival_analysis',{
+    const res = await axios.post('http://192.168.10.8:8000/api/survival_analysis',{
       session_id: sessionId.value, // 【修改】
       sample: sampleNames,
       labels: clusterLabels
@@ -751,7 +754,7 @@ const runSurvivalAnalysis = async () => {
 //     const clusterLabels = plotData.map(item => item.cluster)
 
 //     // 发送请求给后端
-//     const res=await axios.post('http://127.0.0.1:8000/api/survival_analysis',{
+//     const res=await axios.post('http://192.168.10.8:8000/api/survival_analysis',{
 //       clinical_filename: clinicalFilename.value,
 //       sample: sampleNames,
 //       labels: clusterLabels
@@ -962,7 +965,7 @@ const runDifferentialAnalysis= async ()=>{
     const sampleNames=plotData.map(item=>item.name)
     const clusterLabels=plotData.map(item=>item.cluster)
 
-    const res=await axios.post('http://127.0.0.1:8000/api/differential_analysis',{
+    const res=await axios.post('http://192.168.10.8:8000/api/differential_analysis',{
       session_id: sessionId.value, // 【修改】
       omics_type: selectedDiffOmicsType.value, // 👈 【新增】把用户选择的组学名发给后端
       // omics_filename: uploadedFilename.value, // 使用之前上传的组学文件
@@ -1288,7 +1291,7 @@ const runEnrichmentAnalysis = async (type) => {
     }
 
     // 3. 发送请求给后端，把所有簇的基因字典一次性发过去
-    const res = await axios.post('http://127.0.0.1:8000/api/enrichment_analysis', {
+    const res = await axios.post('http://192.168.10.8:8000/api/enrichment_analysis', {
       cluster_genes: clusterGenesDict,
       database: type // 传入 'GO' 或 'KEGG'，后端去判断对应哪个文件
     })
@@ -1793,7 +1796,7 @@ const runParameterSearch = async () => {
     }
 
     // 发送 POST 请求到后端的测试模式接口
-    const res = await axios.post('http://127.0.0.1:8000/api/parameter_search', {
+    const res = await axios.post('http://192.168.10.8:8000/api/parameter_search', {
       algorithm: selectedAlgorithm.value[0], // 当前算法名 // 为什么要这么写：同样使用索引 [0] 提取选中的算法名称作为字符串数据格式传递，满足后端 ParameterSearchRequest 接口规范。
       session_id: sessionId.value, // 【修改】
       // omics_filename: uploadedFilename.value, // 上传好的组学文件名
