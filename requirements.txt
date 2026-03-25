@@ -7,10 +7,12 @@ conda install scikit-learn
 conda install umap-learn
 conda install -c conda-forge lifelines
 conda install -c bioconda gseapy
+openpyxl（未显式安装）
+joblib（未显式安装）
 
 前端：
 npm install echarts
-npm install echarts-gl --legacy-peer-deps （如果以后echarts-gl兼容echarts6.0了，那么去掉上面的“--legacy-peer-deps”）
+npm install echarts-gl --legacy-peer-deps （如果以后echarts-gl兼容echarts6.0了，那么去掉“--legacy-peer-deps”）
 npm install uuid --legacy-peer-deps
 
 之后记得补充一下其他东西
