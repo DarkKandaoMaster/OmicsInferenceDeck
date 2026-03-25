@@ -1,13 +1,15 @@
 后端：
-openpyxl
-umap-learn
-lifelines （需要Python3.11以上版本）
-gseapy
-snfpy
-joblib
+conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+conda install uvicorn
+conda install fastapi
+conda install pandas
+conda install scikit-learn
+conda install umap-learn
+conda install -c conda-forge lifelines
+conda install -c bioconda gseapy
 
-前端：（npm install echarts）
-echarts
+前端：
+npm install echarts
 npm install echarts-gl --legacy-peer-deps （如果以后echarts-gl兼容echarts6.0了，那么去掉上面的“--legacy-peer-deps”）
 npm install uuid --legacy-peer-deps
 
