@@ -1792,6 +1792,21 @@ const runParameterSearch = async () => {
       psParam1.value = 'n_clusters'
       psParam2.value = 'n_neighbors'
     }
+    else if (selectedAlgorithm.value[0] === 'NEMO') {
+      paramGridObj = {
+        "n_clusters": testNClusters.value.split(',').map(Number)
+      }
+      psParam1.value = 'n_clusters'
+      psParam2.value = '' // NEMO 只有一个主要参数，留空以绘制 2D 折线图
+    }
+    else if (selectedAlgorithm.value[0] === 'SNF') {
+      paramGridObj = {
+        "n_clusters": testNClusters.value.split(',').map(Number),
+        "n_neighbors": testNNeighbors.value.split(',').map(Number)
+      }
+      psParam1.value = 'n_clusters'
+      psParam2.value = 'n_neighbors'
+    }
 
     // 发送 POST 请求到后端的测试模式接口
     const res = await axios.post('/api/parameter_search', {
@@ -2107,6 +2122,26 @@ const renderPsChart = () => {
                       <input type="number" v-model="randomSeed" />
                     </div>
                   </div>
+
+                  <div v-if="selectedAlgorithm.includes('NEMO')" class="param-group">
+                    <h4 class="algo-badge">NEMO 参数</h4>
+                    <div class="input-field">
+                      <label>聚类簇数 (K值)</label>
+                      <input type="number" v-model="kValue" />
+                    </div>
+                  </div>
+
+                  <div v-if="selectedAlgorithm.includes('SNF')" class="param-group">
+                    <h4 class="algo-badge">SNF 参数</h4>
+                    <div class="input-field">
+                      <label>聚类簇数 (K值)</label>
+                      <input type="number" v-model="kValue" />
+                    </div>
+                    <div class="input-field">
+                      <label>构建KNN网络邻居数 (K)</label>
+                      <input type="number" v-model="nNeighbors" />
+                    </div>
+                  </div>
                 </template>
 
                 <template v-else>
@@ -2139,6 +2174,34 @@ const renderPsChart = () => {
                     <div class="input-field">
                       <label>邻居数范围 (逗号分隔)</label>
                       <input type="text" v-model="testNNeighbors" placeholder="如: 5,10,15" />
+                    </div>
+                    <div class="input-field">
+                      <label>随机种子</label>
+                      <input type="number" v-model="randomSeed" />
+                    </div>
+                  </div>
+
+                  <div v-if="selectedAlgorithm.includes('NEMO')" class="param-group test-params">
+                    <h4 class="algo-badge">NEMO 测试范围</h4>
+                    <div class="input-field">
+                      <label>聚类簇数范围 (逗号分隔)</label>
+                      <input type="text" v-model="testNClusters" placeholder="如: 2,3,4,5" />
+                    </div>
+                    <div class="input-field">
+                      <label>随机种子</label>
+                      <input type="number" v-model="randomSeed" />
+                    </div>
+                  </div>
+
+                  <div v-if="selectedAlgorithm.includes('SNF')" class="param-group test-params">
+                    <h4 class="algo-badge">SNF 测试范围</h4>
+                    <div class="input-field">
+                      <label>聚类簇数范围 (逗号分隔)</label>
+                      <input type="text" v-model="testNClusters" placeholder="如: 2,3,4,5" />
+                    </div>
+                    <div class="input-field">
+                      <label>邻居数范围 (逗号分隔)</label>
+                      <input type="text" v-model="testNNeighbors" placeholder="如: 10,20,30" />
                     </div>
                     <div class="input-field">
                       <label>随机种子</label>

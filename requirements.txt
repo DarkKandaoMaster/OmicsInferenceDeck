@@ -6,5 +6,13 @@ conda install scikit-learn
 conda install umap-learn
 conda install -c conda-forge lifelines
 conda install -c bioconda gseapy
+pip install snfpy
 openpyxl（未显式安装）
 joblib（未显式安装）
+pip install rpy2（本项目不需要，在此仅做记录）
+
+
+R包：
+install.packages("devtools")
+install.packages("SNFtool")
+devtools::install_github("Shamir-Lab/NEMO/NEMO")
