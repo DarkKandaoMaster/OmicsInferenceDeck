@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import snf
 from sklearn.manifold import spectral_embedding
+from sklearn.cluster import spectral_clustering  # 【新增】导入 sklearn 的谱聚类方法
 from .base import BaseAlgorithm
 
 class Algorithm(BaseAlgorithm):
@@ -26,8 +27,8 @@ class Algorithm(BaseAlgorithm):
         affinity_networks = snf.make_affinity(aligned_matrices, metric='euclidean', K=k_neighbors, mu=0.5)
         # 融合网络
         fused_network = snf.snf(affinity_networks, K=k_neighbors)
-        # 基于融合网络进行谱聚类
-        labels = snf.clustering.spectral_clustering(fused_network, n_clusters=n_clusters)
+        # 【修改这里】基于融合网络进行谱聚类，直接调用 sklearn 的 spectral_clustering
+        labels = spectral_clustering(fused_network, n_clusters=n_clusters)
         
         # 4. 生成用于降维和评估的特征矩阵
         # 因为 SNF 生成的是一个 N x N 的相似度矩阵，为了配合后端的 PCA/t-SNE 降维，
