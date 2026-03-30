@@ -1,10 +1,11 @@
+import os
+os.environ["OMP_NUM_THREADS"]="5" #
 import uvicorn
 from fastapi import FastAPI,HTTPException,File,UploadFile,Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import datetime
 import shutil
-import os
 import pandas as pd
 import numpy as np
 # from sklearn.cluster import KMeans,SpectralClustering
