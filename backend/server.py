@@ -1,5 +1,7 @@
 import os
-os.environ["OMP_NUM_THREADS"]="5" #
+os.environ["OMP_NUM_THREADS"]="5" #在Windows上搭配底层MKL库运行K-means时有一个已知内存泄漏问题（当数据块少于可用线程时会触发）。因此官方警告推荐写上这句代码，强行限制底层数学库使用的CPU线程数量为5
+import warnings
+warnings.filterwarnings("ignore",category=FutureWarning) #忽略类别=未来警告的警告，不让这种类别的警告打印到控制台，污染日志。为什么会有这种类别的警告？就比如snfpy库在底层调用sklearn的验证函数时，还在使用旧的未来版本会弃用的参数名force_all_finite，于是sklearn会发出警告提醒你，调用一次提醒一次
 import uvicorn
 from fastapi import FastAPI,HTTPException,File,UploadFile,Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,8 +34,8 @@ import json
 ALGORITHM_MAP={ #建立前端算法名称到后端文件名的映射关系。比如前端传来"K-means"，我就能把它映射成"kmeans"，然后调用kmeans.py这个文件
     "K-means": "kmeans",
     "Spectral Clustering": "spectral",
-    "SNF": "snf",       # 新增 SNF
-    "NEMO": "nemo"      # 新增 NEMO
+    "SNF": "snf",
+    "NEMO": "nemo"
 }
 def load_algorithm(algorithm_name:str): #根据传入的字符串（算法名称），动态导入对应的算法模块，返回该算法模块里面的Algorithm类
     if algorithm_name not in ALGORITHM_MAP:

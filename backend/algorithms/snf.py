@@ -20,14 +20,24 @@ class Algorithm(BaseAlgorithm):
         # 2. 提取参数
         n_clusters = self.params.get('n_clusters', 3)
         # SNF 的 K 值代表构建 KNN 图时的邻居数，前端如果没有传，默认给 20
-        k_neighbors = self.params.get('n_neighbors', 20) 
+        k_neighbors = self.params.get('n_neighbors', 20)
         
         # 3. 运行 SNF 核心逻辑
         # 构建各个组学的亲和度网络
         affinity_networks = snf.make_affinity(aligned_matrices, metric='euclidean', K=k_neighbors, mu=0.5)
+        
+        # 如果只有一个网络，直接使用它，无需融合；如果是多个网络，再调用 SNF 融合
+        # 如果aligned_matrices 列表的长度为 1，snf.make_affinity 生成了只包含 1 个亲和度网络的列表。
+        # 由于融合算法的数学公式中涉及到除以 (网络数量 - 1)，也就是 (1 - 1) = 0，导致了除以零的错误，在后端日志里报错
+        # 除以零产生了 NaN（空值），随后传入 sklearn 的 spectral_clustering，引发了最终的崩溃：Input X contains NaN。
+        if len(affinity_networks) == 1:
+            fused_network = affinity_networks[0]
+        else:
+            fused_network = snf.snf(affinity_networks, K=k_neighbors)
+
         # 融合网络
-        fused_network = snf.snf(affinity_networks, K=k_neighbors)
-        # 【修改这里】基于融合网络进行谱聚类，直接调用 sklearn 的 spectral_clustering
+        # fused_network = snf.snf(affinity_networks, K=k_neighbors)
+        # 基于融合网络进行谱聚类，直接调用 sklearn 的 spectral_clustering
         labels = spectral_clustering(fused_network, n_clusters=n_clusters)
         
         # 4. 生成用于降维和评估的特征矩阵
