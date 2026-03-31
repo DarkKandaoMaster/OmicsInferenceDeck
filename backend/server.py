@@ -201,7 +201,7 @@ async def upload_file(   files:List[UploadFile]=File(...)   ,   data_format:str=
                 # 根据文件名(UUID)在映射字典中找类型，找不到默认Unknown
                 base_type = mapping.get(file.filename, "Unknown")
 
-                # 修改特征名称（列名）！格式：特征名称_组学
+                # 修改特征名称（列名）！格式：特征名称_组学【【【【【我当初为什么会把特征名称改名的来着？？不改名然后直接用字典的键来区分不是更好？
                 df_single.columns = [f"{col}_{base_type}" for col in df_single.columns]
 
                 # 【新增】同组学类型自动合并机制

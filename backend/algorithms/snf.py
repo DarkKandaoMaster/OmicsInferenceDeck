@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import snf
 from sklearn.manifold import spectral_embedding
-from sklearn.cluster import spectral_clustering  # 【新增】导入 sklearn 的谱聚类方法
+from sklearn.cluster import spectral_clustering
 from .base import BaseAlgorithm
 
 class Algorithm(BaseAlgorithm):
