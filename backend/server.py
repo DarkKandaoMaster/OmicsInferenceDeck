@@ -10,7 +10,6 @@ import datetime
 import shutil
 import pandas as pd
 import numpy as np
-# from sklearn.cluster import KMeans,SpectralClustering
 import uuid
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
