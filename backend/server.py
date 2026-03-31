@@ -26,11 +26,15 @@ import itertools
 import joblib
 import importlib
 import json
+import asyncio
+import time
+from contextlib import asynccontextmanager
+# from algorithms import get_algorithm #
 
 # =============================================================================
 # 注册算法
 # =============================================================================
-ALGORITHM_MAP={ #建立前端算法名称到后端文件名的映射关系。比如前端传来"K-means"，我就能把它映射成"kmeans"，然后调用kmeans.py这个文件
+ALGORITHM_MAP={ #建立前端算法名称到后端文件名的映射关系。比如前端传来"K-means"，我们就把它映射成"kmeans"，然后调用kmeans.py这个文件
     "K-means": "kmeans",
     "Spectral Clustering": "spectral",
     "SNF": "snf",
@@ -46,6 +50,50 @@ def load_algorithm(algorithm_name:str): #根据传入的字符串（算法名称
         raise RuntimeError(f"加载算法模块 {algorithm_name} 失败：{str(e)}")
 
 # =============================================================================
+# 后台定时清理任务
+# =============================================================================
+async def cleanup_expired_folders():
+    """每隔6小时自动运行一次，清理超过6小时未修改的会话文件夹"""
+    cleanup_interval = 6 * 60 * 60  # 6小时（转换为秒）这个语法非常关键，它会让这个 while True 循环每执行一次就休眠 6 小时。由于是 await 异步休眠，在这 6 小时内 CPU 会去全速处理其他用户的 API 请求，完全没有任何性能损耗。
+    
+    while True:
+        # 挂起当前任务 6 小时（不阻塞服务器处理其他请求）
+        await asyncio.sleep(cleanup_interval)
+        
+        upload_dir = "upload"
+        if not os.path.exists(upload_dir):
+            continue
+            
+        print(f"\n[后台任务] 开始清理 {upload_dir} 下的过期文件夹...")
+        current_time = time.time()
+        
+        # 遍历 upload 文件夹下的所有内容
+        for folder_name in os.listdir(upload_dir):
+            folder_path = os.path.join(upload_dir, folder_name)
+            
+            # 确保它是一个文件夹
+            if os.path.isdir(folder_path):
+                # 获取文件夹的最后修改时间（Linux/Windows通用，getmtime 最稳妥）
+                folder_mtime = os.path.getmtime(folder_path)
+                
+                # 判断：当前时间 - 文件夹最后修改时间 > 6 小时
+                if current_time - folder_mtime > cleanup_interval:
+                    try:
+                        shutil.rmtree(folder_path)
+                        print(f"[后台任务] 成功删除过期文件夹: {folder_name}")
+                    except Exception as e:
+                        print(f"[后台任务] 删除过期文件夹 {folder_name} 失败: {str(e)}")
+
+# 定义 FastAPI 的生命周期管理器
+@asynccontextmanager #这是目前 FastAPI 官方推荐的处理“服务器启动/关闭事件”的标准做法，用于替代旧版本会报警告的 @app.on_event("startup") 装饰器。
+async def lifespan(app: FastAPI):
+    # 【启动服务器时】创建并启动后台清理任务
+    task = asyncio.create_task(cleanup_expired_folders())
+    yield  # 交出控制权，让 FastAPI 正常启动并处理请求
+    # 【关闭服务器时】取消清理任务，优雅退出
+    task.cancel()
+
+# =============================================================================
 # 应用程序初始化
 # =============================================================================
 #实例化FastAPI类
@@ -55,7 +103,8 @@ def load_algorithm(algorithm_name:str): #根据传入的字符串（算法名称
 app=FastAPI(
     title="InferenceDeck API Platform", #设置API文档的标题
     description="Backend for Multi-Omics Cancer Subtyping Platform", #设置API的描述信息
-    version="1.0.0" #设置版本号
+    version="1.0.0", #设置版本号
+    lifespan=lifespan # <--- 【新增】挂载生命周期管理器
 )
 
 #配置CORS（跨域资源共享）中间件
@@ -474,11 +523,8 @@ async def run_analysis(request:AnalysisRequest): #指定record的类型为Analys
 
     except Exception as e: #处理用户参数设置不合理，或者上传了一个非常大的CSV文件并且上传时硬盘存得下但处理时硬盘存不下，等情况
         print(f"[算法错误] {str(e)}")
-        return{
-            "status": "error",
-            "message": f"算法运行失败: {str(e)}",
-            "server_time": datetime.datetime.now().isoformat()
-        }
+        # 直接抛出 400 异常，让前端 axios 能够正确捕捉到 error
+        raise HTTPException(status_code=400, detail=f"算法运行失败: {str(e)}")
 
     #构建HTTP响应
     #下面这个字典就是要返回给前端的东西
