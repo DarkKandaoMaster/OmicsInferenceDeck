@@ -29,7 +29,7 @@ import json
 import asyncio
 import time
 from contextlib import asynccontextmanager
-from .algorithms import load_algorithm
+from algorithms import load_algorithm #导入我们自己写的函数
 
 # =============================================================================
 # 后台定时清理任务
