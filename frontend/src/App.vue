@@ -8,7 +8,6 @@ import * as uuid from 'uuid'
 
 // ===================== 状态定义区 =====================
 
-
 //代表当前会话的UUID
 const sessionId=ref(uuid.v4())
 
