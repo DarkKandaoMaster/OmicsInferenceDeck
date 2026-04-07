@@ -4,7 +4,8 @@ ALGORITHM_MAP={ #建立前端算法名称到后端文件名的映射关系。比
     "K-means": "kmeans",
     "Spectral Clustering": "spectral",
     "SNF": "snf",
-    "NEMO": "nemo"
+    "NEMO": "nemo",
+    "Subtype-Gan": "subtype"
 }
 
 def load_algorithm(algorithm_name:str): #根据传入的字符串（算法名称），动态导入对应的算法模块，返回该算法模块里面的Algorithm类
