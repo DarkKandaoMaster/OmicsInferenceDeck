@@ -29,7 +29,7 @@ import json
 import asyncio
 import time
 from contextlib import asynccontextmanager
-from algorithms import load_algorithm #导入我们自己写的函数
+from algorithms import load_algorithm #导入我们在./algorithms/__init__.py里写的load_algorithm函数
 
 # =============================================================================
 # 后台定时清理任务
@@ -466,9 +466,7 @@ async def run_analysis(request:AnalysisRequest): #指定record的类型为Analys
             coords=PCA(n_components=2,random_state=seed)   .fit_transform(embeddings) #初始化PCA模型，指定降维到2维（x轴和y轴）；对df进行降维，返回一个形状为(样本数量,2)的numpy数组。其中第0列表示第一主成分（PC1），这是数据差异最大、最能区分样本的方向；第1列表示第二主成分（PC2），这是数据差异第二大的方向
         elif request.reduction=="t-SNE":
             coords=TSNE(n_components=2,random_state=seed)   .fit_transform(embeddings)
-        elif request.reduction=="UMAP":
-            coords=umap.UMAP(n_components=2,random_state=seed)   .fit_transform(embeddings)
-        else: #兜底逻辑：如果用户选择了未知的降维算法，那么默认使用UMAP
+        else: #如果用户选择了"UMAP"，或者选择了未知的降维算法，那么默认使用UMAP
             coords=umap.UMAP(n_components=2,random_state=seed)   .fit_transform(embeddings)
         plot_data=[] #初始化一个列表，用来存放每个样本对应的信息，以便前端画散点图。在前端的散点图中，每个样本对应一个点
         for i in range(len(sample_names)):
