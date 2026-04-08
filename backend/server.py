@@ -592,8 +592,7 @@ async def evaluate_custom(
 
         # 4. ---------- 计算评估指标 ----------
         metrics_scores = {}
-        unique_labels = np.unique(labels)
-        if len(unique_labels) >= 2:
+        if len(np.unique(labels)) >= 2:
             s_score = silhouette_score(embeddings, labels)
             ch_score = calinski_harabasz_score(embeddings, labels)
             db_score = davies_bouldin_score(embeddings, labels)
