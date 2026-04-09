@@ -4,8 +4,6 @@ ALGORITHM_MAP={ #建立前端算法名称到后端文件名的映射关系。比
     "K-means": "kmeans",
     "Spectral Clustering": "spectral",
     "SNF": "snf",
-    "NEMO": "nemo",
-    "Subtype-GAN": "subtype",
     "NEMO": "nemo"
     #DarkKandaoMaster：如果发现算法代码完全错了，并且之后一段时间不打算添加这个算法，那么最好把改动都恢复回去。这样用户使用这个算法的时候才能提示“暂时不支持的算法”而不是报错，也方便我们之后添加这个算法，不然algorithms文件夹里的文件一多，很麻烦的。我先帮你恢复回去了哈。
     #以后也这样吧，如果我需要修改algorithms文件夹里的内容，那就在修改处以“DarkKandaoMaster：”开头写个注释，说明一下情况；如果你需要修改algorithms文件夹外的内容，同理。
