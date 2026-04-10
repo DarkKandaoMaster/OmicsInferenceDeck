@@ -21,54 +21,8 @@ import gseapy as gp
 import itertools
 import joblib
 import json
-import asyncio
-import time
-from contextlib import asynccontextmanager
 from algorithms import load_algorithm #导入我们在./algorithms/__init__.py里写的load_algorithm函数 #这里也不能使用相对导入
-
-# =============================================================================
-# 后台定时清理任务
-# =============================================================================
-async def cleanup_expired_folders():
-    """每隔6小时自动运行一次，清理超过6小时未修改的会话文件夹"""
-    cleanup_interval = 6 * 60 * 60  # 6小时（转换为秒）这个语法非常关键，它会让这个 while True 循环每执行一次就休眠 6 小时。由于是 await 异步休眠，在这 6 小时内 CPU 会去全速处理其他用户的 API 请求，完全没有任何性能损耗。
-    
-    while True:
-        # 挂起当前任务 6 小时（不阻塞服务器处理其他请求）
-        await asyncio.sleep(cleanup_interval)
-        
-        upload_dir = "upload"
-        if not os.path.exists(upload_dir):
-            continue
-            
-        print(f"\n[后台任务] 开始清理 {upload_dir} 下的过期文件夹...")
-        current_time = time.time()
-        
-        # 遍历 upload 文件夹下的所有内容
-        for folder_name in os.listdir(upload_dir):
-            folder_path = os.path.join(upload_dir, folder_name)
-            
-            # 确保它是一个文件夹
-            if os.path.isdir(folder_path):
-                # 获取文件夹的最后修改时间（Linux/Windows通用，getmtime 最稳妥）
-                folder_mtime = os.path.getmtime(folder_path)
-                
-                # 判断：当前时间 - 文件夹最后修改时间 > 6 小时
-                if current_time - folder_mtime > cleanup_interval:
-                    try:
-                        shutil.rmtree(folder_path)
-                        print(f"[后台任务] 成功删除过期文件夹: {folder_name}")
-                    except Exception as e:
-                        print(f"[后台任务] 删除过期文件夹 {folder_name} 失败: {str(e)}")
-
-# 定义 FastAPI 的生命周期管理器
-@asynccontextmanager #这是目前 FastAPI 官方推荐的处理“服务器启动/关闭事件”的标准做法，用于替代旧版本会报警告的 @app.on_event("startup") 装饰器。
-async def lifespan(app: FastAPI):
-    # 【启动服务器时】创建并启动后台清理任务
-    task = asyncio.create_task(cleanup_expired_folders())
-    yield  # 交出控制权，让 FastAPI 正常启动并处理请求
-    # 【关闭服务器时】取消清理任务，优雅退出
-    task.cancel()
+from cleanup import lifespan #导入我们在./cleanup.py里写的后台定时清理任务的生命周期管理器
 
 # =============================================================================
 # 应用程序初始化
