@@ -1,5 +1,5 @@
 import uvicorn
-from server import app
+from server import app #导入我们在./server.py里写的app #由于 main.py 是作为直接运行的脚本（entry point），它不能使用相对导入（如 from .server import app），必须使用绝对导入
 
 # =============================================================================
 # 程序入口
