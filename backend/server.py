@@ -22,7 +22,7 @@ import itertools
 import joblib
 import json
 from algorithms import load_algorithm #导入我们在./algorithms/__init__.py里写的load_algorithm函数 #这里也不能使用相对导入
-from cleanup import lifespan, cleanup_temp_files #导入我们在./cleanup.py里写的后台定时清理任务的生命周期管理器，以及临时文件清理函数
+from cleanup import lifespan,cleanup_temp_files #导入我们在./cleanup.py里写的后台定时清理任务的生命周期管理器，以及临时文件清理函数
 
 # =============================================================================
 # 应用程序初始化
