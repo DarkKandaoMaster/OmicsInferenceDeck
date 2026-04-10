@@ -22,7 +22,7 @@ import itertools
 import joblib
 import json
 from algorithms import load_algorithm #导入我们在./algorithms/__init__.py里写的load_algorithm函数 #这里也不能使用相对导入
-from cleanup import lifespan #导入我们在./cleanup.py里写的后台定时清理任务的生命周期管理器
+from cleanup import lifespan, cleanup_temp_files #导入我们在./cleanup.py里写的后台定时清理任务的生命周期管理器，以及临时文件清理函数
 
 # =============================================================================
 # 应用程序初始化
@@ -250,9 +250,7 @@ async def upload_file(   files:List[UploadFile]=File(...)   ,   data_format:str=
             # #这样一来，"/api/run"接口就可以直接使用pd.read_csv(file_path,header=0,index_col=0,sep=',')读取输入数据了
 
             # 6.删除用户上传的各个文件
-            for path in temp_file_paths:
-                if os.path.exists(path):
-                    os.remove(path)
+            cleanup_temp_files(temp_file_paths)
 
         except Exception as e:
             raise HTTPException(status_code=400,detail=f"数据格式错误: {str(e)}")
@@ -267,15 +265,11 @@ async def upload_file(   files:List[UploadFile]=File(...)   ,   data_format:str=
             "message": f"成功合并 {len(files)} 个文件"
         }
     except HTTPException as he: #捕获到了我们刚才自己抛出的错误，说明虽然读取、合并文件成功，但是文件内容不合规
-        for path in temp_file_paths: #删除用户上传的各个文件
-            if os.path.exists(path):
-                os.remove(path)
+        cleanup_temp_files(temp_file_paths) #删除用户上传的各个文件
         print(f"[后端日志] 校验不通过，文件已删除: {str(he)}")
         raise he #直接抛出错误给前端
     except Exception as e: #说明读取文件失败，或者其他什么错误
-        for path in temp_file_paths: #删除用户上传的各个文件
-            if os.path.exists(path):
-                os.remove(path)
+        cleanup_temp_files(temp_file_paths) #删除用户上传的各个文件
         print(f"[后端日志] 严重错误，文件已删除: {str(e)}")
         raise HTTPException(status_code=500,detail=f"服务器内部错误: {str(e)}") #抛出错误给前端
 
@@ -584,9 +578,7 @@ async def evaluate_custom(
         }
 
         # 清理临时结果文件
-        for path in temp_paths:
-            if os.path.exists(path):
-                os.remove(path)
+        cleanup_temp_files(temp_paths)
 
         return {
             "status": "success",
@@ -596,9 +588,7 @@ async def evaluate_custom(
         }
 
     except Exception as e:
-        for path in temp_paths:
-            if os.path.exists(path):
-                os.remove(path)
+        cleanup_temp_files(temp_paths)
         print(f"[自定义评估错误] {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 

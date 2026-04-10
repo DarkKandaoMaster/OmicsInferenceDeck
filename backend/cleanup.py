@@ -14,7 +14,7 @@ import shutil
 import time
 import asyncio
 from contextlib import asynccontextmanager
-
+from typing import List
 
 # 清理间隔时间（秒）
 CLEANUP_INTERVAL = 6 * 60 * 60  # 6小时
@@ -77,3 +77,21 @@ async def lifespan(app):
     yield  # 交出控制权，让 FastAPI 正常启动并处理请求
     # 【关闭服务器时】取消清理任务，优雅退出
     task.cancel()
+
+
+
+def cleanup_temp_files(file_paths: List[str]) -> None: #-> None 是 Python 类型注解（Type Hint） 语法的一部分，用于声明函数的返回类型。像注释一样给开发者看的。表示函数 cleanup_temp_files() 不返回任何值。
+    """
+    清理临时文件列表中的所有文件
+    
+    遍历传入的文件路径列表，删除所有存在的文件。
+    用于在请求处理完成后或出错时清理临时文件。
+    
+    Parameters
+    ----------
+    file_paths : List[str]
+        需要删除的文件路径列表
+    """
+    for path in file_paths:
+        if os.path.exists(path):
+            os.remove(path)
