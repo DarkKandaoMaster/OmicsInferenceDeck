@@ -116,8 +116,8 @@ async def run_analysis(request:AnalysisRequest): #指定record的类型为Analys
         # 3.计算三个聚类评估指标：轮廓系数、CH指数、DB指数，它们是可以用来给任何聚类算法打分的通用指标
         metrics_scores={} #初始化一个字典，用来存放这三个指标
         if request.n_clusters>=2: #只有当簇数量大于等于2时，聚类评估指标才有数学意义
-            s_score=silhouette_score(embeddings,labels) #轮廓系数。范围[-1,1]，越接近1表示分类效果越好。衡量一个样本"离自己组的人有多近"、"离隔壁组的人有多远"
-            ch_score=calinski_harabasz_score(embeddings,labels) #CH指数。范围[0,+∞)，值越大表示分类效果越好。衡量簇内紧密度与簇间分离度的比值，简单来说就是它希望"组内越紧密越好"、"组间离得越远越好"
+            s_score=silhouette_score(embeddings,labels) #轮廓系数。范围[-1,1]，越接近1表示分类效果越好。衡量一个样本“离自己组的人有多近”、“离隔壁组的人有多远”
+            ch_score=calinski_harabasz_score(embeddings,labels) #CH指数。范围[0,+∞)，值越大表示分类效果越好。衡量簇内紧密度与簇间分离度的比值，简单来说就是它希望“组内越紧密越好”、“组间离得越远越好”
             db_score=davies_bouldin_score(embeddings,labels) #DB指数。范围[0,+∞)，值越小表示分类效果越好。衡量簇之间的重叠程度，如果这个指标很高，说明不同组混在一起了，分得不清楚
             metrics_scores={
                 "silhouette": round(float(s_score),4), #将s_score强制类型转换float，然后四舍五入保留小数点后4位
