@@ -52,7 +52,7 @@ async def run_survival_analysis(request:SurvivalRequest):
         cluster_df.set_index("SampleID",inplace=True) #.set_index()可以将cluster_df的"SampleID"列设置为索引列；inplace=True表示直接在原对象上修改
 
         # 3.把clinical_df和cluster_df合并起来
-        merged_df=clinical_df.join(cluster_df,how="inner") #how='inner'表示取索引的交集，即"如果病人名称有对不上的，那么取病人名称的交集"
+        merged_df=clinical_df.join(cluster_df,how="inner") #how='inner'表示取索引的交集，即“如果病人名称有对不上的，那么取病人名称的交集”
         if merged_df.empty:
             raise ValueError("临床数据与组学数据的样本名称没有交集，无法进行分析。请检查选择的数据格式是否正确，或者样本ID是否一致。")
 
