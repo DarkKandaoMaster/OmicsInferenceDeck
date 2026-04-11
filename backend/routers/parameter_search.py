@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from algorithms import load_algorithm
 
 # 创建路由器实例
-router = APIRouter()
+router=APIRouter()
 
 class ParameterSearchRequest(BaseModel): # 定义参数搜索请求的数据校验模型，确保前端传来的数据格式正确
     session_id: str # 【修改】

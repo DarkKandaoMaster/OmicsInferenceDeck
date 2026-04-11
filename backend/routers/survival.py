@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 # 创建路由器实例
-router = APIRouter()
+router=APIRouter()
 
 class SurvivalRequest(BaseModel): #定义数据校验模型
     # clinical_filename: str #用户上传的使用UUID改名后的临床数据文件名

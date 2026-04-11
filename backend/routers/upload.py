@@ -12,7 +12,7 @@ from typing import List
 from cleanup import cleanup_temp_files
 
 # 创建路由器实例
-router = APIRouter()
+router=APIRouter()
 
 #@router.post是一个装饰器，它的作用是将下面的upload_file函数注册到Web服务器的路由表中，当用户发送POST请求到"/api/upload"这个网址时，服务器会自动调用下面的upload_file函数来处理，同时FastAPI会自动读取HTTP请求体中的数据，并将其传给upload_file函数中的形参，实现接收输入数据
 #async可以定义异步函数，允许在进行文件读写或等待模型推理时，服务器可以挂起当前任务去处理其他请求，提高并发吞吐量

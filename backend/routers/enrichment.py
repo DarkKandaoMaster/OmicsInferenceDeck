@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 # 创建路由器实例
-router = APIRouter()
+router=APIRouter()
 
 class EnrichmentRequest(BaseModel): #定义数据校验模型
     cluster_genes: dict[str,list[str]] #字典，键为所有簇的ID，值为簇对应的差异基因列表

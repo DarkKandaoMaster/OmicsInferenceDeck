@@ -6,7 +6,7 @@ import shutil
 from fastapi import APIRouter, Form
 
 # 创建路由器实例 #如果不写这串代码，在main.py里就无法使用app.include_router(router)注册路由，该文件中也无法使用@router.post() 等装饰器来定义 API 端点
-router = APIRouter()
+router=APIRouter()
 
 @router.post("/api/cleanup")
 async def cleanup_session(session_id: str = Form(...)):
