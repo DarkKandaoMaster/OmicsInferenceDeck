@@ -10,10 +10,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 # 创建路由器实例
-router = APIRouter(
-    prefix="/api",
-    tags=["differential"]
-)
+router = APIRouter()
 
 class DifferentialAnalysisRequest(BaseModel): #定义数据校验模型
     # omics_filename: str #用户上传的使用UUID改名后的组学数据文件名
@@ -22,7 +19,7 @@ class DifferentialAnalysisRequest(BaseModel): #定义数据校验模型
     sample: list[str] #样本名称列表
     labels: list[int] #和样本名称列表一一对应的聚类标签列表
 
-@router.post("/differential_analysis")
+@router.post("/api/differential_analysis")
 async def run_differential_analysis(request:DifferentialAnalysisRequest):
     # print(f"\n[后端日志] 收到差异分析请求，处理文件: {request.omics_filename}")
 

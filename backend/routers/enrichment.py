@@ -7,16 +7,13 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 # 创建路由器实例
-router = APIRouter(
-    prefix="/api",
-    tags=["enrichment"]
-)
+router = APIRouter()
 
 class EnrichmentRequest(BaseModel): #定义数据校验模型
     cluster_genes: dict[str,list[str]] #字典，键为所有簇的ID，值为簇对应的差异基因列表
     database: str #用户选择的是GO分析还是KEGG分析
 
-@router.post("/enrichment_analysis")
+@router.post("/api/enrichment_analysis")
 async def run_enrichment_analysis(request:EnrichmentRequest):
     print(f"\n[后端日志] 收到富集分析请求，处理的簇数量: {len(request.cluster_genes)}")
     print(f"[后端日志] 目标数据库: {request.database}")

@@ -10,10 +10,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 # 创建路由器实例
-router = APIRouter(
-    prefix="/api",
-    tags=["survival"]
-)
+router = APIRouter()
 
 class SurvivalRequest(BaseModel): #定义数据校验模型
     # clinical_filename: str #用户上传的使用UUID改名后的临床数据文件名
@@ -21,7 +18,7 @@ class SurvivalRequest(BaseModel): #定义数据校验模型
     sample: list[str] #样本名称列表
     labels: list[int] #和样本名称列表一一对应的聚类标签列表
 
-@router.post("/survival_analysis")
+@router.post("/api/survival_analysis")
 async def run_survival_analysis(request:SurvivalRequest):
     # print(f"\n[后端日志] 收到生存分析请求，处理文件: {request.clinical_filename}")
 
