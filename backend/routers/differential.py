@@ -73,7 +73,7 @@ async def run_differential_analysis(request:DifferentialAnalysisRequest):
         cluster_info.set_index("SampleID",inplace=True) #.set_index()可以将cluster_info的"SampleID"列设置为索引列；inplace=True表示直接在原对象上修改
 
         # 3.把df和cluster_info合并起来，得到merged_df
-        merged_df=df.join(cluster_info,how="inner") #how='inner'表示取索引的交集，即"如果病人名称有对不上的，那么取病人名称的交集"
+        merged_df=df.join(cluster_info,how="inner") #how='inner'表示取索引的交集，即“如果病人名称有对不上的，那么取病人名称的交集”
         if merged_df.empty:
             raise ValueError("样本名称无法匹配，请检查数据一致性。")
 
@@ -82,7 +82,7 @@ async def run_differential_analysis(request:DifferentialAnalysisRequest):
         volcano_data={} #存放每个簇的用来绘制火山图的数据
         top_genes_set=set() #存放后面筛选出来的基因名称（特征名称）。这是差异基因热图的y轴数据
 
-        #遍历每一个簇，进行"一对多"比较，找出每个簇特有的特征【【【【【以后或许可以在这里加一个"一对一"比较
+        #遍历每一个簇，进行“一对多”比较，找出每个簇特有的特征【【【【【以后或许可以在这里加一个“一对一”比较
         for target_cluster in unique_clusters:
             group_a_df=merged_df[merged_df["Cluster"]==target_cluster][genes] #首先筛选出属于当前簇的样本，然后只保留所有特征列
             group_b_df=merged_df[merged_df["Cluster"]!=target_cluster][genes] #首先筛选出不属于当前簇的样本，然后只保留所有特征列
