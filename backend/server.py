@@ -2,27 +2,19 @@ import os
 os.environ["OMP_NUM_THREADS"]="5" #在Windows上搭配底层MKL库运行K-means时有一个已知内存泄漏问题（当数据块少于可用线程时会触发）。因此官方警告推荐写上这句代码，强行限制底层数学库使用的CPU线程数量为5
 import warnings
 warnings.filterwarnings("ignore",category=FutureWarning) #忽略类别=未来警告的警告，不让这种类别的警告打印到控制台，污染日志。为什么会有这种类别的警告？就比如snfpy库在底层调用sklearn的验证函数时，还在使用旧的未来版本会弃用的参数名force_all_finite，于是sklearn会发出警告提醒你，调用一次提醒一次
-from fastapi import FastAPI,HTTPException,File,UploadFile,Form
+from fastapi import FastAPI,HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import datetime
-import shutil
 import pandas as pd
 import numpy as np
-from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
-import umap
-from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 from lifelines import KaplanMeierFitter
 from lifelines.statistics import multivariate_logrank_test
-from typing import List
 from scipy import stats
 import gseapy as gp
 import itertools
 import joblib
-import json
 from algorithms import load_algorithm #导入我们在./algorithms/__init__.py里写的load_algorithm函数 #这里也不能使用相对导入
-from cleanup import lifespan,cleanup_temp_files #导入我们在./cleanup.py里写的后台定时清理任务的生命周期管理器，以及临时文件清理函数
+from cleanup import lifespan #导入我们在./cleanup.py里写的后台定时清理任务的生命周期管理器
 
 # =============================================================================
 # 应用程序初始化
