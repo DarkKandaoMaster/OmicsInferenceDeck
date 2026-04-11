@@ -12,14 +12,11 @@ from typing import List
 from cleanup import cleanup_temp_files
 
 # 创建路由器实例
-router = APIRouter(
-    prefix="/api",
-    tags=["upload"]
-)
+router=APIRouter()
 
 #@router.post是一个装饰器，它的作用是将下面的upload_file函数注册到Web服务器的路由表中，当用户发送POST请求到"/api/upload"这个网址时，服务器会自动调用下面的upload_file函数来处理，同时FastAPI会自动读取HTTP请求体中的数据，并将其传给upload_file函数中的形参，实现接收输入数据
 #async可以定义异步函数，允许在进行文件读写或等待模型推理时，服务器可以挂起当前任务去处理其他请求，提高并发吞吐量
-@router.post("/upload")
+@router.post("/api/upload")
 async def upload_file(   files:List[UploadFile]=File(...)   ,   data_format:str=Form(...)   ,   file_type:str=Form("omics")   ,   session_id:str=Form(...)   ,   omics_mapping:str=Form("{}")   ): #接收用户上传的组学文件和临床文件
 # <--- 【新增】接收前端传来的组学映射 JSON 字符串，默认为空字典字符串
 #files是用户上传的文件对象；data_format是用户选择的数据格式；file_type标记用户上传的文件是组学数据还是临床数据，默认组学；session_id是会话ID #(...)表示该对象必填，前端传来的东西必须包含该对象
