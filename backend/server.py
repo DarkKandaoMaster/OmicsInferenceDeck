@@ -157,8 +157,8 @@ async def run_enrichment_analysis(request:EnrichmentRequest):
         print(f"[富集分析错误] {str(e)}")
         raise HTTPException(status_code=400,detail=f"富集分析失败: {str(e)}")
 
-# *********************************************
-# [新增] 接口：测试模式（参数敏感性分析）
+# =============================================================================
+# 接口：测试模式（参数敏感性分析）
 # =============================================================================
 class ParameterSearchRequest(BaseModel): # 定义参数搜索请求的数据校验模型，确保前端传来的数据格式正确
     session_id: str # 【修改】
