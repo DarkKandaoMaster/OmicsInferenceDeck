@@ -9,7 +9,6 @@ import pandas as pd
 import numpy as np
 from lifelines import KaplanMeierFitter
 from lifelines.statistics import multivariate_logrank_test
-from typing import List
 from scipy import stats
 import gseapy as gp
 import itertools
