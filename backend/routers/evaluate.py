@@ -15,7 +15,7 @@ from fastapi import APIRouter, HTTPException, File, UploadFile, Form
 from cleanup import cleanup_temp_files
 
 # 创建路由器实例
-router = APIRouter()
+router=APIRouter()
 
 @router.post("/api/evaluate_custom")
 async def evaluate_custom(

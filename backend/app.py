@@ -32,7 +32,7 @@ app.add_middleware(
     allow_headers=["*"], #允许的HTTP请求头（Content-Type、Accept等）
 )
 
-# 注册路由
+#注册路由
 from routers.cleanup import router as cleanup_router #导入清理会话垃圾文件的路由
 app.include_router(cleanup_router)
 from routers.upload import router as upload_router #导入上传文件的路由

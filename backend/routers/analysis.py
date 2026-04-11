@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from algorithms import load_algorithm
 
 # 创建路由器实例
-router = APIRouter()
+router=APIRouter()
 
 class AnalysisRequest(BaseModel): #定义数据校验模型 #定义一个类，在这个类里声明几个变量，并且明确指定这几个变量的类型。以此实现确保输入数据类型符合该要求，如果不符合，FastAPI会自动拦截并返回422错误
     #这里的冒号使用的是Python的类型提示语法。 变量名: 类型 意思是声明一个名为 变量名 的变量，它的预期类型是 类型 
