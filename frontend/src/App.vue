@@ -480,7 +480,7 @@ const runAnalysis = async () => {
       })
 
       // 第二步：计算指标 + 降维可视化
-      const res = await axios.post('/api/visualize', {
+      const res = await axios.post('/api/analysis', {
         session_id: sessionId.value,
         reduction: currentReduction.value,
         random_state: randomSeed.value,
@@ -534,7 +534,7 @@ const runAnalysis = async () => {
     })
 
     // 第二步：计算指标 + 降维可视化
-    const res = await axios.post('/api/visualize', {
+    const res = await axios.post('/api/analysis', {
       session_id: sessionId.value,
       reduction: currentReduction.value,
       random_state: randomSeed.value,
@@ -622,10 +622,10 @@ const switchReduction = async (method) => {
   if (currentReduction.value === method) return
   currentReduction.value = method
 
-  // 切换降维只需重新调 /api/visualize，不用重跑聚类
+  // 切换降维只需重新调 /api/analysis，不用重跑聚类
   isLoading.value = true
   try {
-    const res = await axios.post('/api/visualize', {
+    const res = await axios.post('/api/analysis', {
       session_id: sessionId.value,
       reduction: currentReduction.value,
       random_state: randomSeed.value,
