@@ -2363,32 +2363,32 @@ const renderPsChart = () => {
               <div v-if="backendResponse.data.metrics" class="metrics-row">
                 <div class="metric-widget">
                   <div class="mw-title">Silhouette Score</div>
-                  <div class="mw-value">{{ backendResponse.data.metrics.silhouette }}</div>
+                  <div class="mw-value">{{ backendResponse.data.metrics.silhouette ?? 'N/A' }}</div>
                   <div class="mw-desc">轮廓系数 ↑</div>
                 </div>
                 <div class="metric-widget">
                   <div class="mw-title">Calinski-Harabasz</div>
-                  <div class="mw-value">{{ backendResponse.data.metrics.calinski }}</div>
+                  <div class="mw-value">{{ backendResponse.data.metrics.calinski ?? 'N/A' }}</div>
                   <div class="mw-desc">CH 指数 ↑</div>
                 </div>
                 <div class="metric-widget">
                   <div class="mw-title">Davies-Bouldin</div>
-                  <div class="mw-value">{{ backendResponse.data.metrics.davies }}</div>
+                  <div class="mw-value">{{ backendResponse.data.metrics.davies ?? 'N/A' }}</div>
                   <div class="mw-desc">DB 指数 ↓</div>
                 </div>
                 <div class="metric-widget">
                   <div class="mw-title">Dunn Index</div>
-                  <div class="mw-value">{{ backendResponse.data.metrics.dunn }}</div>
+                  <div class="mw-value">{{ backendResponse.data.metrics.dunn ?? 'N/A' }}</div>
                   <div class="mw-desc">Dunn 指数 ↑</div>
                 </div>
                 <div class="metric-widget">
                   <div class="mw-title">Xie-Beni</div>
-                  <div class="mw-value">{{ backendResponse.data.metrics.xb }}</div>
+                  <div class="mw-value">{{ backendResponse.data.metrics.xb ?? 'N/A' }}</div>
                   <div class="mw-desc">XB 指数 ↓</div>
                 </div>
                 <div class="metric-widget">
                   <div class="mw-title">S_Dbw</div>
-                  <div class="mw-value">{{ backendResponse.data.metrics.s_dbw }}</div>
+                  <div class="mw-value">{{ backendResponse.data.metrics.s_dbw ?? 'N/A' }}</div>
                   <div class="mw-desc">S_Dbw 指数 ↓</div>
                 </div>
               </div>

@@ -129,9 +129,10 @@ async def analysis(request: AnalysisRequest):
             }
             # 【新增】调用 R 的 clusterCrit 计算 Dunn / Xie-Beni / S_Dbw
             r_metrics = compute_r_metrics(embeddings, labels)
-            metrics_scores["dunn"]   = r_metrics["dunn"]
-            metrics_scores["xb"]     = r_metrics["xb"]
-            metrics_scores["s_dbw"]  = r_metrics["s_dbw"]
+            for key in ("dunn", "xb", "s_dbw"):
+                val = r_metrics[key]
+                metrics_scores[key] = None if isinstance(val, float) and np.isnan(val) else val
+
         else: #如果K<2，那么这些指标都无法计算，所以我们把这些指标都赋值为-1
             metrics_scores = {"silhouette": -1, "calinski": -1, "davies": -1, "dunn": -1, "xb": -1, "s_dbw": -1}
 
