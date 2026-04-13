@@ -3,6 +3,9 @@
 # 上游：/api/run 或 /api/evaluate_custom（二者都会写入 cluster_result.joblib）
 # =============================================================================
 import os
+import json
+import subprocess
+import tempfile
 import datetime
 import joblib
 import numpy as np
@@ -15,6 +18,71 @@ from pydantic import BaseModel
 
 # 创建路由器实例
 router = APIRouter()
+
+
+def compute_r_metrics(embeddings: np.ndarray, labels: np.ndarray) -> dict:
+    """通过 R 的 clusterCrit 包计算 Dunn / Xie-Beni / S_Dbw 指标。
+
+    参数:
+        embeddings: (n_samples, n_features) 的特征矩阵
+        labels:     (n_samples,) 的簇标签数组
+    返回:
+        {"dunn": float, "xb": float, "s_dbw": float}，计算失败时各值为 -1
+    """
+    r_script = os.path.join(os.path.dirname(__file__),"analysis.R")
+    r_script = os.path.abspath(r_script)
+
+    # 防御：如果 R 脚本不存在，直接返回 -1
+    if not os.path.exists(r_script):
+        print(f"[R指标] 脚本不存在: {r_script}")
+        return {"dunn": -1, "xb": -1, "s_dbw": -1}
+
+    emb_path = None
+    lab_path = None
+    try:
+        # 将 numpy 数据以 UTF-8 编码写入临时 CSV 文件供 R 读取
+        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False, mode="w", encoding="utf-8") as f_emb:
+            np.savetxt(f_emb.name, embeddings, delimiter=",")
+            emb_path = f_emb.name
+
+        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False, mode="w", encoding="utf-8") as f_lab:
+            np.savetxt(f_lab.name, labels.reshape(-1, 1), delimiter=",")
+            lab_path = f_lab.name
+
+        # 调用 Rscript，结果通过 stdout 以 UTF-8 返回
+        result = subprocess.run(
+            ["Rscript", r_script, emb_path, lab_path],
+            capture_output=True, text=True, encoding="utf-8", timeout=120
+        )
+
+        if result.returncode != 0:
+            print(f"[R指标] Rscript 错误: stderr={result.stderr.strip()}")
+            return {"dunn": -1, "xb": -1, "s_dbw": -1}
+
+        r_output = json.loads(result.stdout.strip())
+
+        if "error" in r_output:
+            print(f"[R指标] R 运行错误: {r_output['error']}")
+            return {"dunn": -1, "xb": -1, "s_dbw": -1}
+
+        return {
+            "dunn":   r_output.get("dunn", -1),
+            "xb":     r_output.get("xb", -1),
+            "s_dbw":  r_output.get("s_dbw", -1),
+        }
+
+    except Exception as e:
+        print(f"[R指标] 调用失败: {e}")
+        return {"dunn": -1, "xb": -1, "s_dbw": -1}
+
+    finally:
+        # 清理临时文件
+        for p in [emb_path, lab_path]:
+            try:
+                if p and os.path.exists(p):
+                    os.unlink(p)
+            except OSError:
+                pass
 
 
 class AnalysisRequest(BaseModel):
@@ -52,15 +120,20 @@ async def analysis(request: AnalysisRequest):
                 "silhouette": round(float(silhouette_score(embeddings, labels)), 4), #将s_score强制类型转换float，然后四舍五入保留小数点后4位
                 # CH 指数：[0, +∞)，越大越好
                 # 衡量簇内紧密度与簇间分离度的比值
-                #CH指数。范围[0,+∞)，值越大表示分类效果越好。衡量簇内紧密度与簇间分离度的比值，简单来说就是它希望“组内越紧密越好”、“组间离得越远越好”
+                #CH指数。范围[0,+∞)，值越大表示分类效果越好。衡量簇内紧密度与簇间分离度的比值，简单来说就是它希望”组内越紧密越好”、”组间离得越远越好”
                 "calinski":   round(float(calinski_harabasz_score(embeddings, labels)), 4),
                 # DB 指数：[0, +∞)，越小越好
                 # 衡量簇之间的重叠程度
                 #DB指数。范围[0,+∞)，值越小表示分类效果越好。衡量簇之间的重叠程度，如果这个指标很高，说明不同组混在一起了，分得不清楚
                 "davies":     round(float(davies_bouldin_score(embeddings, labels)), 4),
             }
+            # 【新增】调用 R 的 clusterCrit 计算 Dunn / Xie-Beni / S_Dbw
+            r_metrics = compute_r_metrics(embeddings, labels)
+            metrics_scores["dunn"]   = r_metrics["dunn"]
+            metrics_scores["xb"]     = r_metrics["xb"]
+            metrics_scores["s_dbw"]  = r_metrics["s_dbw"]
         else: #如果K<2，那么这些指标都无法计算，所以我们把这些指标都赋值为-1
-            metrics_scores = {"silhouette": -1, "calinski": -1, "davies": -1}
+            metrics_scores = {"silhouette": -1, "calinski": -1, "davies": -1, "dunn": -1, "xb": -1, "s_dbw": -1}
 
         #于是我们就计算出来那三个聚类评估指标了。但是它们不太直观，所以我们来另外计算一个散点图。如果聚类效果确实很好（样本确实分得很开），那么通常指标会很好、散点图也会分得很开，两者趋势是一致的
         # 4.为了能够画散点图，我们需要对df使用PCA/t-SNE/UMAP降维。PCA/t-SNE/UMAP搞定散点图中的x、y坐标，需要评估的算法搞定散点图中点对应的簇
