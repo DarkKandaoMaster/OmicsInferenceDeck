@@ -120,7 +120,7 @@ async def analysis(request: AnalysisRequest):
                 "silhouette": round(float(silhouette_score(embeddings, labels)), 4), #将s_score强制类型转换float，然后四舍五入保留小数点后4位
                 # CH 指数：[0, +∞)，越大越好
                 # 衡量簇内紧密度与簇间分离度的比值
-                #CH指数。范围[0,+∞)，值越大表示分类效果越好。衡量簇内紧密度与簇间分离度的比值，简单来说就是它希望”组内越紧密越好”、”组间离得越远越好”
+                #CH指数。范围[0,+∞)，值越大表示分类效果越好。衡量簇内紧密度与簇间分离度的比值，简单来说就是它希望“组内越紧密越好”、“组间离得越远越好”
                 "calinski":   round(float(calinski_harabasz_score(embeddings, labels)), 4),
                 # DB 指数：[0, +∞)，越小越好
                 # 衡量簇之间的重叠程度
