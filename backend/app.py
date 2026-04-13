@@ -41,14 +41,14 @@ app.include_router(cleanup_router)
 from routers.upload import router as upload_router
 app.include_router(upload_router)
 
-from routers.analysis import router as analysis_router       # /api/run
+from routers.run import router as run_router
+app.include_router(run_router)
+
+from routers.evaluate_run import router as evaluate_run_router
+app.include_router(evaluate_run_router)
+
+from routers.analysis import router as analysis_router
 app.include_router(analysis_router)
-
-from routers.evaluate import router as evaluate_router       # /api/evaluate_custom
-app.include_router(evaluate_router)
-
-from routers.visualize import router as visualize_router     # /api/visualize（新增）
-app.include_router(visualize_router)
 
 from routers.survival import router as survival_router
 app.include_router(survival_router)
@@ -59,5 +59,5 @@ app.include_router(differential_router)
 from routers.enrichment import router as enrichment_router
 app.include_router(enrichment_router)
 
-from routers.parameter_search import router as parameter_search_router
-app.include_router(parameter_search_router)
+from routers.parameter_run import router as parameter_run_router
+app.include_router(parameter_run_router)

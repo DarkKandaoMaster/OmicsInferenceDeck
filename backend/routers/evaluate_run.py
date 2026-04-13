@@ -6,7 +6,6 @@ import shutil
 import datetime
 import joblib
 import pandas as pd
-import numpy as np
 from fastapi import APIRouter, HTTPException, File, UploadFile, Form
 from cleanup import cleanup_temp_files
 
