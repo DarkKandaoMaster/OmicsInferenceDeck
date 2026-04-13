@@ -474,8 +474,16 @@ const runAnalysis = async () => {
       formData.append('reduction', currentReduction.value)
       formData.append('random_state', randomSeed.value)
 
-      const res = await axios.post('/api/evaluate_custom', formData, {
+      // 第一步：解析自定义结果文件
+      await axios.post('/api/evaluate_custom', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
+      })
+
+      // 第二步：计算指标 + 降维可视化
+      const res = await axios.post('/api/visualize', {
+        session_id: sessionId.value,
+        reduction: currentReduction.value,
+        random_state: randomSeed.value,
       })
 
       backendResponse.value = res.data
@@ -514,21 +522,28 @@ const runAnalysis = async () => {
       await uploadFile() 
     }
 
-    const res = await axios.post('/api/run', {
-      algorithm: selectedAlgorithm.value[0], 
-      timestamp: new Date().toISOString(), 
+    // 第一步：运行聚类算法
+    await axios.post('/api/run', {
+      algorithm: selectedAlgorithm.value[0],
+      timestamp: new Date().toISOString(),
       session_id: sessionId.value,
-      n_clusters: kValue.value, 
-      random_state: randomSeed.value, 
-      max_iter: maxIter.value, 
-      n_neighbors: nNeighbors.value, 
-      reduction: currentReduction.value 
+      n_clusters: kValue.value,
+      random_state: randomSeed.value,
+      max_iter: maxIter.value,
+      n_neighbors: nNeighbors.value,
     })
-    
-    backendResponse.value = res.data 
-    await nextTick() 
+
+    // 第二步：计算指标 + 降维可视化
+    const res = await axios.post('/api/visualize', {
+      session_id: sessionId.value,
+      reduction: currentReduction.value,
+      random_state: randomSeed.value,
+    })
+
+    backendResponse.value = res.data
+    await nextTick()
     if (res.data.data.plot_data) {
-      renderChart(res.data.data.plot_data) 
+      renderChart(res.data.data.plot_data)
     }
   } catch(error) {
     errorMessage.value = error.response?.data?.detail || '连接后端失败或上传出错。'
@@ -596,11 +611,35 @@ const runAnalysis = async () => {
 //   }
 // }
 
-//定义事件处理函数，监听PCA/t-SNE/UMAP按钮的click事件，用户点击按钮时触发
-const switchReduction= (method)=>{
-  if(currentReduction.value===method) return //如果用户点击的是当前已经选中的降维算法，则不进行任何操作
-  currentReduction.value=method //更新用户选择的降维算法
-  runAnalysis() //直接重新运行分析
+////定义事件处理函数，监听PCA/t-SNE/UMAP按钮的click事件，用户点击按钮时触发
+//const switchReduction= (method)=>{
+//  if(currentReduction.value===method) return //如果用户点击的是当前已经选中的降维算法，则不进行任何操作
+//  currentReduction.value=method //更新用户选择的降维算法
+//  runAnalysis() //直接重新运行分析
+//}
+
+const switchReduction = async (method) => {
+  if (currentReduction.value === method) return
+  currentReduction.value = method
+
+  // 切换降维只需重新调 /api/visualize，不用重跑聚类
+  isLoading.value = true
+  try {
+    const res = await axios.post('/api/visualize', {
+      session_id: sessionId.value,
+      reduction: currentReduction.value,
+      random_state: randomSeed.value,
+    })
+    backendResponse.value = res.data
+    await nextTick()
+    if (res.data.data.plot_data) {
+      renderChart(res.data.data.plot_data)
+    }
+  } catch (error) {
+    errorMessage.value = error.response?.data?.detail || '降维切换失败。'
+  } finally {
+    isLoading.value = false
+  }
 }
 
 // 【修改】临床数据的上传与监听
