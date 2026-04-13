@@ -2364,17 +2364,32 @@ const renderPsChart = () => {
                 <div class="metric-widget">
                   <div class="mw-title">Silhouette Score</div>
                   <div class="mw-value">{{ backendResponse.data.metrics.silhouette }}</div>
-                  <div class="mw-desc">轮廓系数</div>
+                  <div class="mw-desc">轮廓系数 ↑</div>
                 </div>
                 <div class="metric-widget">
                   <div class="mw-title">Calinski-Harabasz</div>
                   <div class="mw-value">{{ backendResponse.data.metrics.calinski }}</div>
-                  <div class="mw-desc">CH 指数</div>
+                  <div class="mw-desc">CH 指数 ↑</div>
                 </div>
                 <div class="metric-widget">
                   <div class="mw-title">Davies-Bouldin</div>
                   <div class="mw-value">{{ backendResponse.data.metrics.davies }}</div>
-                  <div class="mw-desc">DB 指数</div>
+                  <div class="mw-desc">DB 指数 ↓</div>
+                </div>
+                <div class="metric-widget">
+                  <div class="mw-title">Dunn Index</div>
+                  <div class="mw-value">{{ backendResponse.data.metrics.dunn }}</div>
+                  <div class="mw-desc">Dunn 指数 ↑</div>
+                </div>
+                <div class="metric-widget">
+                  <div class="mw-title">Xie-Beni</div>
+                  <div class="mw-value">{{ backendResponse.data.metrics.xb }}</div>
+                  <div class="mw-desc">XB 指数 ↓</div>
+                </div>
+                <div class="metric-widget">
+                  <div class="mw-title">S_Dbw</div>
+                  <div class="mw-value">{{ backendResponse.data.metrics.s_dbw }}</div>
+                  <div class="mw-desc">S_Dbw 指数 ↓</div>
                 </div>
               </div>
 
@@ -3028,7 +3043,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 /* ================== 特殊组件样式 ================== */
 /* KPI 指标卡片 */
 .metrics-row {
-  display: flex; gap: 20px; margin-bottom: 24px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px;
 }
 .metric-widget {
   flex: 1; background: var(--bg-page); padding: 20px;
