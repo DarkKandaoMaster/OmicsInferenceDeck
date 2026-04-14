@@ -1,3 +1,4 @@
 .vscode/*
 .pylintrc
 __pycache__/
+frontend_/
