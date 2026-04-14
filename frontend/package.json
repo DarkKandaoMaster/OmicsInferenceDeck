@@ -20,8 +20,12 @@
     "@unhead/vue": "catalog:frontend",
     "@unocss/reset": "catalog:frontend",
     "@vueuse/core": "catalog:frontend",
+    "axios": "^1.15.0",
+    "echarts": "^6.0.0",
+    "echarts-gl": "^2.0.9",
     "nprogress": "catalog:frontend",
     "pinia": "catalog:frontend",
+    "uuid": "^13.0.0",
     "vue": "catalog:frontend",
     "vue-i18n": "catalog:frontend",
     "vue-router": "catalog:frontend"
