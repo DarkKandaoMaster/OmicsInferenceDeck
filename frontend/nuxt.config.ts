@@ -2,6 +2,8 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
 
+  modules: ['@nuxtjs/tailwindcss'],
+
   devtools: { enabled: true }, //这个就是网页底部那个悬浮图标，是一个调试神器，不过很碍眼。想把它隐藏可以把这句代码改成false
 
   devServer: {
