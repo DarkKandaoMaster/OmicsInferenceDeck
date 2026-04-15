@@ -1977,10 +1977,6 @@ const renderPsChart = () => {
       </div>
 
       <div v-else class="analysis-dashboard">
-        <div class="dashboard-header">
-          <h2>数据配置与算法引擎</h2>
-          <p>请依次上传数据、选择聚类算法并配置参数以启动分析管线。</p>
-        </div>
 
         <div class="test-mode-switch" :class="{ 'is-active': isCustomEvalMode }" style="margin: 0 auto 24px auto; max-width: 450px;">
         <!-- <div class="test-mode-switch" :class="{ 'is-active': isCustomEvalMode }" style="margin-bottom: 24px; max-width: 450px;"> -->
