@@ -32,20 +32,32 @@ app.add_middleware(
     allow_headers=["*"], #允许的HTTP请求头（Content-Type、Accept等）
 )
 
-#注册路由
-from routers.cleanup import router as cleanup_router #导入清理会话垃圾文件的路由
+# =============================================================================
+# 注册路由
+# =============================================================================
+from routers.cleanup import router as cleanup_router
 app.include_router(cleanup_router)
-from routers.upload import router as upload_router #导入上传文件的路由
+
+from routers.upload import router as upload_router
 app.include_router(upload_router)
-from routers.analysis import router as analysis_router #导入运行分析的路由
+
+from routers.run import router as run_router
+app.include_router(run_router)
+
+from routers.evaluate_run import router as evaluate_run_router
+app.include_router(evaluate_run_router)
+
+from routers.analysis import router as analysis_router
 app.include_router(analysis_router)
-from routers.evaluate import router as evaluate_router #导入自定义算法结果评估的路由
-app.include_router(evaluate_router)
-from routers.survival import router as survival_router #导入生存分析的路由
+
+from routers.survival import router as survival_router
 app.include_router(survival_router)
-from routers.differential import router as differential_router #导入差异表达分析的路由
+
+from routers.differential import router as differential_router
 app.include_router(differential_router)
-from routers.enrichment import router as enrichment_router #导入富集分析的路由
+
+from routers.enrichment import router as enrichment_router
 app.include_router(enrichment_router)
-from routers.parameter_search import router as parameter_search_router #导入参数敏感性分析的路由
-app.include_router(parameter_search_router)
+
+from routers.parameter_run import router as parameter_run_router
+app.include_router(parameter_run_router)

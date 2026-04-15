@@ -1,4 +1,6 @@
 <script setup>
+// Nuxt 会自动导入 useHead，不需要手动 import
+useHead({ title: 'InferenceDeck ---面向多组学癌症分型的全栈AI分析平台' })
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 // import { ref,computed,nextTick } from 'vue' //引入Vue框架的核心函数 //ref：用于定义基本类型的响应式数据（数据变化时视图自动更新） //computed：用于定义计算属性（依赖其他数据变化而自动重新计算并缓存结果） //nextTick：用于确保DOM元素渲染完成后再执行绘图代码
 import axios from 'axios' //引入 axios 库，用于在浏览器端发送 HTTP 请求，与后端服务器进行数据交互
@@ -474,8 +476,16 @@ const runAnalysis = async () => {
       formData.append('reduction', currentReduction.value)
       formData.append('random_state', randomSeed.value)
 
-      const res = await axios.post('/api/evaluate_custom', formData, {
+      // 第一步：解析自定义结果文件
+      await axios.post('/api/evaluate_custom', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
+      })
+
+      // 第二步：计算指标 + 降维可视化
+      const res = await axios.post('/api/analysis', {
+        session_id: sessionId.value,
+        reduction: currentReduction.value,
+        random_state: randomSeed.value,
       })
 
       backendResponse.value = res.data
@@ -514,21 +524,28 @@ const runAnalysis = async () => {
       await uploadFile() 
     }
 
-    const res = await axios.post('/api/run', {
-      algorithm: selectedAlgorithm.value[0], 
-      timestamp: new Date().toISOString(), 
+    // 第一步：运行聚类算法
+    await axios.post('/api/run', {
+      algorithm: selectedAlgorithm.value[0],
+      timestamp: new Date().toISOString(),
       session_id: sessionId.value,
-      n_clusters: kValue.value, 
-      random_state: randomSeed.value, 
-      max_iter: maxIter.value, 
-      n_neighbors: nNeighbors.value, 
-      reduction: currentReduction.value 
+      n_clusters: kValue.value,
+      random_state: randomSeed.value,
+      max_iter: maxIter.value,
+      n_neighbors: nNeighbors.value,
     })
-    
-    backendResponse.value = res.data 
-    await nextTick() 
+
+    // 第二步：计算指标 + 降维可视化
+    const res = await axios.post('/api/analysis', {
+      session_id: sessionId.value,
+      reduction: currentReduction.value,
+      random_state: randomSeed.value,
+    })
+
+    backendResponse.value = res.data
+    await nextTick()
     if (res.data.data.plot_data) {
-      renderChart(res.data.data.plot_data) 
+      renderChart(res.data.data.plot_data)
     }
   } catch(error) {
     errorMessage.value = error.response?.data?.detail || '连接后端失败或上传出错。'
@@ -596,11 +613,35 @@ const runAnalysis = async () => {
 //   }
 // }
 
-//定义事件处理函数，监听PCA/t-SNE/UMAP按钮的click事件，用户点击按钮时触发
-const switchReduction= (method)=>{
-  if(currentReduction.value===method) return //如果用户点击的是当前已经选中的降维算法，则不进行任何操作
-  currentReduction.value=method //更新用户选择的降维算法
-  runAnalysis() //直接重新运行分析
+////定义事件处理函数，监听PCA/t-SNE/UMAP按钮的click事件，用户点击按钮时触发
+//const switchReduction= (method)=>{
+//  if(currentReduction.value===method) return //如果用户点击的是当前已经选中的降维算法，则不进行任何操作
+//  currentReduction.value=method //更新用户选择的降维算法
+//  runAnalysis() //直接重新运行分析
+//}
+
+const switchReduction = async (method) => {
+  if (currentReduction.value === method) return
+  currentReduction.value = method
+
+  // 切换降维只需重新调 /api/analysis，不用重跑聚类
+  isLoading.value = true
+  try {
+    const res = await axios.post('/api/analysis', {
+      session_id: sessionId.value,
+      reduction: currentReduction.value,
+      random_state: randomSeed.value,
+    })
+    backendResponse.value = res.data
+    await nextTick()
+    if (res.data.data.plot_data) {
+      renderChart(res.data.data.plot_data)
+    }
+  } catch (error) {
+    errorMessage.value = error.response?.data?.detail || '降维切换失败。'
+  } finally {
+    isLoading.value = false
+  }
 }
 
 // 【修改】临床数据的上传与监听
@@ -2324,18 +2365,33 @@ const renderPsChart = () => {
               <div v-if="backendResponse.data.metrics" class="metrics-row">
                 <div class="metric-widget">
                   <div class="mw-title">Silhouette Score</div>
-                  <div class="mw-value">{{ backendResponse.data.metrics.silhouette }}</div>
-                  <div class="mw-desc">轮廓系数</div>
+                  <div class="mw-value">{{ backendResponse.data.metrics.silhouette ?? 'N/A' }}</div>
+                  <div class="mw-desc">轮廓系数 ↑</div>
                 </div>
                 <div class="metric-widget">
                   <div class="mw-title">Calinski-Harabasz</div>
-                  <div class="mw-value">{{ backendResponse.data.metrics.calinski }}</div>
-                  <div class="mw-desc">CH 指数</div>
+                  <div class="mw-value">{{ backendResponse.data.metrics.calinski ?? 'N/A' }}</div>
+                  <div class="mw-desc">CH 指数 ↑</div>
                 </div>
                 <div class="metric-widget">
                   <div class="mw-title">Davies-Bouldin</div>
-                  <div class="mw-value">{{ backendResponse.data.metrics.davies }}</div>
-                  <div class="mw-desc">DB 指数</div>
+                  <div class="mw-value">{{ backendResponse.data.metrics.davies ?? 'N/A' }}</div>
+                  <div class="mw-desc">DB 指数 ↓</div>
+                </div>
+                <div class="metric-widget">
+                  <div class="mw-title">Dunn Index</div>
+                  <div class="mw-value">{{ backendResponse.data.metrics.dunn ?? 'N/A' }}</div>
+                  <div class="mw-desc">Dunn 指数 ↑</div>
+                </div>
+                <div class="metric-widget">
+                  <div class="mw-title">Xie-Beni</div>
+                  <div class="mw-value">{{ backendResponse.data.metrics.xb ?? 'N/A' }}</div>
+                  <div class="mw-desc">XB 指数 ↓</div>
+                </div>
+                <div class="metric-widget">
+                  <div class="mw-title">S_Dbw</div>
+                  <div class="mw-value">{{ backendResponse.data.metrics.s_dbw ?? 'N/A' }}</div>
+                  <div class="mw-desc">S_Dbw 指数 ↓</div>
                 </div>
               </div>
 
@@ -2989,7 +3045,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 /* ================== 特殊组件样式 ================== */
 /* KPI 指标卡片 */
 .metrics-row {
-  display: flex; gap: 20px; margin-bottom: 24px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px;
 }
 .metric-widget {
   flex: 1; background: var(--bg-page); padding: 20px;
