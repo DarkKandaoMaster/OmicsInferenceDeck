@@ -1,5 +1,4 @@
 <script setup>
-// Nuxt 会自动导入 useHead，不需要手动 import
 useHead({ title: 'InferenceDeck ---面向多组学癌症分型的全栈AI分析平台' })
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 // import { ref,computed,nextTick } from 'vue' //引入Vue框架的核心函数 //ref：用于定义基本类型的响应式数据（数据变化时视图自动更新） //computed：用于定义计算属性（依赖其他数据变化而自动重新计算并缓存结果） //nextTick：用于确保DOM元素渲染完成后再执行绘图代码
