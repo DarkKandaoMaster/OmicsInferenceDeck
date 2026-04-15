@@ -139,6 +139,7 @@ export default defineConfig({
     }),
 
     // https://github.com/webfansplz/vite-plugin-vue-devtools
+    // 这个就是网页里的那个底部图标Vite Vue DevTools，听说是一个调试神器，不过现在被我注释掉了，以后要用到的话再取消注释吧
     // VueDevTools(),
   ],
 
