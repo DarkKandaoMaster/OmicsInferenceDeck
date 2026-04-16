@@ -13,7 +13,7 @@ InferenceDeck/frontend/
 │   │   │   ├── AlgorithmSelect.vue     # 2. 算法选择、算法参数配置模块（包含“我想测试自己的算法”、“开启测试模式”两个按钮，以及自定义算法结果数据上传模块）
 │   │   │   └── Actions.vue             # 底部按钮
 │   │   └── results/                # 结果展示区域组件
-│   │       ├── Container.vue           # 总容器
+│   │       ├── Container.vue           # 总容器（可以把滚动定位放在这里实现）
 │   │       ├── EvaluationMetrics.vue   # 数学指标（重构时记得把它独立于所有图表之外）
 │   │       ├── ClusteringView.vue      # A. 聚类散点图 (散点图)
 │   │       ├── DifferentialView.vue    # B. 差异表达分析 (火山图、热图)
