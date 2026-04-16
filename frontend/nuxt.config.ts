@@ -4,6 +4,8 @@ export default defineNuxtConfig({
 
   modules: ['@nuxtjs/tailwindcss'],
 
+  css: ['~/assets/css/tailwind.css'],
+
   imports: {
     dirs: [
       'composables/**' //默认情况下，Nuxt的自动导入机制只扫描composables/目录下的第一层文件，因此我们这里要显式告诉Nuxt去扫描composables目录及其所有子目录
