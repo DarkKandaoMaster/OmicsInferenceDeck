@@ -1,6 +1,6 @@
 InferenceDeck/frontend/
 ├── app/
-│   ├── assets/                  # 静态资源
+│   ├── assets/                      # 静态资源
 │   │   └── css/
 │   │       └── tailwind.css             # Tailwind 基础指令引入
 │   │
