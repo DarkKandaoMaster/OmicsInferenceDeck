@@ -41,17 +41,17 @@ InferenceDeck/frontend/
 │   │   └── formatters.ts                # 其他纯工具函数，比如格式化 P-value
 │   │
 │   ├── layouts/
-│   │   └── default.vue                 # 全局基础布局（包含 AppHeader，留出主要内容 <slot />）
+│   │   └── default.vue                  # 全局基础布局（包含 AppHeader，留出主要内容 <slot />）
 │   │
-│   ├── pages/                      # 基于文件系统的真实路由 (利用 Nuxt 文件路由替代 activeTab 变量)
-│   │   ├── index.vue                   # 对应 "Home" 页面 (Hero 区域)
-│   │   ├── analysis.vue                # 对应 "Analysis" 页面 (核心工作台)
-│   │   ├── resources.vue               # 对应 "Resources" 页面
-│   │   └── help.vue                    # 对应 "Help" 页面
+│   ├── pages/                       # 基于文件系统的真实路由 (利用 Nuxt 文件路由替代 activeTab 变量)
+│   │   ├── index.vue                    # 对应 "Home" 页面 (Hero 区域)
+│   │   ├── analysis.vue                 # 对应 "Analysis" 页面 (核心工作台)
+│   │   ├── resources.vue                # 对应 "Resources" 页面
+│   │   └── help.vue                     # 对应 "Help" 页面
 │   │
-│   └── app.vue                         # 极简的系统入口
+│   └── app.vue                          # 极简的系统入口
 │
-├── public/                         # 静态资源 (如图标等)
+├── public/                          # 静态资源 (如图标等)
 │   ├── favicon.ico
 │   └── robots.txt
 ├── nuxt.config.ts
