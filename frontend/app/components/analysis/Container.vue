@@ -8,6 +8,13 @@ const { errorMessage } = useUIState()
 
 <template>
   <div>
+    <div class="mb-4 flex justify-end">
+      <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200 shadow-sm hover:border-primary transition-all"><!-- 这个样式之后记得改一下 -->
+        <input type="checkbox" v-model="isCustomEvalMode" class="w-4 h-4 text-primary focus:ring-primary rounded border-gray-300" />
+        <span class="text-sm font-semibold text-slate-700">我想测试自己的算法 (自定义模式)</span>
+      </label>
+    </div>
+
     <!-- 配置区 -->
     <div class="grid grid-cols-3 gap-6 mb-8 items-start">
       <!-- 第1栏：数据上传 -->
