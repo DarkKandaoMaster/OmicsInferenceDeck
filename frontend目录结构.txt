@@ -2,26 +2,26 @@ InferenceDeck/frontend/
 ├── app/
 │   ├── assets/                  # 静态资源
 │   │   └── css/
-│   │       └── tailwind.css            # Tailwind 基础指令引入
+│   │       └── tailwind.css             # Tailwind 基础指令引入
 │   │
-│   ├── components/                     # 页面组件（按功能区域划分）
+│   ├── components/                  # 页面组件（按功能区域划分）
 │   │   ├── layout/
-│   │   │   └── AppHeader.vue           # 顶部导航栏（Logo+路由菜单）
-│   │   ├── analysis/               # 数据配置区域组件
-│   │   │   ├── Container.vue           # 总容器
-│   │   │   ├── DataUpload.vue          # 1. 数据上传模块（组学与临床数据）
-│   │   │   ├── AlgorithmSelect.vue     # 2. 算法选择、算法参数配置模块（包含“我想测试自己的算法”、“开启测试模式”两个按钮，以及自定义算法结果数据上传模块）
-│   │   │   └── Actions.vue             # 底部按钮
-│   │   └── results/                # 结果展示区域组件
-│   │       ├── Container.vue           # 总容器（可以把滚动定位放在这里实现）
-│   │       ├── EvaluationMetrics.vue   # 数学指标（重构时记得把它独立于所有图表之外）
-│   │       ├── ClusteringView.vue      # A. 聚类散点图 (散点图)
-│   │       ├── DifferentialView.vue    # B. 差异表达分析 (火山图、热图)
-│   │       ├── EnrichmentView.vue      # C. 功能富集分析 (条形图、气泡图)
-│   │       ├── SurvivalView.vue        # D. 临床预后生存分析 (KM曲线)
-│   │       └── ParameterView.vue       # 参数敏感性分析结果 (2D/3D图)
+│   │   │   └── AppHeader.vue            # 顶部导航栏（Logo+路由菜单）
+│   │   ├── analysis/                # 数据配置区域组件
+│   │   │   ├── Container.vue            # 总容器
+│   │   │   ├── DataUpload.vue           # 1. 数据上传模块（组学与临床数据）
+│   │   │   ├── AlgorithmSelect.vue      # 2. 算法选择、算法参数配置模块（包含“我想测试自己的算法”、“开启测试模式”两个按钮，以及自定义算法结果数据上传模块）
+│   │   │   └── Actions.vue              # 底部按钮
+│   │   └── results/                 # 结果展示区域组件
+│   │       ├── Container.vue            # 总容器（可以把滚动定位放在这里实现）
+│   │       ├── EvaluationMetrics.vue    # 数学指标（重构时记得把它独立于所有图表之外）
+│   │       ├── ClusteringView.vue       # A. 聚类散点图 (散点图)
+│   │       ├── DifferentialView.vue     # B. 差异表达分析 (火山图、热图)
+│   │       ├── EnrichmentView.vue       # C. 功能富集分析 (条形图、气泡图)
+│   │       ├── SurvivalView.vue         # D. 临床预后生存分析 (KM曲线)
+│   │       └── ParameterView.vue        # 参数敏感性分析结果 (2D/3D图)
 │   │
-│   ├── composables/                    # 抽取全局状态与复用逻辑，用于存放有状态的函数
+│   ├── composables/                 # 抽取全局状态与复用逻辑，用于存放有状态的函数
 │   │   ├── core/
 │   │   │   ├── useSession.ts            # 会话管理：UUID 生成、beforeunload 的 beacon 清理逻辑
 │   │   │   └── useUIState.ts            # 全局 UI 状态：控制全局 loading、侧边栏折叠等
@@ -43,7 +43,7 @@ InferenceDeck/frontend/
 │   ├── layouts/
 │   │   └── default.vue                 # 全局基础布局（包含 AppHeader，留出主要内容 <slot />）
 │   │
-│   ├── pages/                          # 基于文件系统的真实路由 (利用 Nuxt 文件路由替代 activeTab 变量)
+│   ├── pages/                      # 基于文件系统的真实路由 (利用 Nuxt 文件路由替代 activeTab 变量)
 │   │   ├── index.vue                   # 对应 "Home" 页面 (Hero 区域)
 │   │   ├── analysis.vue                # 对应 "Analysis" 页面 (核心工作台)
 │   │   ├── resources.vue               # 对应 "Resources" 页面
