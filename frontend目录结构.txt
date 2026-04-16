@@ -55,6 +55,6 @@ InferenceDeck/frontend/
 │   ├── favicon.ico
 │   └── robots.txt
 ├── nuxt.config.ts
-├── tailwind.config.ts                  # Tailwind 配置文件
+├── tailwind.config.ts               # Tailwind 配置文件
 ├── package.json
 └── tsconfig.json
