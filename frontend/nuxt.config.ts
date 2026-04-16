@@ -4,6 +4,12 @@ export default defineNuxtConfig({
 
   modules: ['@nuxtjs/tailwindcss'],
 
+  imports: {
+    dirs: [
+      'composables/**' //默认情况下，Nuxt的自动导入机制只扫描composables/目录下的第一层文件，因此我们这里要显式告诉Nuxt去扫描composables目录及其所有子目录
+    ]
+  },
+
   devtools: { enabled: true }, //这个就是网页底部那个悬浮图标，是一个调试神器，不过很碍眼。想把它隐藏可以把这句代码改成false
 
   devServer: {
