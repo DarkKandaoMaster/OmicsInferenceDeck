@@ -57,4 +57,5 @@ InferenceDeck/frontend/
 ├── nuxt.config.ts
 ├── tailwind.config.ts               # Tailwind 配置文件
 ├── package.json
-└── tsconfig.json
+├── tsconfig.json
+└── ...
