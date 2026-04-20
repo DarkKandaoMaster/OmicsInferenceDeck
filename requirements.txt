@@ -1,16 +1,20 @@
-conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
-conda install uvicorn
-conda install fastapi
-conda install pandas
-conda install scikit-learn
-conda install umap-learn
-conda install -c conda-forge lifelines
-conda install -c bioconda gseapy
-pip install snfpy
-pip install python-multipart（未尝试用conda安装）
-openpyxl（未显式安装）
-joblib（未显式安装）
-pip install rpy2（本项目不需要，在此仅做记录）
+fastapi
+uvicorn
+pydantic 
+pandas
+numpy
+scipy
+scikit-learn
+snfpy
+umap-learn
+lifelines
+gseapy
+joblib
+python-multipart
+openpyxl
+
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 （不过本项目似乎没有使用到torch...）
+
 
 
 R包：
