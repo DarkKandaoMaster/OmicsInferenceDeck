@@ -1,4 +1,4 @@
-# InferenceDeck ---面向多组学癌症分型的全栈AI分析平台（副标题暂定）
+# OmicsInferenceDeck ---面向多组学癌症分型的全栈AI分析平台（副标题暂定）
 
 
 完成进度：
@@ -105,8 +105,8 @@ frontend文件夹里是前端代码
 为什么会取这个名字？
 Inference（推理）
 Deck（控制台）
-想过很多，我觉得还是InferenceDeck比较好，既能体现出全栈能力（Deck，控制台），对想要从事开发岗的我比较友好；也有Inference（推理）这个词，对数学系的你比较友好。
-而且最主要的是InferenceDeck非常干净，不管是同名项目还是同名域名都没有。
+想过很多，我觉得还是OmicsInferenceDeck比较好，既能体现出全栈能力（Deck，控制台），对想要从事开发岗的我比较友好；也有Inference（推理）这个词，对数学系的你比较友好。
+而且最主要的是OmicsInferenceDeck非常干净，不管是同名项目还是同名域名都没有。
 至于生物学元素就放在副标题，或者网页里面吧。
 
 
