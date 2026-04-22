@@ -1,5 +1,5 @@
 <script setup lang="ts">
-useHead({ title: 'Resources - InferenceDeck' })
+useHead({ title: 'Resources - OmicsInferenceDeck' })
 </script>
 
 <template>
