@@ -1,4 +1,4 @@
-InferenceDeck/frontend/
+OmicsInferenceDeck/frontend/
 ├── app/
 │   ├── assets/                      # 静态资源
 │   │   └── css/
