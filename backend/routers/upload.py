@@ -136,7 +136,7 @@ async def upload_file(   files:List[UploadFile]=File(...)   ,   data_format:str=
             if need_transpose: #如果需要转置
                 df_single=df_single.T
 
-            # 【修改】获取基础的组学类型，作为 data_dict 的键名
+            # 获取基础的组学类型，作为 data_dict 的键名
             if file_type == "omics":
                 # 根据文件名(UUID)在映射字典中找类型，找不到默认Unknown
                 base_type = mapping.get(file.filename, "Unknown")
@@ -144,7 +144,7 @@ async def upload_file(   files:List[UploadFile]=File(...)   ,   data_format:str=
                 # 修改特征名称（列名）！格式：特征名称_组学【【【【【我当初为什么会把特征名称改名的来着？？不改名然后直接用字典的键来区分不是更好？
                 df_single.columns = [f"{col}_{base_type}" for col in df_single.columns]
 
-                # 【新增】同组学类型自动合并机制
+                # 同组学类型自动合并机制
                 # 把df_single存入字典，键名类似于"mRNA", "DNA Methylation", "Unknown"
                 if base_type in data_dict: #如果该组学类型的键名已存在，直接按特征列拼接（取样本交集）
                     data_dict[base_type] = pd.concat([data_dict[base_type], df_single], axis=1, join='inner')
