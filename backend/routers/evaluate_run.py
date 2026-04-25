@@ -80,7 +80,7 @@ async def evaluate_custom(
         labels = df_filtered.iloc[:, 0].values
         embeddings = df_filtered.iloc[:, 1:].values
 
-        # 5. 持久化中间结果，供 /api/visualize 读取
+        # 5. 持久化中间结果，供 /api/analysis 读取
         result_path = os.path.join(UPLOAD_PATH, "cluster_result.joblib")
         joblib.dump({
             "labels": labels,
@@ -92,10 +92,10 @@ async def evaluate_custom(
         # 清理临时结果文件
         cleanup_temp_files(temp_paths)
 
-        # 6. 返回基础聚类信息（不含指标和散点图，由 /api/visualize 负责）
+        # 6. 返回基础聚类信息（不含指标和散点图，由 /api/analysis 负责）
         return {
             "status": "success",
-            "message": "自定义结果解析成功，请调用 /api/visualize 获取评估结果",
+            "message": "自定义结果解析成功，请调用 /api/analysis 获取评估结果",
             "server_time": datetime.datetime.now().isoformat(),
             "data": {
                 "method": "Custom Evaluation",

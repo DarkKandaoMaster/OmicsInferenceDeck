@@ -82,19 +82,19 @@ async def run_analysis(request:AnalysisRequest): #指定record的类型为Analys
         #   sample_names — 长度 n_samples 的列表，样本名称
         labels, embeddings, sample_names = algo_instance.fit_predict(data_dict)
 
-        # 4. 将中间结果持久化到 cluster_result.joblib，供 /api/visualize 读取
+        # 4. 将中间结果持久化到 cluster_result.joblib，供 /api/analysis 读取
         result_path = os.path.join("upload", request.session_id, "cluster_result.joblib")
         joblib.dump({
             "labels": labels,
             "embeddings": embeddings,
             "sample_names": sample_names,
-            "method": request.algorithm,    # 透传给 /api/visualize，方便它写回响应
+            "method": request.algorithm,    # 透传给 /api/analysis，方便它写回响应
         }, result_path)
 
-        # 5. 返回基础聚类信息（不含指标和散点图，由 /api/visualize 负责）
+        # 5. 返回基础聚类信息（不含指标和散点图，由 /api/analysis 负责）
         return {
             "status": "success",
-            "message": f"算法 {request.algorithm} 运行成功，请调用 /api/visualize 获取评估结果",
+            "message": f"算法 {request.algorithm} 运行成功，请调用 /api/analysis 获取评估结果",
             "server_time": datetime.datetime.now().isoformat(),
             "data": {
                 "method": request.algorithm,
