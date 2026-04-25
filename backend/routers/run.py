@@ -82,14 +82,16 @@ async def run_analysis(request:AnalysisRequest): #指定record的类型为Analys
         #   sample_names — 长度 n_samples 的列表，样本名称
         labels, embeddings, sample_names = algo_instance.fit_predict(data_dict)
 
-        # 4. 将中间结果持久化到 cluster_result.joblib，供 /api/analysis 读取
-        result_path = os.path.join("upload", request.session_id, "cluster_result.joblib")
-        joblib.dump({
-            "labels": labels,
-            "embeddings": embeddings,
-            "sample_names": sample_names,
-            "method": request.algorithm,    # 透传给 /api/analysis，方便它写回响应
-        }, result_path)
+        # 4. 将中间结果持久化到 cluster_result.parquet，供 /api/analysis 和 analysis.R 读取
+        n_features = embeddings.shape[1]
+        df_result = pd.DataFrame(
+            embeddings,
+            columns=[f"emb_{i}" for i in range(n_features)]
+        )
+        df_result.insert(0, "sample_name", sample_names)
+        df_result.insert(1, "label", labels)
+        result_path = os.path.join("upload", request.session_id, "cluster_result.parquet")
+        df_result.to_parquet(result_path, index=False)
 
         # 5. 返回基础聚类信息（不含指标和散点图，由 /api/analysis 负责）
         return {

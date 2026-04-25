@@ -5,9 +5,8 @@
 import os
 import json
 import subprocess
-import tempfile
 import datetime
-import joblib
+import pandas as pd
 import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
@@ -20,12 +19,11 @@ from pydantic import BaseModel
 router = APIRouter()
 
 
-def compute_r_metrics(embeddings: np.ndarray, labels: np.ndarray) -> dict:
+def compute_r_metrics(parquet_path: str) -> dict:
     """通过 R 的 clusterCrit 包计算 Dunn / Xie-Beni / S_Dbw 指标。
 
     参数:
-        embeddings: (n_samples, n_features) 的特征矩阵
-        labels:     (n_samples,) 的簇标签数组
+        parquet_path: cluster_result.parquet 文件路径
     返回:
         {"dunn": float, "xb": float, "s_dbw": float}，计算失败时各值为 -1
     """
@@ -37,21 +35,10 @@ def compute_r_metrics(embeddings: np.ndarray, labels: np.ndarray) -> dict:
         print(f"[R指标] 脚本不存在: {r_script}")
         return {"dunn": -1, "xb": -1, "s_dbw": -1}
 
-    emb_path = None
-    lab_path = None
     try:
-        # 将 numpy 数据以 UTF-8 编码写入临时 CSV 文件供 R 读取
-        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False, mode="w", encoding="utf-8") as f_emb:
-            np.savetxt(f_emb.name, embeddings, delimiter=",")
-            emb_path = f_emb.name
-
-        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False, mode="w", encoding="utf-8") as f_lab:
-            np.savetxt(f_lab.name, labels.reshape(-1, 1), delimiter=",")
-            lab_path = f_lab.name
-
-        # 调用 Rscript，结果通过 stdout 以 UTF-8 返回
+        # 直接将 Parquet 路径传给 R，由 R 端读取
         result = subprocess.run(
-            ["Rscript", r_script, emb_path, lab_path],
+            ["Rscript", r_script, parquet_path],
             capture_output=True, text=True, encoding="utf-8", timeout=120
         )
 
@@ -75,15 +62,6 @@ def compute_r_metrics(embeddings: np.ndarray, labels: np.ndarray) -> dict:
         print(f"[R指标] 调用失败: {e}")
         return {"dunn": -1, "xb": -1, "s_dbw": -1}
 
-    finally:
-        # 清理临时文件
-        for p in [emb_path, lab_path]:
-            try:
-                if p and os.path.exists(p):
-                    os.unlink(p)
-            except OSError:
-                pass
-
 
 class AnalysisRequest(BaseModel):
     session_id: str           # 会话 ID
@@ -96,17 +74,18 @@ async def analysis(request: AnalysisRequest):
     seed = request.random_state if request.random_state != -1 else None
 
     try:
-        # 1. 读取上游写入的聚类中间结果
-        result_path = os.path.join("upload", request.session_id, "cluster_result.joblib")
+        # 1. 读取上游写入的聚类中间结果（Parquet 格式）
+        result_path = os.path.join("upload", request.session_id, "cluster_result.parquet")
         if not os.path.exists(result_path):
             raise FileNotFoundError(
                 "找不到聚类结果文件，请先调用 /api/run 或 /api/evaluate_custom"
             )
-        result = joblib.load(result_path)
-        labels = result["labels"]           # numpy (n_samples,)
-        embeddings = result["embeddings"]   # numpy (n_samples, n_features)
-        sample_names = result["sample_names"]
-        method = result.get("method", "Unknown")
+        df_result = pd.read_parquet(result_path)
+        sample_names = df_result["sample_name"].tolist()
+        labels = df_result["label"].values
+        emb_cols = [c for c in df_result.columns if c.startswith("emb_")]
+        embeddings = df_result[emb_cols].values
+        method = "Unknown" #原本这里是存放算法名称的，但是我在重构时把它删了
         metrics_scores = {} #存放计算出的数学指标
 
         # 2. 计算聚类评估指标# 3.计算三个聚类评估指标：轮廓系数、CH指数、DB指数，它们是可以用来给任何聚类算法打分的通用指标
@@ -128,7 +107,7 @@ async def analysis(request: AnalysisRequest):
                 "davies":     round(float(davies_bouldin_score(embeddings, labels)), 4),
             }
             # 【新增】调用 R 的 clusterCrit 计算 Dunn / Xie-Beni / S_Dbw
-            r_metrics = compute_r_metrics(embeddings, labels)
+            r_metrics = compute_r_metrics(result_path)
             for key in ("dunn", "xb", "s_dbw"):
                 val = r_metrics[key]
                 metrics_scores[key] = None if isinstance(val, float) and np.isnan(val) else val
