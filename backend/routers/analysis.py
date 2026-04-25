@@ -86,7 +86,7 @@ def compute_r_metrics(embeddings: np.ndarray, labels: np.ndarray) -> dict:
 
 
 class AnalysisRequest(BaseModel):
-    session_id: str           # 会话 ID，对应 upload/<session_id>/cluster_result.joblib
+    session_id: str           # 会话 ID
     reduction: str = "PCA"    # 降维算法：PCA / t-SNE / UMAP
     random_state: int = 42    # 随机种子，-1 表示不固定
 
