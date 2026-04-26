@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import * as echarts from 'echarts'
 import { useEcharts } from '~/composables/ui/useEcharts'
 import { useSurvival } from '~/composables/domain/useSurvival'
 import { formatPValue } from '~/utils/formatters'
@@ -8,7 +7,7 @@ const survivalChartRef = ref<HTMLElement | null>(null)
 const survivalAreaRef = ref<HTMLElement | null>(null)
 
 const survivalChart = useEcharts()
-const { survivalResult, isSurvivalLoading, runSurvivalAnalysis } = useSurvival()
+const { survivalResult, isSurvivalLoading, survivalErrorMessage } = useSurvival()
 
 function renderSurvivalChart(kmData: any[]) {
   if (!survivalChartRef.value) return
@@ -91,14 +90,12 @@ function renderSurvivalChart(kmData: any[]) {
   })
 }
 
-async function handleRunSurvival() {
-  await runSurvivalAnalysis()
-  if (survivalResult.value) {
+watch(survivalResult, async (value) => {
+  if (value) {
     await nextTick()
-    renderSurvivalChart(survivalResult.value.km_data)
-    survivalAreaRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    renderSurvivalChart(value.km_data)
   }
-}
+}, { immediate: true })
 
 onUnmounted(() => survivalChart.dispose())
 </script>
@@ -110,12 +107,17 @@ onUnmounted(() => survivalChart.dispose())
         <span class="bg-amber-700 text-white w-6 h-6 flex items-center justify-center rounded-md text-sm font-bold">D</span>
         临床预后生存分析 (Survival Analysis)
       </h3>
-      <button @click="handleRunSurvival" :disabled="isSurvivalLoading" class="border-none rounded-lg text-[13px] font-medium px-4 py-2 cursor-pointer text-white transition-all bg-amber-600 disabled:opacity-60 disabled:cursor-not-allowed">
-        {{ isSurvivalLoading ? '计算中...' : '绘制 KM 曲线' }}
-      </button>
     </div>
     <div class="p-6">
       <p class="text-slate-500 text-sm m-0 mb-5">基于临床数据 (OS &amp; OS.time) 评估不同分子亚型的预后差异。</p>
+
+      <div v-if="isSurvivalLoading" class="bg-slate-50 border border-slate-200 text-slate-600 p-4 rounded-lg text-sm">
+        正在计算 Log-Rank P-value 与 KM 生存曲线...
+      </div>
+
+      <div v-if="survivalErrorMessage" class="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-[13px] mb-5">
+        {{ survivalErrorMessage }}
+      </div>
 
       <div v-if="survivalResult">
         <div class="bg-amber-50 border border-amber-200 text-amber-700 p-3 rounded-lg text-[13px] mb-5">

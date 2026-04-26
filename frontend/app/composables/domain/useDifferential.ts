@@ -14,9 +14,9 @@ export function useDifferential() {
   const { omicsFileConfigs, uploadedOmicsTypes } = useDataState()
   const { backendResponse } = useAnalysisActions()
 
-  async function runDifferentialAnalysis() {
+  async function runDifferentialAnalysis(options: { silent?: boolean } = {}) {
     if (omicsFileConfigs.value.length === 0 || !backendResponse.value?.data?.plot_data) {
-      alert('请先完成 [2. 算法选择] 和 [3. 运行分析] 得到聚类结果！')
+      if (!options.silent) alert('请先完成 [2. 算法选择] 和 [3. 运行分析] 得到聚类结果！')
       return
     }
 
@@ -24,7 +24,7 @@ export function useDifferential() {
       if (uploadedOmicsTypes.value.length > 0) {
         selectedDiffOmicsType.value = uploadedOmicsTypes.value[0]!
       } else {
-        alert('无可用的组学数据类型！')
+        if (!options.silent) alert('无可用的组学数据类型！')
         return
       }
     }

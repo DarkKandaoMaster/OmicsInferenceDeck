@@ -12,7 +12,7 @@ const bubbleChart = useEcharts()
 
 const {
   enrichmentResult, isEnrichmentLoading, enrichmentType,
-  selectedEnrichmentCluster, bubbleChartMode,
+  selectedEnrichmentCluster, bubbleChartMode, enrichmentErrorMessage,
   runEnrichmentAnalysis,
 } = useEnrichment()
 const { diffResult } = useDifferential()
@@ -171,14 +171,20 @@ function renderEnrichmentBubbleChart() {
 }
 
 async function handleRunEnrichment(type: string) {
-  await runEnrichmentAnalysis(type)
-  if (enrichmentResult.value) {
+  await runEnrichmentAnalysis(type, { silent: true })
+}
+
+async function handleEnrichmentTypeChange(event: Event) {
+  await handleRunEnrichment((event.target as HTMLSelectElement).value)
+}
+
+watch(enrichmentResult, async (value) => {
+  if (value) {
     await nextTick()
     renderEnrichmentChart()
     renderEnrichmentBubbleChart()
-    enrichmentAreaRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
-}
+}, { immediate: true })
 
 onUnmounted(() => {
   barChart.dispose()
@@ -193,17 +199,21 @@ onUnmounted(() => {
         <span class="bg-green-700 text-white w-6 h-6 flex items-center justify-center rounded-md text-sm font-bold">C</span>
         功能富集分析 (Enrichment Analysis)
       </h3>
-      <div class="flex gap-2">
-        <button @click="handleRunEnrichment('GO')" :disabled="isEnrichmentLoading" class="border-none rounded-lg text-[13px] font-medium px-4 py-2 cursor-pointer text-white transition-all bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed">
-          {{ (isEnrichmentLoading && enrichmentType === 'GO') ? '查询中...' : '运行 GO' }}
-        </button>
-        <button @click="handleRunEnrichment('KEGG')" :disabled="isEnrichmentLoading" class="border-none rounded-lg text-[13px] font-medium px-4 py-2 cursor-pointer text-white transition-all bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed">
-          {{ (isEnrichmentLoading && enrichmentType === 'KEGG') ? '查询中...' : '运行 KEGG' }}
-        </button>
-      </div>
+      <select :value="enrichmentType || 'GO'" @change="handleEnrichmentTypeChange" :disabled="isEnrichmentLoading" class="min-w-[120px] px-2 py-1.5 border border-slate-200 rounded-lg text-[13px] bg-white cursor-pointer outline-none focus:border-primary disabled:opacity-60">
+        <option value="GO">GO</option>
+        <option value="KEGG">KEGG</option>
+      </select>
     </div>
     <div class="p-6">
       <p class="text-slate-500 text-sm m-0 mb-5">针对各个簇的显著上调基因（P&lt;0.05, LogFC&gt;0.5），在数据库中查找显著富集的生物学通路。</p>
+
+      <div v-if="isEnrichmentLoading" class="bg-slate-50 border border-slate-200 text-slate-600 p-4 rounded-lg text-sm mb-5">
+        正在查询 {{ enrichmentType || 'GO' }} 富集结果...
+      </div>
+
+      <div v-if="enrichmentErrorMessage" class="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-[13px] mb-5">
+        {{ enrichmentErrorMessage }}
+      </div>
 
       <div v-if="enrichmentResult" class="flex flex-col gap-6">
         <!-- 条形图 -->

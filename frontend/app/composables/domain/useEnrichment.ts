@@ -6,19 +6,21 @@ const isEnrichmentLoading = ref(false)
 const enrichmentType = ref('')
 const selectedEnrichmentCluster = ref(0)
 const bubbleChartMode = ref<'combined' | 'by_gene'>('combined')
+const enrichmentErrorMessage = ref('')
 
 export function useEnrichment() {
   const { diffResult } = useDifferential()
 
-  async function runEnrichmentAnalysis(type: string) {
+  async function runEnrichmentAnalysis(type: string, options: { silent?: boolean } = {}) {
     if (!diffResult.value || !diffResult.value.volcano_data) {
-      alert('请先运行步骤 4 的差异分析！我们需要差异基因列表才能做富集分析。')
+      if (!options.silent) alert('请先运行步骤 4 的差异分析！我们需要差异基因列表才能做富集分析。')
       return
     }
 
     isEnrichmentLoading.value = true
     enrichmentType.value = type
     enrichmentResult.value = null
+    enrichmentErrorMessage.value = ''
 
     try {
       const clusterGenesDict: Record<string, string[]> = {}
@@ -40,17 +42,19 @@ export function useEnrichment() {
         const clusters = Object.keys(res.data.data).map(Number)
         if (clusters.length > 0) selectedEnrichmentCluster.value = clusters[0]!
       } else {
-        alert(res.data.message)
+        enrichmentErrorMessage.value = res.data.message
+        if (!options.silent) alert(res.data.message)
       }
     } catch (error: any) {
-      alert('富集分析失败: ' + (error.response?.data?.detail || error.message))
+      enrichmentErrorMessage.value = '富集分析失败: ' + (error.response?.data?.detail || error.message)
+      if (!options.silent) alert(enrichmentErrorMessage.value)
     } finally {
       isEnrichmentLoading.value = false
     }
   }
 
   return {
-    enrichmentResult, isEnrichmentLoading, enrichmentType,
+    enrichmentResult, isEnrichmentLoading, enrichmentType, enrichmentErrorMessage,
     selectedEnrichmentCluster, bubbleChartMode,
     runEnrichmentAnalysis,
   }

@@ -2,6 +2,8 @@
 import { useEcharts } from '~/composables/ui/useEcharts'
 import { useDifferential } from '~/composables/domain/useDifferential'
 import { useDataState } from '~/composables/domain/useDataState'
+import { useAnalysisActions } from '~/composables/domain/useAnalysisActions'
+import { useEnrichment } from '~/composables/domain/useEnrichment'
 
 const volcanoChartRef = ref<HTMLElement | null>(null)
 const heatmapChartRef = ref<HTMLElement | null>(null)
@@ -16,6 +18,8 @@ const {
   runDifferentialAnalysis,
 } = useDifferential()
 const { uploadedOmicsTypes } = useDataState()
+const { backendResponse } = useAnalysisActions()
+const { runEnrichmentAnalysis } = useEnrichment()
 
 function renderVolcanoPlot() {
   if (!volcanoChartRef.value || !diffResult.value) return
@@ -104,14 +108,18 @@ function renderHeatmapPlot(heatmapData: any) {
   })
 }
 
-async function handleRunDifferential() {
-  await runDifferentialAnalysis()
-  if (diffResult.value) {
+watch(diffResult, async (value) => {
+  if (value) {
     await nextTick()
     renderVolcanoPlot()
-    renderHeatmapPlot(diffResult.value.heatmap_data)
-    diffAreaRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    renderHeatmapPlot(value.heatmap_data)
   }
+}, { immediate: true })
+
+async function handleOmicsTypeChange() {
+  if (!backendResponse.value?.data?.plot_data) return
+  await runDifferentialAnalysis({ silent: true })
+  if (diffResult.value?.volcano_data) await runEnrichmentAnalysis('GO', { silent: true })
 }
 
 onUnmounted(() => {
@@ -128,19 +136,20 @@ onUnmounted(() => {
         差异表达分析 (Differential Expression)
       </h3>
       <div class="flex gap-3 items-center">
-        <select v-model="selectedDiffOmicsType" class="min-w-[120px] px-2 py-1.5 border border-slate-200 rounded-lg text-[13px] bg-white cursor-pointer outline-none focus:border-primary">
+        <select v-model="selectedDiffOmicsType" @change="handleOmicsTypeChange" class="min-w-[120px] px-2 py-1.5 border border-slate-200 rounded-lg text-[13px] bg-white cursor-pointer outline-none focus:border-primary">
           <option value="" disabled>请选择组学层</option>
           <option v-for="type in uploadedOmicsTypes" :key="type" :value="type">{{ type }}</option>
         </select>
-        <button @click="handleRunDifferential" :disabled="isDiffLoading" class="border-none rounded-lg text-[13px] font-medium px-4 py-2 cursor-pointer text-white transition-all bg-purple-600 disabled:opacity-60 disabled:cursor-not-allowed">
-          {{ isDiffLoading ? '分析中...' : '运行差异分析' }}
-        </button>
       </div>
     </div>
     <div class="p-6">
       <p class="text-slate-500 text-sm m-0 mb-5">基于聚类结果执行 One-vs-Rest 差异基因计算，鉴定出每个亚型的特异性高表达基因。</p>
 
       <div v-if="diffErrorMessage" class="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-[13px] mb-5">{{ diffErrorMessage }}</div>
+
+      <div v-if="isDiffLoading" class="bg-slate-50 border border-slate-200 text-slate-600 p-4 rounded-lg text-sm">
+        正在计算差异表达结果...
+      </div>
 
       <div v-if="diffResult" class="grid grid-cols-2 gap-6 max-[1100px]:grid-cols-1">
         <div class="border border-slate-200 rounded-xl bg-white overflow-hidden">

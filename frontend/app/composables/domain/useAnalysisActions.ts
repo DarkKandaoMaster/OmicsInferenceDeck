@@ -3,15 +3,36 @@ import { useSession } from '~/composables/core/useSession'
 import { useUIState } from '~/composables/core/useUIState'
 import { useDataState } from '~/composables/domain/useDataState'
 import { useAlgorithmState } from '~/composables/domain/useAlgorithmState'
+import { useDifferential } from '~/composables/domain/useDifferential'
+import { useEnrichment } from '~/composables/domain/useEnrichment'
+import { useSurvival } from '~/composables/domain/useSurvival'
 
 // 分析结果（全局共享）
 const backendResponse = ref<any>(null)
+const analysisStatus = ref('')
 
 export function useAnalysisActions() {
   const { sessionId } = useSession()
   const { isLoading, setError, clearError } = useUIState()
-  const { isOmicsUploaded, isClinicalUploaded, omicsFileConfigs, doUploadOmics, doUploadClinical, isCustomEvalMode, customEvalFile } = useDataState()
+  const { clinicalFile, isOmicsUploaded, isClinicalUploaded, omicsFileConfigs, doUploadOmics, doUploadClinical, isCustomEvalMode, customEvalFile } = useDataState()
   const { selectedAlgorithm, kValue, maxIter, nNeighbors, randomSeed, currentReduction, testNClusters, testMaxIter, testNNeighbors, psResult, isPsLoading, psParam1, psParam2 } = useAlgorithmState()
+
+  async function runDownstreamAnalyses() {
+    const { runDifferentialAnalysis, diffResult } = useDifferential()
+    const { runEnrichmentAnalysis } = useEnrichment()
+    const { runSurvivalAnalysis } = useSurvival()
+
+    analysisStatus.value = '正在运行差异表达分析...'
+    await runDifferentialAnalysis({ silent: true })
+
+    if (diffResult.value?.volcano_data) {
+      analysisStatus.value = '正在运行功能富集分析...'
+      await runEnrichmentAnalysis('GO', { silent: true })
+    }
+
+    if (clinicalFile.value) analysisStatus.value = '正在计算生存曲线...'
+    await runSurvivalAnalysis({ silent: true })
+  }
 
   /** 运行聚类分析 (内置算法 或 自定义评估) */
   async function runAnalysisFlow() {
@@ -22,10 +43,11 @@ export function useAnalysisActions() {
       isLoading.value = true
       clearError()
       backendResponse.value = null
+      analysisStatus.value = '正在评估聚类结果...'
 
       try {
         if (omicsFileConfigs.value.length > 0 && !isOmicsUploaded.value) await doUploadOmics(sessionId.value)
-        if (useDataState().clinicalFile.value && !isClinicalUploaded.value) await doUploadClinical(sessionId.value)
+        if (clinicalFile.value && !isClinicalUploaded.value) await doUploadClinical(sessionId.value)
 
         const formData = new FormData()
         formData.append('file', customEvalFile.value)
@@ -41,9 +63,11 @@ export function useAnalysisActions() {
         })
 
         backendResponse.value = res.data
+        await runDownstreamAnalyses()
       } catch (error: any) {
         setError(error.response?.data?.detail || '评估失败，请检查数据。')
       } finally {
+        analysisStatus.value = ''
         isLoading.value = false
       }
       return
@@ -56,6 +80,7 @@ export function useAnalysisActions() {
     isLoading.value = true
     clearError()
     backendResponse.value = null
+    analysisStatus.value = '正在运行聚类分析...'
 
     try {
       if (!isOmicsUploaded.value) await doUploadOmics(sessionId.value)
@@ -70,6 +95,7 @@ export function useAnalysisActions() {
         n_neighbors: nNeighbors.value,
       })
 
+      analysisStatus.value = '正在计算指标与降维图...'
       const res = await apiRunAnalysis({
         session_id: sessionId.value,
         reduction: currentReduction.value,
@@ -77,9 +103,11 @@ export function useAnalysisActions() {
       })
 
       backendResponse.value = res.data
+      await runDownstreamAnalyses()
     } catch (error: any) {
       setError(error.response?.data?.detail || '连接后端失败或上传出错。')
     } finally {
+      analysisStatus.value = ''
       isLoading.value = false
     }
   }
@@ -161,7 +189,7 @@ export function useAnalysisActions() {
   }
 
   return {
-    backendResponse,
+    backendResponse, analysisStatus,
     runAnalysisFlow,
     switchReduction,
     runParameterSearchFlow,
