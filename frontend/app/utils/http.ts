@@ -2,7 +2,7 @@ import axios from 'axios'
 
 const http = axios.create({
   baseURL: '/api',
-  timeout: 300000, // 5 minutes for long-running analysis
+  timeout: 30000000, // 500 minutes for long-running analysis（开发阶段用）
 })
 
 http.interceptors.response.use(

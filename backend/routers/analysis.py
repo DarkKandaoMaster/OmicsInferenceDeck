@@ -39,7 +39,7 @@ def compute_r_metrics(parquet_path: str) -> dict:
         # 直接将 Parquet 路径传给 R，由 R 端读取
         result = subprocess.run(
             ["Rscript", r_script, parquet_path],
-            capture_output=True, text=True, encoding="utf-8", timeout=120
+            capture_output=True, text=True, encoding="utf-8", timeout=3600 #如果超出3600秒，那么强行停止（开发阶段用）
         )
 
         if result.returncode != 0:
