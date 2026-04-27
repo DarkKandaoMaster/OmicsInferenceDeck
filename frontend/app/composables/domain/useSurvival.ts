@@ -16,11 +16,11 @@ export function useSurvival() {
     if (!clinicalFile.value) {
       survivalResult.value = null
       survivalErrorMessage.value = ''
-      if (!options.silent) alert('请先选择临床数据！')
+      if (!options.silent) alert('请先选择临床数据。')
       return
     }
-    if (!backendResponse.value || !backendResponse.value.data.plot_data) {
-      if (!options.silent) alert('请先运行聚类分析！')
+    if (!backendResponse.value || !backendResponse.value.data.metrics) {
+      if (!options.silent) alert('请先运行聚类分析。')
       return
     }
 
@@ -30,14 +30,8 @@ export function useSurvival() {
     try {
       if (!isClinicalUploaded.value) await doUploadClinical(sessionId.value)
 
-      const plotData = backendResponse.value.data.plot_data
-      const sampleNames = plotData.map((item: any) => item.name)
-      const clusterLabels = plotData.map((item: any) => item.cluster)
-
       const res = await runSurvival({
         session_id: sessionId.value,
-        sample: sampleNames,
-        labels: clusterLabels,
       })
 
       survivalResult.value = res.data

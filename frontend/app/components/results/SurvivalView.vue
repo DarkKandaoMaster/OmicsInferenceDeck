@@ -1,137 +1,30 @@
 <script setup lang="ts">
-import { useEcharts } from '~/composables/ui/useEcharts'
 import { useSurvival } from '~/composables/domain/useSurvival'
 import { formatPValue } from '~/utils/formatters'
 
-const survivalChartRef = ref<HTMLElement | null>(null)
-const survivalAreaRef = ref<HTMLElement | null>(null)
-
-const survivalChart = useEcharts()
 const { survivalResult, isSurvivalLoading, survivalErrorMessage } = useSurvival()
-
-function renderSurvivalChart(kmData: any[]) {
-  if (!survivalChartRef.value) return
-  const myChart = survivalChart.init(survivalChartRef.value)
-
-  const colorPalette = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
-  const series: any[] = []
-
-  kmData.forEach((group: any, index: number) => {
-    const groupColor = colorPalette[index % colorPalette.length]
-
-    series.push({
-      name: group.name,
-      type: 'line',
-      step: 'end',
-      data: group.times.map((t: number, i: number) => [t, group.probs[i]]),
-      symbol: 'circle',
-      symbolSize: 10,
-      showSymbol: true,
-      itemStyle: { color: groupColor, opacity: 0 },
-      emphasis: { itemStyle: { opacity: 1 } },
-      lineStyle: { width: 2, color: groupColor },
-    })
-
-    const censoredData: number[][] = []
-    if (group.censored_times) {
-      group.censored_times.forEach((t: number, i: number) => {
-        censoredData.push([t, group.censored_probs[i]])
-      })
-    }
-    if (censoredData.length > 0) {
-      series.push({
-        name: group.name,
-        type: 'scatter',
-        data: censoredData,
-        symbol: 'rect',
-        symbolSize: [1, 6],
-        itemStyle: { color: groupColor, opacity: 0.7 },
-        cursor: 'default',
-      })
-    }
-  })
-
-  myChart.setOption({
-    series,
-    tooltip: { trigger: 'item', triggerOn: 'none', formatter(params: any) { return `${params.seriesName}<br/>Time: ${params.value[0]}<br/>Probability: ${params.value[1].toFixed(4)}` } },
-    legend: { orient: 'horizontal', bottom: '0%' },
-    xAxis: { type: 'value', name: 'Time (OS.time)', nameLocation: 'middle', nameGap: 30, min: 0, splitLine: { show: false } },
-    yAxis: { type: 'value', name: 'Survival Probability (OS)', nameLocation: 'middle', nameGap: 30, min: 0, max: 1, splitLine: { show: false } },
-  })
-
-  myChart.getZr().on('mousemove', (params: any) => {
-    const pointInPixel = [params.offsetX, params.offsetY]
-    let minDistance = Infinity
-    let nearestItem: any = null
-    series.forEach((s: any, sIdx: number) => {
-      if (s.type === 'scatter') return
-      s.data.forEach((d: any, dIdx: number) => {
-        const point = myChart.convertToPixel({ seriesIndex: sIdx }, d)
-        if (point) {
-          const px = point as any
-          const dx = px[0] - pointInPixel[0]
-          const dy = px[1] - pointInPixel[1]
-          const distanceSquared = dx * dx + dy * dy
-          if (distanceSquared < minDistance) {
-            minDistance = distanceSquared
-            nearestItem = { seriesIndex: sIdx, dataIndex: dIdx, distance: Math.sqrt(distanceSquared) }
-          }
-        }
-      })
-    })
-    if (nearestItem && nearestItem.distance < 100) {
-      myChart.dispatchAction({ type: 'downplay' })
-      myChart.dispatchAction({ type: 'highlight', seriesIndex: nearestItem.seriesIndex, dataIndex: nearestItem.dataIndex })
-      myChart.dispatchAction({ type: 'showTip', seriesIndex: nearestItem.seriesIndex, dataIndex: nearestItem.dataIndex })
-    } else {
-      myChart.dispatchAction({ type: 'downplay' })
-      myChart.dispatchAction({ type: 'hideTip' })
-    }
-  })
-}
-
-watch(survivalResult, async (value) => {
-  if (value) {
-    await nextTick()
-    renderSurvivalChart(value.km_data)
-  }
-}, { immediate: true })
-
-onUnmounted(() => survivalChart.dispose())
 </script>
 
 <template>
-  <div ref="survivalAreaRef" class="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
-    <div class="px-6 py-4 border-b border-slate-200 bg-amber-50 flex justify-between items-center">
-      <h3 class="m-0 text-lg text-amber-700 flex items-center gap-3">
-        <span class="bg-amber-700 text-white w-6 h-6 flex items-center justify-center rounded-md text-sm font-bold">D</span>
-        临床预后生存分析 (Survival Analysis)
-      </h3>
-    </div>
-    <div class="p-6">
-      <p class="text-slate-500 text-sm m-0 mb-5">基于临床数据 (OS &amp; OS.time) 评估不同分子亚型的预后差异。</p>
+  <div v-if="isSurvivalLoading" class="result-card">
+    <div class="p-5 text-sm text-slate-600">正在计算 Log-Rank P-value 与 KM 生存曲线...</div>
+  </div>
 
-      <div v-if="isSurvivalLoading" class="bg-slate-50 border border-slate-200 text-slate-600 p-4 rounded-lg text-sm">
-        正在计算 Log-Rank P-value 与 KM 生存曲线...
-      </div>
+  <div v-else-if="survivalErrorMessage" class="result-card">
+    <div class="p-5 text-sm text-red-700">{{ survivalErrorMessage }}</div>
+  </div>
 
-      <div v-if="survivalErrorMessage" class="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-[13px] mb-5">
-        {{ survivalErrorMessage }}
-      </div>
-
-      <div v-if="survivalResult">
-        <div class="bg-amber-50 border border-amber-200 text-amber-700 p-3 rounded-lg text-[13px] mb-5">
-          ⚠️ <strong>提示：</strong>有 <strong>{{ survivalResult.lost_samples }}</strong> 个已聚类的病人因缺少临床数据，在计算生存曲线时被丢弃。
-        </div>
-        <div class="bg-slate-100 p-5 rounded-lg text-center border border-slate-200" :class="{ '!bg-amber-50 !border-amber-200': survivalResult.p_value < 0.05 }">
-          <span class="text-base text-slate-500 mr-3">Log-Rank P-value:</span>
-          <span class="text-2xl font-extrabold text-slate-900">{{ formatPValue(survivalResult.p_value) }}</span>
-          <span v-if="survivalResult.p_value < 0.05" class="ml-3 bg-amber-500 text-white px-2.5 py-1 rounded-full text-xs font-bold">显著差异 ✨</span>
-        </div>
-        <div class="border border-slate-200 rounded-xl bg-white overflow-hidden mt-6">
-          <div ref="survivalChartRef" class="w-full h-[500px]" />
-        </div>
+  <div v-else-if="survivalResult" class="result-card">
+    <div class="result-card-header">
+      <div class="result-card-title">生存曲线</div>
+      <div class="text-sm text-slate-600">
+        Log-Rank P-value:
+        <span class="font-bold text-slate-900">{{ survivalResult.p_value ? formatPValue(survivalResult.p_value) : 'N/A' }}</span>
       </div>
     </div>
+    <div v-if="survivalResult.lost_samples" class="mx-5 mt-4 bg-amber-50 border border-amber-200 text-amber-700 p-3 rounded-lg text-[13px]">
+      {{ survivalResult.lost_samples }} 个已聚类样本因缺少临床数据未参与生存分析。
+    </div>
+    <div class="svg-chart" v-html="survivalResult.survival_svg" />
   </div>
 </template>

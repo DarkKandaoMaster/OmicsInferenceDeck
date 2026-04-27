@@ -61,3 +61,6 @@ app.include_router(enrichment_router)
 
 from routers.parameter_run import router as parameter_run_router
 app.include_router(parameter_run_router)
+
+from routers.plots import router as plots_router
+app.include_router(plots_router)

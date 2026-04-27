@@ -47,15 +47,16 @@ export function evaluateCustom(formData: FormData) {
 export function runDifferential(params: {
   session_id: string
   omics_type: string
-  sample: string[]
-  labels: number[]
+  sample?: string[]
+  labels?: number[]
 }) {
   return http.post('/differential_analysis', params)
 }
 
 /** 富集分析 */
 export function runEnrichment(params: {
-  cluster_genes: Record<string, string[]>
+  session_id?: string
+  cluster_genes?: Record<string, string[]>
   database: string
 }) {
   return http.post('/enrichment_analysis', params)
@@ -64,8 +65,8 @@ export function runEnrichment(params: {
 /** 生存分析 */
 export function runSurvival(params: {
   session_id: string
-  sample: string[]
-  labels: number[]
+  sample?: string[]
+  labels?: number[]
 }) {
   return http.post('/survival_analysis', params)
 }
@@ -78,6 +79,37 @@ export function runParameterSearch(params: {
   random_state: number
 }) {
   return http.post('/parameter_search', params)
+}
+
+export function renderDifferentialVolcano(params: {
+  session_id: string
+  cluster_id: number
+}) {
+  return http.post('/plots/differential_volcano', params)
+}
+
+export function renderEnrichmentBar(params: {
+  session_id: string
+  database: string
+  cluster_id: number
+}) {
+  return http.post('/plots/enrichment_bar', params)
+}
+
+export function renderEnrichmentBubble(params: {
+  session_id: string
+  database: string
+  mode: 'combined' | 'by_gene'
+}) {
+  return http.post('/plots/enrichment_bubble', params)
+}
+
+export function renderParameterSurface(params: {
+  session_id: string
+  x_param: string
+  y_param?: string
+}) {
+  return http.post('/plots/parameter_surface', params)
 }
 
 /** 会话清理 (使用 beacon，不走 axios) */

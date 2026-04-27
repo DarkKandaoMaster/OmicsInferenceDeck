@@ -1,3 +1,49 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  .results-grid {
+    @apply grid grid-cols-2 gap-6 max-[1100px]:grid-cols-1;
+  }
+
+  .result-card {
+    @apply bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden;
+  }
+
+  .result-card-header {
+    @apply min-h-[64px] px-5 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-4;
+  }
+
+  .result-card-title {
+    @apply font-semibold text-sm text-slate-800;
+  }
+
+  .chart-select {
+    @apply px-2 py-1.5 border border-slate-200 rounded-lg text-[13px] bg-white cursor-pointer outline-none focus:border-primary disabled:opacity-60;
+  }
+
+  .chart-toggle {
+    @apply border-none px-4 py-1.5 text-[13px] cursor-pointer border-r border-slate-200 disabled:opacity-60 disabled:cursor-not-allowed;
+  }
+
+  .svg-chart {
+    @apply w-full p-5 bg-white min-h-[420px] flex items-center justify-center;
+  }
+
+  .svg-chart svg {
+    @apply block w-full h-auto max-h-[620px];
+  }
+
+  .metric-card {
+    @apply bg-slate-50 p-5 rounded-xl border border-slate-200 text-center;
+  }
+
+  .metric-label {
+    @apply text-xs text-slate-500 uppercase tracking-wider;
+  }
+
+  .metric-value {
+    @apply text-3xl font-extrabold text-primary my-2;
+  }
+}
