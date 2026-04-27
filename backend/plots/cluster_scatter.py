@@ -8,15 +8,8 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 
-try:
-    import umap
-except Exception:  # pragma: no cover - optional import failure is handled at runtime.
-    umap = None
-
-try:
-    import seaborn as sns
-except Exception:  # pragma: no cover - seaborn is optional.
-    sns = None
+import umap
+import seaborn as sns
 
 from .base import CANAKO_TSNE_RANDOM_STATE, PALETTE, configure_matplotlib, empty_svg, figure_to_svg
 
