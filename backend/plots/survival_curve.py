@@ -5,13 +5,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from lifelines import KaplanMeierFitter
 
-from .base import PALETTE, configure_matplotlib, empty_svg, figure_to_svg
+from .base import PALETTE, configure_matplotlib, empty_figure, figure_to_svg
 
 
-def render_svg(survival_data_path: str, p_value: float | None = None) -> str:
+def build_figure(survival_data_path: str, p_value: float | None = None) -> plt.Figure:
     df = pd.read_parquet(survival_data_path)
     if df.empty:
-        return empty_svg("No matched clinical samples available.", "Survival Curve")
+        return empty_figure("No matched clinical samples available.", "Survival Curve")
 
     configure_matplotlib()
     fig, ax = plt.subplots(figsize=(9, 6))
@@ -64,4 +64,8 @@ def render_svg(survival_data_path: str, p_value: float | None = None) -> str:
     for text in legend.get_texts():
         text.set_fontweight("bold")
     fig.tight_layout()
-    return figure_to_svg(fig)
+    return fig
+
+
+def render_svg(survival_data_path: str, p_value: float | None = None) -> str:
+    return figure_to_svg(build_figure(survival_data_path, p_value))

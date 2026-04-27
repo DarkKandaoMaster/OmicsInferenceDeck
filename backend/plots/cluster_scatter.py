@@ -11,7 +11,7 @@ from sklearn.manifold import TSNE
 import umap
 import seaborn as sns
 
-from .base import CANAKO_TSNE_RANDOM_STATE, PALETTE, configure_matplotlib, empty_svg, figure_to_svg
+from .base import CANAKO_TSNE_RANDOM_STATE, PALETTE, configure_matplotlib, empty_figure, figure_to_svg
 
 
 def _scatter_palette(n_colors: int):
@@ -59,14 +59,14 @@ def _coords(embeddings: np.ndarray, reduction: str, random_state: int | None) ->
     return umap.UMAP(n_components=2, random_state=random_state).fit_transform(embeddings)
 
 
-def render_svg(cluster_result_path: str, reduction: str = "PCA", random_state: int | None = 42) -> str:
+def build_figure(cluster_result_path: str, reduction: str = "PCA", random_state: int | None = 42) -> plt.Figure:
     df = pd.read_parquet(cluster_result_path)
     if df.empty:
-        return empty_svg("No clustering result available.", "Cluster Scatter")
+        return empty_figure("No clustering result available.", "Cluster Scatter")
 
     emb_cols = [col for col in df.columns if col.startswith("emb_")]
     if len(emb_cols) == 0:
-        return empty_svg("No feature matrix columns found in cluster_result.parquet.", "Cluster Scatter")
+        return empty_figure("No feature matrix columns found in cluster_result.parquet.", "Cluster Scatter")
 
     labels = df["label"].to_numpy()
     embeddings = df[emb_cols].to_numpy(dtype=float)
@@ -111,4 +111,8 @@ def render_svg(cluster_result_path: str, reduction: str = "PCA", random_state: i
     for text in legend.get_texts():
         text.set_fontweight("bold")
     fig.tight_layout()
-    return figure_to_svg(fig)
+    return fig
+
+
+def render_svg(cluster_result_path: str, reduction: str = "PCA", random_state: int | None = 42) -> str:
+    return figure_to_svg(build_figure(cluster_result_path, reduction, random_state))

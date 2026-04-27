@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { renderDifferentialVolcano } from '~/utils/api'
-import { useDifferential } from '~/composables/domain/useDifferential'
-import { useDataState } from '~/composables/domain/useDataState'
 import { useSession } from '~/composables/core/useSession'
+import { useDataState } from '~/composables/domain/useDataState'
+import { useDifferential } from '~/composables/domain/useDifferential'
 import { useEnrichment } from '~/composables/domain/useEnrichment'
+import { renderDifferentialVolcano } from '~/utils/api'
 
 const {
   diffResult, isDiffLoading, selectedVolcanoCluster,
@@ -13,6 +13,14 @@ const {
 const { uploadedOmicsTypes } = useDataState()
 const { sessionId } = useSession()
 const { runEnrichmentAnalysis } = useEnrichment()
+
+const volcanoDownloadParams = computed(() => ({
+  session_id: sessionId.value,
+  cluster_id: selectedVolcanoCluster.value,
+}))
+const heatmapDownloadParams = computed(() => ({
+  session_id: sessionId.value,
+}))
 
 async function handleVolcanoClusterChange() {
   if (!diffResult.value) return
@@ -31,7 +39,7 @@ async function handleOmicsTypeChange() {
 
 <template>
   <div v-if="isDiffLoading" class="result-card col-span-2">
-    <div class="p-5 text-sm text-slate-600">正在计算差异表达结果...</div>
+    <div class="p-5 text-sm text-slate-600">Calculating differential expression results...</div>
   </div>
 
   <div v-if="diffErrorMessage" class="result-card col-span-2">
@@ -41,15 +49,16 @@ async function handleOmicsTypeChange() {
   <template v-if="diffResult">
     <div class="result-card">
       <div class="result-card-header">
-        <div class="result-card-title">差异火山图</div>
+        <div class="result-card-title">Differential Volcano</div>
         <div class="flex items-center gap-3">
           <select v-model="selectedDiffOmicsType" @change="handleOmicsTypeChange" class="chart-select">
-            <option value="" disabled>选择组学层</option>
+            <option value="" disabled>Select omics layer</option>
             <option v-for="type in uploadedOmicsTypes" :key="type" :value="type">{{ type }}</option>
           </select>
           <select v-model.number="selectedVolcanoCluster" @change="handleVolcanoClusterChange" class="chart-select">
             <option v-for="cid in diffResult.clusters" :key="cid" :value="cid">Cluster {{ cid }}</option>
           </select>
+          <ResultsPlotDownloadButton plot-type="differential_volcano" :params="volcanoDownloadParams" filename-prefix="differential_volcano" />
         </div>
       </div>
       <div class="svg-chart" v-html="diffResult.volcano_svg" />
@@ -57,7 +66,8 @@ async function handleOmicsTypeChange() {
 
     <div class="result-card">
       <div class="result-card-header">
-        <div class="result-card-title">差异热图</div>
+        <div class="result-card-title">Differential Heatmap</div>
+        <ResultsPlotDownloadButton plot-type="differential_heatmap" :params="heatmapDownloadParams" filename-prefix="differential_heatmap" />
       </div>
       <div class="svg-chart" v-html="diffResult.heatmap_svg" />
     </div>

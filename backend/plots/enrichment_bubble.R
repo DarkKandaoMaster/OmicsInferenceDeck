@@ -14,18 +14,44 @@ if (length(args) < 2) {
 
 data_path <- args[[1]]
 mode <- args[[2]]
+output_format <- if (length(args) >= 3) tolower(args[[3]]) else ""
+output_path <- if (length(args) >= 4) args[[4]] else ""
+is_download <- output_format %in% c("png", "svg", "pdf") && nzchar(output_path)
 FONT_FAMILY <- "serif"
 
-blank_svg <- function(message) {
-  svglite::stringSVG({
-    grid.newpage()
-    grid.text(message, x = 0.5, y = 0.5, gp = gpar(fontfamily = FONT_FAMILY, fontsize = 16, col = "#666666"))
-  }, width = 8, height = 6)
+open_plot_device <- function(width, height) {
+  if (output_format == "png") {
+    grDevices::png(output_path, width = width, height = height, units = "in", res = 300, bg = "white")
+  } else if (output_format == "svg") {
+    svglite::svglite(output_path, width = width, height = height, bg = "white")
+  } else if (output_format == "pdf") {
+    grDevices::pdf(output_path, width = width, height = height, bg = "white", family = FONT_FAMILY)
+  } else {
+    stop("Unsupported output format")
+  }
+}
+
+render_output <- function(draw_expr, width, height) {
+  expr <- substitute(draw_expr)
+  if (is_download) {
+    open_plot_device(width, height)
+    on.exit(grDevices::dev.off(), add = TRUE)
+    eval(expr, parent.frame())
+  } else {
+    cat(svglite::stringSVG({
+      eval(expr, parent.frame())
+    }, width = width, height = height))
+  }
+}
+
+draw_blank <- function(message) {
+  grid.newpage()
+  grid.text(message, x = 0.5, y = 0.5, gp = gpar(fontfamily = FONT_FAMILY, fontsize = 16, col = "#666666"))
 }
 
 df <- as.data.frame(arrow::read_parquet(data_path))
 if (nrow(df) == 0) {
-  cat(blank_svg("No enrichment result available."))
+  render_output(draw_blank("No enrichment result available."), width = 8, height = 6)
   quit(save = "no", status = 0)
 }
 
@@ -45,7 +71,7 @@ df <- df %>%
   ungroup()
 
 if (nrow(df) == 0) {
-  cat(blank_svg("No significant enrichment result available."))
+  render_output(draw_blank("No significant enrichment result available."), width = 8, height = 6)
   quit(save = "no", status = 0)
 }
 
@@ -84,4 +110,4 @@ p <- p +
 
 svg_width <- if (mode == "by_gene") 10 else 12
 svg_height <- if (mode == "by_gene") 8 else 10
-cat(svglite::stringSVG(print(p), width = svg_width, height = svg_height))
+render_output(print(p), width = svg_width, height = svg_height)

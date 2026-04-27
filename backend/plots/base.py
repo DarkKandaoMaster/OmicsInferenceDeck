@@ -6,6 +6,7 @@ import math
 import os
 import re
 import subprocess
+import uuid
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -25,6 +26,13 @@ DIFFERENTIAL_META_FILE = "differential_meta.json"
 SURVIVAL_DATA_FILE = "survival_data.parquet"
 PARAMETER_SEARCH_FILE = "parameter_search.parquet"
 PARAMETER_SEARCH_META_FILE = "parameter_search_meta.json"
+
+SUPPORTED_PLOT_FORMATS = {"png", "svg", "pdf"}
+PLOT_MEDIA_TYPES = {
+    "png": "image/png",
+    "svg": "image/svg+xml; charset=utf-8",
+    "pdf": "application/pdf",
+}
 
 PALETTE = [
     "#E41A1C",
@@ -84,6 +92,17 @@ def configure_matplotlib() -> None:
     )
 
 
+def normalize_plot_format(file_format: str) -> str:
+    normalized = (file_format or "").lower().strip().lstrip(".")
+    if normalized not in SUPPORTED_PLOT_FORMATS:
+        raise ValueError("format must be one of: PNG, SVG, PDF")
+    return normalized
+
+
+def media_type_for_format(file_format: str) -> str:
+    return PLOT_MEDIA_TYPES[normalize_plot_format(file_format)]
+
+
 def strip_to_svg(text: str) -> str:
     start = text.find("<svg")
     end = text.rfind("</svg>")
@@ -92,14 +111,30 @@ def strip_to_svg(text: str) -> str:
     return text[start : end + len("</svg>")]
 
 
-def figure_to_svg(fig: plt.Figure) -> str:
-    buffer = io.StringIO()
-    fig.savefig(buffer, format="svg", bbox_inches="tight", facecolor="white")
+def figure_to_bytes(fig: plt.Figure, file_format: str, dpi: int = 300) -> bytes:
+    normalized = normalize_plot_format(file_format)
+    buffer = io.BytesIO()
+    save_kwargs: dict[str, Any] = {
+        "format": normalized,
+        "bbox_inches": "tight",
+        "facecolor": "white",
+    }
+    if normalized == "png":
+        save_kwargs["dpi"] = dpi
+
+    fig.savefig(buffer, **save_kwargs)
     plt.close(fig)
-    return strip_to_svg(buffer.getvalue())
+    payload = buffer.getvalue()
+    if normalized == "svg":
+        return strip_to_svg(payload.decode("utf-8", errors="replace")).encode("utf-8")
+    return payload
 
 
-def empty_svg(message: str, title: str | None = None) -> str:
+def figure_to_svg(fig: plt.Figure) -> str:
+    return figure_to_bytes(fig, "svg").decode("utf-8", errors="replace")
+
+
+def empty_figure(message: str, title: str | None = None) -> plt.Figure:
     configure_matplotlib()
     fig, ax = plt.subplots(figsize=(8, 6))
     ax.axis("off")
@@ -116,6 +151,11 @@ def empty_svg(message: str, title: str | None = None) -> str:
         color="#666666",
         wrap=True,
     )
+    return fig
+
+
+def empty_svg(message: str, title: str | None = None) -> str:
+    return figure_to_svg(empty_figure(message, title))
     return figure_to_svg(fig)
 
 
@@ -171,3 +211,38 @@ def run_r_svg(script_name: str, args: list[str | os.PathLike[str]], timeout: int
     if not svg.startswith("<svg"):
         raise RuntimeError(result.stderr.strip() or "R script did not return SVG")
     return svg
+
+
+def run_r_plot_bytes(
+    script_name: str,
+    args: list[str | os.PathLike[str] | int | float],
+    file_format: str,
+    output_dir: Path,
+    timeout: int = 3600,
+) -> bytes:
+    normalized = normalize_plot_format(file_format)
+    script_path = Path(__file__).with_name(script_name).resolve()
+    if not script_path.exists():
+        raise FileNotFoundError(f"R plot script not found: {script_path}")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / f"{uuid.uuid4().hex}.{normalized}"
+    try:
+        result = subprocess.run(
+            ["Rscript", str(script_path), *[str(arg) for arg in args], normalized, str(output_path)],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(result.stderr.strip() or result.stdout.strip())
+        if not output_path.exists() or output_path.stat().st_size == 0:
+            raise RuntimeError(result.stderr.strip() or "R script did not create plot output")
+        return output_path.read_bytes()
+    finally:
+        try:
+            output_path.unlink(missing_ok=True)
+        except Exception:
+            pass

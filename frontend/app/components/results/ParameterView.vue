@@ -1,12 +1,17 @@
 <script setup lang="ts">
-import { renderParameterSurface } from '~/utils/api'
 import { useSession } from '~/composables/core/useSession'
 import { useAlgorithmState } from '~/composables/domain/useAlgorithmState'
+import { renderParameterSurface } from '~/utils/api'
 
 const { sessionId } = useSession()
 const { psResult, psParam1, psParam2 } = useAlgorithmState()
 
 const paramNames = computed(() => psResult.value?.param_names || [])
+const downloadParams = computed(() => ({
+  session_id: sessionId.value,
+  x_param: psParam1.value,
+  y_param: psParam2.value || undefined,
+}))
 
 async function updateParameterPlot() {
   if (!psResult.value || !psParam1.value) return
@@ -27,9 +32,9 @@ watch([psParam1, psParam2], () => {
   <div v-if="psResult" class="result-card col-span-2">
     <div class="result-card-header">
       <div>
-        <div class="result-card-title">参数敏感性分析</div>
+        <div class="result-card-title">Parameter Sensitivity</div>
         <div class="mt-1 text-sm text-slate-600">
-          最优参数: <span class="font-bold text-slate-900">{{ psResult.best_params }}</span>
+          Best parameters: <span class="font-bold text-slate-900">{{ psResult.best_params }}</span>
           <span class="ml-4">-Log10(P): <span class="font-bold text-red-600">{{ psResult.best_score.toFixed(4) }}</span></span>
         </div>
       </div>
@@ -40,9 +45,10 @@ watch([psParam1, psParam2], () => {
         </select>
         <label class="text-xs text-slate-500">Y</label>
         <select v-model="psParam2" class="chart-select">
-          <option value="">无，绘制 2D 曲线</option>
+          <option value="">2D curve</option>
           <option v-for="name in paramNames" :key="name" :value="name">{{ name }}</option>
         </select>
+        <ResultsPlotDownloadButton plot-type="parameter_surface" :params="downloadParams" filename-prefix="parameter_surface" />
       </div>
     </div>
     <div class="svg-chart" v-html="psResult.plot_svg" />

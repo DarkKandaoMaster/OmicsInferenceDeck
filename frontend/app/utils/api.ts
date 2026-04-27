@@ -118,3 +118,18 @@ export function cleanupSession(sessionId: string) {
   formData.append('session_id', sessionId)
   navigator.sendBeacon('/api/cleanup', formData)
 }
+
+export function downloadPlot(params: {
+  session_id: string
+  plot_type: string
+  format: 'png' | 'svg' | 'pdf'
+  reduction?: string
+  random_state?: number
+  cluster_id?: number
+  database?: string
+  mode?: 'combined' | 'by_gene'
+  x_param?: string
+  y_param?: string
+}) {
+  return http.post('/plots/download', params, { responseType: 'blob' })
+}
