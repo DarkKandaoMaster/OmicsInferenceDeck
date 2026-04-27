@@ -5,6 +5,7 @@ pandas
 numpy
 scipy
 scikit-learn
+seaborn
 snfpy
 umap-learn
 lifelines

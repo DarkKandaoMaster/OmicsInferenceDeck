@@ -14,11 +14,12 @@ if (length(args) < 2) {
 
 data_path <- args[[1]]
 mode <- args[[2]]
+FONT_FAMILY <- "serif"
 
 blank_svg <- function(message) {
   svglite::stringSVG({
     grid.newpage()
-    grid.text(message, x = 0.5, y = 0.5, gp = gpar(fontfamily = "serif", fontsize = 14, col = "#666666"))
+    grid.text(message, x = 0.5, y = 0.5, gp = gpar(fontfamily = FONT_FAMILY, fontsize = 16, col = "#666666"))
   }, width = 8, height = 6)
 }
 
@@ -34,8 +35,9 @@ df <- df %>%
     Gene_Count = as.numeric(Gene_Count),
     Adjusted_P = as.numeric(Adjusted_P),
     Adjusted_P = ifelse(is.na(Adjusted_P) | Adjusted_P <= 0, as.numeric(P_value), Adjusted_P),
-    neg_log_p = -log10(pmax(Adjusted_P, 1e-300)),
-    TermShort = str_wrap(str_trunc(str_remove(Term, " \\(GO.*$"), width = 60), width = 42)
+    neg_adjusted_p = -1 * Adjusted_P,
+    TermShort = vapply(strsplit(str_remove(Term, " \\(GO.*$"), " "), function(words) paste(head(words, 6), collapse = " "), character(1)),
+    TermShort = str_wrap(TermShort, width = 40)
   ) %>%
   arrange(Adjusted_P) %>%
   group_by(cluster) %>%
@@ -52,25 +54,34 @@ df$TermShort <- factor(df$TermShort, levels = term_levels)
 
 if (mode == "by_gene") {
   p <- ggplot(df, aes(x = Gene_Count, y = TermShort)) +
-    geom_point(aes(size = Gene_Count, color = cluster), alpha = 0.85) +
-    labs(title = "Pathway Enrichment by Gene Count", x = "Gene Number", y = "Pathways", color = "Cluster", size = "Gene Number") +
-    theme_bw(base_family = "serif", base_size = 14)
+    geom_point(aes(size = Gene_Count, color = neg_adjusted_p), alpha = 0.8) +
+    scale_color_gradient(low = "green", high = "red") +
+    geom_text(aes(label = Gene_Count), hjust = -0.7, size = 5.6, color = "black", family = FONT_FAMILY) +
+    labs(title = "Pathway Enrichment by Gene Count", x = "Gene Number", y = "Pathways", color = expression(p.adjust), size = "Count") +
+    theme_bw(base_family = FONT_FAMILY, base_size = 16)
 } else {
   p <- ggplot(df, aes(x = cluster, y = TermShort)) +
-    geom_point(aes(size = Gene_Count, color = neg_log_p), alpha = 0.86) +
-    scale_color_gradient(low = "#377EB8", high = "#E41A1C") +
-    labs(title = "Pathway Enrichment - All Clusters", x = "Cluster", y = "Pathways", color = expression(-log[10](p.adjust)), size = "Gene Number") +
-    theme_bw(base_family = "serif", base_size = 14)
+    geom_point(aes(size = Gene_Count, color = neg_adjusted_p), alpha = 0.8) +
+    scale_color_gradient(low = "blue", high = "red") +
+    labs(title = "Pathway Enrichment - All Clusters", x = "Cluster", y = "Pathways", color = expression(p.adjust), size = "Gene Count") +
+    theme_bw(base_family = FONT_FAMILY, base_size = 16)
 }
 
 p <- p +
-  scale_size_continuous(range = c(3, 13)) +
+  scale_size_continuous(range = c(3, 15)) +
   theme(
-    text = element_text(face = "bold"),
-    plot.title = element_text(hjust = 0.5, size = 16),
-    axis.text.y = element_text(size = 10, lineheight = 0.85),
+    text = element_text(family = FONT_FAMILY, size = 16),
+    axis.title = element_text(family = FONT_FAMILY, size = 16, face = "bold"),
+    axis.text = element_text(family = FONT_FAMILY, size = 16, face = "bold"),
+    axis.text.y = element_text(family = FONT_FAMILY, size = 16, face = "bold", lineheight = 0.8),
+    plot.title = element_text(family = FONT_FAMILY, size = 16, face = "bold", hjust = 0.5),
+    legend.title = element_text(family = FONT_FAMILY, size = 16, face = "bold"),
+    legend.text = element_text(family = FONT_FAMILY, size = 16, face = "bold"),
     legend.position = "right",
-    plot.margin = margin(5, 5, 5, 5, "mm")
+    plot.margin = margin(5, 5, 5, 5, "mm"),
+    panel.spacing = unit(0.1, "lines")
   )
 
-cat(svglite::stringSVG(print(p), width = 8, height = 6))
+svg_width <- if (mode == "by_gene") 10 else 12
+svg_height <- if (mode == "by_gene") 8 else 10
+cat(svglite::stringSVG(print(p), width = svg_width, height = svg_height))

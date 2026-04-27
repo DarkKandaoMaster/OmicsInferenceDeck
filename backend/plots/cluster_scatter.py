@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import inspect
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -11,7 +13,33 @@ try:
 except Exception:  # pragma: no cover - optional import failure is handled at runtime.
     umap = None
 
-from .base import PALETTE, configure_matplotlib, empty_svg, figure_to_svg, set_2d_plot_box
+try:
+    import seaborn as sns
+except Exception:  # pragma: no cover - seaborn is optional.
+    sns = None
+
+from .base import CANAKO_TSNE_RANDOM_STATE, PALETTE, configure_matplotlib, empty_svg, figure_to_svg
+
+
+def _scatter_palette(n_colors: int):
+    if sns is not None:
+        return sns.color_palette("husl", n_colors)
+    return [PALETTE[index % len(PALETTE)] for index in range(n_colors)]
+
+
+def _tsne_kwargs(n_samples: int) -> dict:
+    kwargs = {
+        "n_components": 2,
+        "perplexity": min(50, n_samples - 1),
+        "learning_rate": "auto",
+        "early_exaggeration": 50,
+        "init": "random",
+        "random_state": CANAKO_TSNE_RANDOM_STATE,
+        "method": "exact",
+    }
+    iteration_arg = "max_iter" if "max_iter" in inspect.signature(TSNE).parameters else "n_iter"
+    kwargs[iteration_arg] = 1000
+    return kwargs
 
 
 def _coords(embeddings: np.ndarray, reduction: str, random_state: int | None) -> np.ndarray:
@@ -31,16 +59,7 @@ def _coords(embeddings: np.ndarray, reduction: str, random_state: int | None) ->
     if reduction == "t-SNE":
         if n_samples < 4:
             return _coords(embeddings, "PCA", random_state)
-        perplexity = min(50, max(2, (n_samples - 1) // 3))
-        perplexity = min(perplexity, n_samples - 1)
-        return TSNE(
-            n_components=2,
-            perplexity=perplexity,
-            learning_rate="auto",
-            init="random",
-            random_state=random_state,
-            method="barnes_hut",
-        ).fit_transform(embeddings)
+        return TSNE(**_tsne_kwargs(n_samples)).fit_transform(embeddings)
 
     if umap is None:
         return _coords(embeddings, "PCA", random_state)
@@ -61,8 +80,9 @@ def render_svg(cluster_result_path: str, reduction: str = "PCA", random_state: i
     coords = _coords(embeddings, reduction, random_state)
 
     configure_matplotlib()
-    fig, ax = plt.subplots(figsize=(8, 6))
+    fig, ax = plt.subplots(figsize=(12, 10))
     unique_labels = sorted(pd.Series(labels).dropna().unique())
+    palette = _scatter_palette(len(unique_labels))
 
     for index, label in enumerate(unique_labels):
         mask = labels == label
@@ -70,19 +90,32 @@ def render_svg(cluster_result_path: str, reduction: str = "PCA", random_state: i
             coords[mask, 0],
             coords[mask, 1],
             label=f"Cluster {label}",
-            s=48,
-            color=PALETTE[index % len(PALETTE)],
-            alpha=0.78,
-            edgecolors="black",
-            linewidths=0.35,
+            s=50,
+            color=palette[index],
+            alpha=0.7,
+            linewidths=0,
         )
 
     axis_prefix = {"PCA": "PC", "t-SNE": "t-SNE", "UMAP": "UMAP"}.get(reduction, "Dim")
-    ax.set_xlabel(f"{axis_prefix} 1")
-    ax.set_ylabel(f"{axis_prefix} 2")
+    if reduction == "t-SNE":
+        ax.set_xlabel("t-SNE dimension 1")
+        ax.set_ylabel("t-SNE dimension 2")
+    else:
+        ax.set_xlabel(f"{axis_prefix} 1")
+        ax.set_ylabel(f"{axis_prefix} 2")
     ax.set_title(f"Sample Clustering ({reduction})")
-    set_2d_plot_box(ax)
     ax.grid(False)
-    ax.legend(title="Clusters", loc="upper right", frameon=True, facecolor="white", edgecolor="#222222")
+    legend = ax.legend(
+        title="Clusters",
+        loc="upper right",
+        frameon=True,
+        framealpha=0.9,
+        facecolor="white",
+        edgecolor="black",
+        bbox_to_anchor=(1, 1),
+    )
+    legend.get_title().set_fontweight("bold")
+    for text in legend.get_texts():
+        text.set_fontweight("bold")
     fig.tight_layout()
     return figure_to_svg(fig)

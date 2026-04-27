@@ -39,6 +39,15 @@ PALETTE = [
     "#FC8D62",
 ]
 
+CANAKO_TSNE_RANDOM_STATE = 3407
+
+SURFACE_COLORS = [
+    (0.8, 0.9, 0.9),
+    (0.7, 0.85, 0.9),
+    (0.8, 0.7, 0.9),
+    (0.9, 0.7, 0.8),
+]
+
 
 def session_dir(session_id: str) -> Path:
     if not re.fullmatch(r"[A-Za-z0-9_.-]+", session_id or ""):
@@ -62,14 +71,14 @@ def configure_matplotlib() -> None:
         {
             "font.family": "Times New Roman",
             "font.weight": "bold",
-            "font.size": 14,
+            "font.size": 16,
             "axes.labelweight": "bold",
             "axes.titleweight": "bold",
             "axes.linewidth": 1.1,
-            "xtick.labelsize": 12,
-            "ytick.labelsize": 12,
-            "legend.fontsize": 11,
-            "legend.title_fontsize": 12,
+            "xtick.labelsize": 16,
+            "ytick.labelsize": 16,
+            "legend.fontsize": 16,
+            "legend.title_fontsize": 16,
             "svg.fonttype": "none",
         }
     )
