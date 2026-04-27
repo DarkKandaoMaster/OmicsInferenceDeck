@@ -4,14 +4,19 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from .base import configure_matplotlib, empty_svg, figure_to_svg, finite_max, set_2d_plot_box
+from .base import configure_matplotlib, empty_figure, figure_to_svg, finite_max, set_2d_plot_box
 
 
-def render_svg(volcano_path: str, cluster_id: int, logfc_threshold: float = 0.5, p_threshold: float = 0.05) -> str:
+def build_figure(
+    volcano_path: str,
+    cluster_id: int,
+    logfc_threshold: float = 0.5,
+    p_threshold: float = 0.05,
+) -> plt.Figure:
     df = pd.read_parquet(volcano_path)
     df = df[df["cluster"].astype(int) == int(cluster_id)].copy()
     if df.empty:
-        return empty_svg(f"No differential result for Cluster {cluster_id}.", "Differential Volcano")
+        return empty_figure(f"No differential result for Cluster {cluster_id}.", "Differential Volcano")
 
     df["t_pvalue"] = pd.to_numeric(df["t_pvalue"], errors="coerce").fillna(1.0)
     df["logFC"] = pd.to_numeric(df["logFC"], errors="coerce").fillna(0.0)
@@ -53,4 +58,8 @@ def render_svg(volcano_path: str, cluster_id: int, logfc_threshold: float = 0.5,
     set_2d_plot_box(ax)
     ax.legend(loc="upper right", frameon=True, facecolor="white", edgecolor="#222222")
     fig.tight_layout()
-    return figure_to_svg(fig)
+    return fig
+
+
+def render_svg(volcano_path: str, cluster_id: int, logfc_threshold: float = 0.5, p_threshold: float = 0.05) -> str:
+    return figure_to_svg(build_figure(volcano_path, cluster_id, logfc_threshold, p_threshold))

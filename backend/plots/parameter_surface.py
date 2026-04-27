@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LightSource, LinearSegmentedColormap
 from scipy.interpolate import griddata
 
-from .base import SURFACE_COLORS, configure_matplotlib, empty_svg, figure_to_svg, set_2d_plot_box
+from .base import SURFACE_COLORS, configure_matplotlib, empty_figure, figure_to_svg, set_2d_plot_box
 
 
 def _maybe_log_axis(values: np.ndarray) -> tuple[np.ndarray, bool]:
@@ -63,10 +63,10 @@ def _interpolated_surface(x: np.ndarray, y: np.ndarray, z: np.ndarray) -> tuple[
     return x_grid, y_grid, z_grid
 
 
-def render_svg(results_path: str, x_param: str, y_param: str | None = None) -> str:
+def build_figure(results_path: str, x_param: str, y_param: str | None = None) -> plt.Figure:
     df = pd.read_parquet(results_path)
     if df.empty or x_param not in df.columns or "score" not in df.columns:
-        return empty_svg("No parameter search result available.", "Parameter Sensitivity")
+        return empty_figure("No parameter search result available.", "Parameter Sensitivity")
 
     configure_matplotlib()
 
@@ -80,11 +80,11 @@ def render_svg(results_path: str, x_param: str, y_param: str | None = None) -> s
         set_2d_plot_box(ax)
         ax.grid(True, linestyle="--", alpha=0.28)
         fig.tight_layout()
-        return figure_to_svg(fig)
+        return fig
 
     data = df[[x_param, y_param, "score"]].dropna().copy()
     if data.empty:
-        return empty_svg("No complete 3D parameter combinations available.", "Parameter Sensitivity")
+        return empty_figure("No complete 3D parameter combinations available.", "Parameter Sensitivity")
 
     x = data[x_param].astype(float).to_numpy()
     y = data[y_param].astype(float).to_numpy()
@@ -147,4 +147,8 @@ def render_svg(results_path: str, x_param: str, y_param: str | None = None) -> s
     ax.set_zlim(0, z_ceil)
     plt.subplots_adjust(left=0.25, right=0.9, bottom=0.1, top=0.9)
     fig.tight_layout(rect=[0.25, 0, 0.95, 0.95])
-    return figure_to_svg(fig)
+    return fig
+
+
+def render_svg(results_path: str, x_param: str, y_param: str | None = None) -> str:
+    return figure_to_svg(build_figure(results_path, x_param, y_param))
