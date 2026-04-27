@@ -19,9 +19,5 @@ export default defineNuxtConfig({
     port: 3000 //可以在这里修改端口号
   },
 
-  routeRules: { //增加代理配置
-    '/api/**': { proxy: 'http://127.0.0.1:8000/api/**' } //这里写后端的本地地址即可，因为后端和Nuxt通常在同一台机器上运行
-  },
-
   ssr: false //关闭SSR，退化成纯SPA模式
 })

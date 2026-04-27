@@ -1,4 +1,4 @@
-import http from './http'
+import http, { API_BASE_URL } from './http'
 
 /** 上传组学/临床数据 */
 export function uploadOmics(formData: FormData) {
@@ -116,7 +116,7 @@ export function renderParameterSurface(params: {
 export function cleanupSession(sessionId: string) {
   const formData = new FormData()
   formData.append('session_id', sessionId)
-  navigator.sendBeacon('/api/cleanup', formData)
+  navigator.sendBeacon(`${API_BASE_URL}/cleanup`, formData)
 }
 
 export function downloadPlot(params: {
