@@ -30,6 +30,7 @@ watch(psResult, async (val) => {
 
     <template v-if="!isTestMode && backendResponse">
       <ResultsEvaluationMetrics />
+      <ResultsClinicalMetrics />
       <div class="results-grid mt-8">
         <ResultsClusteringView />
         <ResultsDifferentialView />

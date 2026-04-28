@@ -1,4 +1,4 @@
-import { computeMetrics, evaluateCustom, renderClusterScatter, runAlgorithm, runParameterSearch } from '~/utils/api'
+import { computeClinicalMetrics, computeMetrics, evaluateCustom, renderClusterScatter, runAlgorithm, runParameterSearch } from '~/utils/api'
 import { useSession } from '~/composables/core/useSession'
 import { useUIState } from '~/composables/core/useUIState'
 import { useDataState } from '~/composables/domain/useDataState'
@@ -64,6 +64,21 @@ export function useAnalysisActions() {
       session_id: sessionId.value,
     })
 
+    let clinicalMetrics: any = null
+    if (clinicalFile.value) {
+      analysisStatus.value = '正在计算临床评价指标...'
+      try {
+        const clinicalMetricsRes = await computeClinicalMetrics({
+          session_id: sessionId.value,
+        })
+        clinicalMetrics = clinicalMetricsRes.data?.data?.clinical_metrics || null
+      } catch (error: any) {
+        clinicalMetrics = {
+          error: error.response?.data?.detail || '临床评价指标计算失败',
+        }
+      }
+    }
+
     analysisStatus.value = '正在绘制聚类散点图...'
     const plotRes = await renderClusterScatter({
       session_id: sessionId.value,
@@ -75,6 +90,7 @@ export function useAnalysisActions() {
       ...metricsRes.data,
       data: {
         ...metricsRes.data.data,
+        clinical_metrics: clinicalMetrics,
         reduction: currentReduction.value,
         plots: {
           cluster_scatter: plotRes.data.svg,

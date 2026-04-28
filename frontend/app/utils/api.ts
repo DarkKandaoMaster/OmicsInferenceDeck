@@ -34,6 +34,13 @@ export function computeMetrics(params: {
   return http.post('/metrics', params)
 }
 
+/** 计算临床评价指标（LRT / ECP） */
+export function computeClinicalMetrics(params: {
+  session_id: string
+}) {
+  return http.post('/metrics/clinical', params)
+}
+
 /** 绘制聚类散点图 */
 export function renderClusterScatter(params: {
   session_id: string
