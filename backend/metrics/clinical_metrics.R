@@ -71,20 +71,6 @@ emit_error <- function(message) {
   emit_json(list(error = message))
 }
 
-script_dir <- function() {
-  command_args <- commandArgs(trailingOnly = FALSE)
-  file_arg <- command_args[grepl("^--file=", command_args)]
-  if (length(file_arg) > 0) {
-    script_path <- sub("^--file=", "", file_arg[[1]])
-    return(dirname(normalizePath(script_path, mustWork = FALSE)))
-  }
-  getwd()
-}
-
-write_json_file <- function(path, payload) {
-  writeLines(to_json(payload), con = path, useBytes = TRUE)
-}
-
 finite_or_na <- function(value) {
   value <- suppressWarnings(as.numeric(value[1]))
   if (is.na(value) || !is.finite(value)) {
@@ -425,14 +411,6 @@ tryCatch(
     }
 
     ecp <- compute_ecp(df)
-    debug_path <- file.path(script_dir(), "ecp_metrics_debug.json")
-    tryCatch(
-      write_json_file(debug_path, ecp),
-      error = function(error) {
-        message(paste0("Failed to write ECP debug JSON: ", conditionMessage(error)))
-      }
-    )
-
     payload <- list(
       lrt = compute_lrt(df),
       ecp = ecp,
