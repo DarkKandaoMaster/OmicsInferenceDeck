@@ -1,9 +1,11 @@
 # Calculate clinical clustering metrics from a merged clinical/cluster parquet.
 # Usage: Rscript clinical_metrics.R <merged_clinical_cluster.parquet>
 
-library(arrow)
-library(survival)
-library(gtsummary)
+suppressPackageStartupMessages({
+  library(arrow)
+  library(survival)
+  library(gtsummary)
+})
 
 json_escape <- function(value) {
   value <- as.character(value)
