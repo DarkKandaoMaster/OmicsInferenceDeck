@@ -284,7 +284,7 @@ compute_ecp <- function(df, alpha = 0.05) {
   list(
     method = "gtsummary::tbl_summary + add_p",
     total_parameters = length(results),
-    significant_count = sum(finite_p_values < alpha),
+    significant_count = sum(vapply(results, function(item) isTRUE(item$significant), logical(1))),
     significance_level = alpha,
     min_p_value = min_p_value,
     skipped_parameters = max(prepared$candidate_count - length(results), 0),
