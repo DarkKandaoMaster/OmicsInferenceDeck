@@ -122,6 +122,7 @@ export function useAnalysisActions() {
 
     try {
       if (!isOmicsUploaded.value) await doUploadOmics(sessionId.value)
+      if (clinicalFile.value && !isClinicalUploaded.value) await doUploadClinical(sessionId.value)
 
       await runAlgorithm({
         algorithm: selectedAlgorithm.value[0]!,
