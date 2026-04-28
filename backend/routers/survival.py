@@ -1,3 +1,10 @@
+"""根据聚类结果和临床数据准备生存分析结果。
+
+本文件读取 upload.py 保存的临床数据，以及 run.py 或 evaluate_run.py 生成的
+cluster_result.parquet，把样本的生存时间、结局和聚类标签合并起来。合并后的
+数据会保存为 survival 数据文件，并返回可在前端显示的生存曲线 SVG。
+"""
+
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel

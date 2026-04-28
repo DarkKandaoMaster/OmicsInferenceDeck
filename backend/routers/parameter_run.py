@@ -1,3 +1,10 @@
+"""批量测试算法参数并记录参数效果。
+
+本文件读取 upload.py 保存的组学数据和临床数据，对前端给出的参数组合逐一运行
+聚类算法，并用临床生存信息计算每组参数的分数。结果会保存为 parameter_search
+文件，供 plots.py 绘制参数敏感性图。
+"""
+
 import itertools
 import numpy as np
 import pandas as pd
