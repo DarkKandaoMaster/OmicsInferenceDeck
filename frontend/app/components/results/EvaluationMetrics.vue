@@ -14,8 +14,12 @@ const metrics = computed(() => backendResponse.value?.data?.metrics)
     <div class="p-6">
       <div class="grid grid-cols-3 gap-5 max-[900px]:grid-cols-2 max-[560px]:grid-cols-1">
         <div class="metric-card">
-          <div class="metric-label">Silhouette Score</div>
+          <div class="metric-label">Silhouette Score (Sample Avg)</div>
           <div class="metric-value">{{ metrics.silhouette ?? 'N/A' }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Silhouette Score (Cluster Avg)</div>
+          <div class="metric-value">{{ metrics.silhouette_cluster ?? 'N/A' }}</div>
         </div>
         <div class="metric-card">
           <div class="metric-label">Calinski-Harabasz</div>

@@ -11,7 +11,7 @@ from plots.base import CLUSTER_RESULT_FILE, plot_path
 
 router = APIRouter()
 METRICS_SCRIPT = Path(__file__).resolve().parents[1] / "metrics" / "cluster_metrics.R"
-METRIC_KEYS = ("silhouette", "calinski", "davies", "dunn", "xb", "s_dbw")
+METRIC_KEYS = ("silhouette", "silhouette_cluster", "calinski", "davies", "dunn", "xb", "s_dbw")
 
 
 class MetricsRequest(BaseModel):

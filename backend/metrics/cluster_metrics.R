@@ -1,10 +1,11 @@
 # Calculate clustering metrics for a persisted cluster_result.parquet file.
 # Usage: Rscript cluster_metrics.R <parquet_file>
 
-library(arrow)
-library(clusterCrit)
+suppressWarnings(suppressMessages(library(arrow)))
+suppressWarnings(suppressMessages(library(cluster)))
+suppressWarnings(suppressMessages(library(clusterCrit)))
 
-metric_keys <- c("silhouette", "calinski", "davies", "dunn", "xb", "s_dbw")
+metric_keys <- c("silhouette", "silhouette_cluster", "calinski", "davies", "dunn", "xb", "s_dbw")
 
 fallback_metrics <- function() {
   values <- as.list(rep(-1, length(metric_keys)))
@@ -88,6 +89,17 @@ compute_metric <- function(embeddings, labels, criterion, field_name) {
   round_or_null(score)
 }
 
+compute_sklearn_silhouette <- function(embeddings, labels) {
+  score <- tryCatch(
+    {
+      sil <- cluster::silhouette(labels, stats::dist(embeddings))
+      mean(sil[, "sil_width"])
+    },
+    error = function(e) NA_real_
+  )
+  round_or_null(score)
+}
+
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 1) {
   emit_error("Usage: Rscript cluster_metrics.R <parquet_file>")
@@ -133,7 +145,8 @@ tryCatch(
     labels <- as.integer(factor(labels))
 
     metrics <- list(
-      silhouette = compute_metric(embeddings, labels, "Silhouette", "silhouette"),
+      silhouette = compute_sklearn_silhouette(embeddings, labels),
+      silhouette_cluster = compute_metric(embeddings, labels, "Silhouette", "silhouette"),
       calinski = compute_metric(embeddings, labels, "Calinski_Harabasz", "calinski_harabasz"),
       davies = compute_metric(embeddings, labels, "Davies_Bouldin", "davies_bouldin"),
       dunn = compute_metric(embeddings, labels, "Dunn", "dunn"),
