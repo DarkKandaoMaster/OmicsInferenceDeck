@@ -1,4 +1,5 @@
 .vscode/*
 .pylintrc
+.lintr
 __pycache__/
 /README_old.md
