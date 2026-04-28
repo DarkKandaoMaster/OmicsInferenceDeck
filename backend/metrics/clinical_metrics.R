@@ -235,20 +235,12 @@ compute_ecp <- function(df, alpha = 0.05) {
     ))
   }
 
-  test_arg <- list()
-  if (length(prepared$discrete_vars) > 0) {
-    test_arg <- c(test_arg, list(gtsummary::all_categorical() ~ "chisq.test"))
-  }
-  if (length(prepared$numerical_vars) > 0) {
-    test_arg <- c(test_arg, list(gtsummary::all_continuous() ~ "kruskal.test"))
-  }
-
   table <- gtsummary::tbl_summary(
     data = prepared$data,
     by = "Cluster",
     missing = "no"
   )
-  table <- gtsummary::add_p(table, test = test_arg)
+  table <- gtsummary::add_p(table)
   table_body <- as.data.frame(table$table_body)
   label_rows <- table_body[table_body$row_type == "label", , drop = FALSE]
 
@@ -257,7 +249,16 @@ compute_ecp <- function(df, alpha = 0.05) {
     variable <- as.character(label_rows$variable[[row_index]])
     p_value <- if ("p.value" %in% names(label_rows)) finite_or_na(label_rows[["p.value"]][[row_index]]) else NA_real_
     parameter_type <- if (variable %in% prepared$discrete_vars) "discrete" else "numerical"
-    test_name <- if (parameter_type == "discrete") "chisq.test" else "kruskal.test"
+    test_name <- if ("test_name" %in% names(label_rows)) {
+      as.character(label_rows$test_name[[row_index]])
+    } else if ("test" %in% names(label_rows)) {
+      as.character(label_rows$test[[row_index]])
+    } else {
+      "gtsummary default"
+    }
+    if (is.na(test_name) || trimws(test_name) == "") {
+      test_name <- "gtsummary default"
+    }
     label <- if ("label" %in% names(label_rows)) as.character(label_rows$label[[row_index]]) else variable
 
     results[[length(results) + 1]] <- list(
