@@ -59,14 +59,14 @@ export function useAnalysisActions() {
   }
 
   async function loadMetricsAndScatter() {
-    analysisStatus.value = '正在计算聚类指标...'
+    analysisStatus.value = '正在计算聚类评估指标...'
     const metricsRes = await computeMetrics({
       session_id: sessionId.value,
     })
 
     let clinicalMetrics: any = null
     if (clinicalFile.value) {
-      analysisStatus.value = '正在计算临床评价指标...'
+      analysisStatus.value = '正在计算临床评估指标...'
       try {
         const clinicalMetricsRes = await computeClinicalMetrics({
           session_id: sessionId.value,
@@ -134,12 +134,13 @@ export function useAnalysisActions() {
     isLoading.value = true
     clearError()
     backendResponse.value = null
-    analysisStatus.value = '正在运行聚类分析...'
+    analysisStatus.value = '正在上传数据...'
 
     try {
       if (!isOmicsUploaded.value) await doUploadOmics(sessionId.value)
       if (clinicalFile.value && !isClinicalUploaded.value) await doUploadClinical(sessionId.value)
 
+      analysisStatus.value = '正在跑算法...'
       await runAlgorithm({
         algorithm: selectedAlgorithm.value[0]!,
         timestamp: new Date().toISOString(),

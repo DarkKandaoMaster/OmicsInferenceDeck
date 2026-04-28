@@ -1,6 +1,10 @@
 # Calculate clinical clustering metrics from a merged clinical/cluster parquet.
 # Usage: Rscript clinical_metrics.R <merged_clinical_cluster.parquet>
 
+library(arrow)
+library(survival)
+library(gtsummary)
+
 json_escape <- function(value) {
   value <- as.character(value)
   value <- gsub("\\", "\\\\", value, fixed = TRUE)
@@ -112,14 +116,6 @@ is_integer_like <- function(values) {
     return(FALSE)
   }
   all(abs(values - round(values)) < 1e-8)
-}
-
-require_packages <- function(packages) {
-  for (package in packages) {
-    if (!requireNamespace(package, quietly = TRUE)) {
-      stop(paste0("R package '", package, "' is required."))
-    }
-  }
 }
 
 compute_lrt <- function(df) {
@@ -398,8 +394,6 @@ if (length(args) < 1) {
 
 tryCatch(
   {
-    require_packages(c("arrow", "survival", "gtsummary"))
-
     df <- as.data.frame(suppressWarnings(suppressMessages(
       arrow::read_parquet(args[1], as_data_frame = TRUE)
     )))
