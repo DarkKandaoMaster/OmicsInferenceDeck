@@ -44,9 +44,6 @@ app.include_router(upload_router)
 from routers.run import router as run_router
 app.include_router(run_router)
 
-from routers.evaluate_run import router as evaluate_run_router
-app.include_router(evaluate_run_router)
-
 from routers.metrics import router as metrics_router
 app.include_router(metrics_router)
 
