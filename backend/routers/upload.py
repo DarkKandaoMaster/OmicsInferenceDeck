@@ -4,12 +4,72 @@
 import os
 import json
 import shutil
-import joblib
 import pandas as pd
 import numpy as np
 from fastapi import APIRouter, HTTPException, File, UploadFile, Form
 from typing import List
 from cleanup import cleanup_temp_files
+from pathlib import Path
+from typing import Any
+
+OMICS_DATA_FILE = "omics_data.parquet"
+CLINICAL_DATA_FILE = "clinical_data.parquet"
+OMICS_META_FILE = "omics_data.json"
+CLINICAL_META_FILE = "clinical_data.json"
+
+
+def input_data_files(file_type: str) -> tuple[str, str]:
+    if file_type == "omics":
+        return OMICS_DATA_FILE, OMICS_META_FILE
+    return CLINICAL_DATA_FILE, CLINICAL_META_FILE
+
+
+def _metadata_path(parquet_path: str | Path) -> Path:
+    path = Path(parquet_path)
+    return path.with_suffix(".json")
+
+
+def save_frame_dict(data: dict[str, pd.DataFrame], parquet_path: str | Path, metadata_path: str | Path | None = None) -> None:
+    parquet_path = Path(parquet_path)
+    metadata_path = Path(metadata_path) if metadata_path is not None else _metadata_path(parquet_path)
+    parquet_path.parent.mkdir(parents=True, exist_ok=True)
+
+    stored_frames: list[pd.DataFrame] = []
+    metadata: dict[str, Any] = {"version": 1, "frames": []}
+    for frame_index, (key, df) in enumerate(data.items()):
+        stored = df.copy()
+        columns = []
+        for column_index, column_name in enumerate(stored.columns):
+            storage_name = f"frame_{frame_index}__col_{column_index}"
+            columns.append({"storage_name": storage_name, "name": str(column_name)})
+        stored.columns = [column["storage_name"] for column in columns]
+        stored_frames.append(stored)
+        metadata["frames"].append({"key": str(key), "columns": columns})
+
+    combined = pd.concat(stored_frames, axis=1, join="outer") if stored_frames else pd.DataFrame()
+    combined.index.name = combined.index.name or "sample_name"
+    combined.to_parquet(parquet_path, index=True)
+    metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def load_frame_dict(parquet_path: str | Path, metadata_path: str | Path | None = None) -> dict[str, pd.DataFrame]:
+    parquet_path = Path(parquet_path)
+    metadata_path = Path(metadata_path) if metadata_path is not None else _metadata_path(parquet_path)
+    combined = pd.read_parquet(parquet_path)
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+
+    data: dict[str, pd.DataFrame] = {}
+    for frame_meta in metadata.get("frames", []):
+        columns = frame_meta.get("columns", [])
+        storage_names = [column["storage_name"] for column in columns]
+        display_names = [column["name"] for column in columns]
+        frame = combined.loc[:, storage_names].copy()
+        frame.columns = display_names
+        data[str(frame_meta["key"])] = frame.dropna(how="all")
+    return data
+
+
+
 
 # 创建路由器实例
 router=APIRouter()
@@ -197,11 +257,15 @@ async def upload_file(   files:List[UploadFile]=File(...)   ,   data_format:str=
                 if len(non_numeric_cols)>0:
                     raise ValueError(f"检测到以下列包含非数字内容: {non_numeric_cols}。请确保这两个列只包含数字。")
 
-            # 接下来我们要把字典data_dict保存为joblib二进制文件
-            final_file_location=os.path.join(UPLOAD_PATH,   "omics_data.joblib" if file_type=="omics" else "clinical_data.joblib"   )
-            if os.path.exists(final_file_location): #如果已经存在该类型文件（omics_data.joblib或者clinical_data.joblib），那么说明这是用户重新上传该类型文件，需要先删除旧的本地文件
-                os.remove(final_file_location)
-            joblib.dump(data_dict, final_file_location)
+            # 保存输入数据：DataFrame 内容写入 parquet，字典结构等元数据写入 JSON。
+            parquet_filename, metadata_filename = input_data_files(file_type)
+            final_file_location=os.path.join(UPLOAD_PATH, parquet_filename)
+            final_metadata_location=os.path.join(UPLOAD_PATH, metadata_filename)
+            legacy_joblib_location=os.path.join(UPLOAD_PATH, "omics_data.joblib" if file_type=="omics" else "clinical_data.joblib")
+            for existing_path in (final_file_location, final_metadata_location, legacy_joblib_location):
+                if os.path.exists(existing_path):
+                    os.remove(existing_path)
+            save_frame_dict(data_dict, final_file_location, final_metadata_location)
             # # 5.接下来我们要把合并后的文件保存到本地
             # final_filename=f"{uuid.uuid4()}.csv" #给合并后的文件起个名
             # final_file_location=os.path.join(UPLOAD_PATH,final_filename) #得到合并后的文件的保存路径
