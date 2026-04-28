@@ -122,7 +122,7 @@ async def run_analysis(request:AnalysisRequest): #指定record的类型为Analys
 """自定义算法结果评估，导入用户自己的聚类结果并纳入统一评价流程。
 
 本文件用于用户已经在外部完成聚类的情况。它接收用户上传的结果文件，检查样本是否
-能和 upload.py 保存的组学数据、临床数据对应上，然后保存成和 run.py 相同格式的
+能和 upload.py 保存的组学数据、临床数据对应上，然后保存成和 /api/run 相同格式的
 cluster_result.parquet。这样 metrics.py、cluster_scatter.py 等后续接口可以继续使用。
 """
 
