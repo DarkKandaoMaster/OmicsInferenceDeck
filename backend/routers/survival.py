@@ -1,11 +1,9 @@
-import numpy as np
 import pandas as pd
 from fastapi import APIRouter, HTTPException
-from lifelines.statistics import multivariate_logrank_test
 from pydantic import BaseModel
 from routers.upload import CLINICAL_DATA_FILE, load_frame_dict
 
-from plots.base import CLUSTER_RESULT_FILE, SURVIVAL_DATA_FILE, empty_svg, plot_path, write_json
+from plots.base import CLUSTER_RESULT_FILE, SURVIVAL_DATA_FILE, empty_svg, plot_path, read_json
 from plots.survival_curve import render_svg as render_survival_svg
 
 
@@ -48,15 +46,12 @@ async def run_survival_analysis(request: SurvivalRequest):
         if merged_df.empty:
             raise ValueError("Matched clinical data contains no valid OS/OS.time rows.")
 
-        p_value: float | None = None
-        if merged_df["Cluster"].nunique() >= 2:
-            results = multivariate_logrank_test(merged_df["OS.time"], merged_df["Cluster"], merged_df["OS"])
-            p_value = float(results.p_value) if np.isfinite(results.p_value) else None
-
         survival_data = merged_df.reset_index().rename(columns={"index": "sample_name"})
         survival_path = plot_path(request.session_id, SURVIVAL_DATA_FILE)
         survival_data.to_parquet(survival_path, index=False)
-        write_json(plot_path(request.session_id, "survival_meta.json"), {"p_value": p_value})
+
+        meta_path = plot_path(request.session_id, "survival_meta.json")
+        p_value = read_json(meta_path).get("p_value") if meta_path.exists() else None
 
         lost_samples = int(len(cluster_df) - len(merged_df))
         try:
