@@ -82,7 +82,7 @@ async def run_analysis(request:AnalysisRequest): #指定record的类型为Analys
         #   sample_names — 长度 n_samples 的列表，样本名称
         labels, embeddings, sample_names = algo_instance.fit_predict(data_dict)
 
-        # 4. 将中间结果持久化到 cluster_result.parquet，供 /api/metrics、/api/plots/cluster_scatter 和 analysis.R 读取
+        # 4. 将中间结果持久化到 cluster_result.parquet，供 /api/metrics 和 /api/plots/cluster_scatter 读取
         n_features = embeddings.shape[1]
         df_result = pd.DataFrame(
             embeddings,
