@@ -71,12 +71,47 @@ emit_error <- function(message) {
   emit_json(list(error = message))
 }
 
+script_dir <- function() {
+  command_args <- commandArgs(trailingOnly = FALSE)
+  file_arg <- command_args[grepl("^--file=", command_args)]
+  if (length(file_arg) > 0) {
+    script_path <- sub("^--file=", "", file_arg[[1]])
+    return(dirname(normalizePath(script_path, mustWork = FALSE)))
+  }
+  getwd()
+}
+
+write_json_file <- function(path, payload) {
+  writeLines(to_json(payload), con = path, useBytes = TRUE)
+}
+
 finite_or_na <- function(value) {
   value <- suppressWarnings(as.numeric(value[1]))
   if (is.na(value) || !is.finite(value)) {
     return(NA_real_)
   }
   value
+}
+
+p_value_or_na <- function(value) {
+  if (is.null(value) || length(value) == 0) {
+    return(NA_real_)
+  }
+
+  if (is.numeric(value) || is.integer(value)) {
+    return(finite_or_na(value))
+  }
+
+  text <- as.character(value[1])
+  if (is.na(text) || trimws(text) == "") {
+    return(NA_real_)
+  }
+
+  text <- trimws(text)
+  text <- sub("^<\\s*", "", text)
+  text <- sub("^<=\\s*", "", text)
+  text <- gsub(",", "", text, fixed = TRUE)
+  finite_or_na(text)
 }
 
 clean_text <- function(values) {
@@ -219,6 +254,64 @@ prepare_ecp_data <- function(df) {
   )
 }
 
+get_gtsummary_table_body <- function(summary_table) {
+  table_body <- tryCatch(summary_table[["table_body"]], error = function(error) NULL)
+  if (is.null(table_body)) {
+    table_body <- tryCatch(summary_table$table_body, error = function(error) NULL)
+  }
+  if (is.null(table_body)) {
+    return(data.frame())
+  }
+  as.data.frame(table_body)
+}
+
+manual_ecp_p_value <- function(data, variable, parameter_type) {
+  variable_df <- data[, c("Cluster", variable), drop = FALSE]
+  variable_df[["Cluster"]] <- droplevels(as.factor(variable_df[["Cluster"]]))
+  variable_df <- variable_df[complete.cases(variable_df), , drop = FALSE]
+
+  if (nrow(variable_df) < 2 || nlevels(variable_df[["Cluster"]]) < 2) {
+    return(list(p_value = NA_real_, test = NA_character_))
+  }
+
+  if (identical(parameter_type, "numerical")) {
+    values <- suppressWarnings(as.numeric(variable_df[[variable]]))
+    valid_mask <- !is.na(values) & !is.na(variable_df[["Cluster"]])
+    values <- values[valid_mask]
+    groups <- droplevels(variable_df[["Cluster"]][valid_mask])
+
+    if (length(values) < 2 || nlevels(groups) < 2 || length(unique(values)) < 2) {
+      return(list(p_value = NA_real_, test = "kruskal.test"))
+    }
+
+    p_value <- tryCatch(
+      stats::kruskal.test(values, groups)$p.value,
+      error = function(error) NA_real_
+    )
+    return(list(p_value = finite_or_na(p_value), test = "kruskal.test"))
+  }
+
+  groups <- droplevels(as.factor(variable_df[["Cluster"]]))
+  values <- droplevels(as.factor(variable_df[[variable]]))
+  contingency <- table(values, groups)
+  contingency <- contingency[rowSums(contingency) > 0, colSums(contingency) > 0, drop = FALSE]
+
+  if (nrow(contingency) < 2 || ncol(contingency) < 2) {
+    return(list(p_value = NA_real_, test = "fisher.test"))
+  }
+
+  p_value <- tryCatch(
+    stats::fisher.test(contingency)$p.value,
+    error = function(error) {
+      tryCatch(
+        stats::fisher.test(contingency, simulate.p.value = TRUE, B = 10000)$p.value,
+        error = function(error) NA_real_
+      )
+    }
+  )
+  list(p_value = finite_or_na(p_value), test = "fisher.test")
+}
+
 compute_ecp <- function(df, alpha = 0.05) {
   prepared <- prepare_ecp_data(df)
   prepared_vars <- prepared$prepared_vars
@@ -240,14 +333,25 @@ compute_ecp <- function(df, alpha = 0.05) {
     by = "Cluster",
     missing = "no"
   )
-  table <- gtsummary::add_p(table)
-  table_body <- as.data.frame(table$table_body)
+  table <- tryCatch(
+    suppressWarnings(suppressMessages(gtsummary::add_p(table))),
+    error = function(error) table
+  )
+  table_body <- get_gtsummary_table_body(table)
   label_rows <- table_body[table_body$row_type == "label", , drop = FALSE]
 
   results <- list()
   for (row_index in seq_len(nrow(label_rows))) {
     variable <- as.character(label_rows$variable[[row_index]])
-    p_value <- if ("p.value" %in% names(label_rows)) finite_or_na(label_rows[["p.value"]][[row_index]]) else NA_real_
+    p_value <- if ("p.value" %in% names(label_rows)) {
+      p_value_or_na(label_rows[["p.value"]][[row_index]])
+    } else if ("p_value" %in% names(label_rows)) {
+      p_value_or_na(label_rows[["p_value"]][[row_index]])
+    } else if ("**p-value**" %in% names(label_rows)) {
+      p_value_or_na(label_rows[["**p-value**"]][[row_index]])
+    } else {
+      NA_real_
+    }
     parameter_type <- if (variable %in% prepared$discrete_vars) "discrete" else "numerical"
     test_name <- if ("test_name" %in% names(label_rows)) {
       as.character(label_rows$test_name[[row_index]])
@@ -261,7 +365,14 @@ compute_ecp <- function(df, alpha = 0.05) {
     }
     label <- if ("label" %in% names(label_rows)) as.character(label_rows$label[[row_index]]) else variable
 
-    results[[length(results) + 1]] <- list(
+    if (is.na(p_value)) {
+      manual_result <- manual_ecp_p_value(prepared$data, variable, parameter_type)
+      p_value <- manual_result$p_value
+      if (!is.na(manual_result$test)) {
+        test_name <- manual_result$test
+      }
+    }
+ results[[length(results) + 1]] <- list(
       variable = variable,
       label = label,
       parameter_type = parameter_type,
@@ -313,9 +424,18 @@ tryCatch(
       stop(paste0("Required column(s) missing: ", paste(missing_columns, collapse = ", ")))
     }
 
+    ecp <- compute_ecp(df)
+    debug_path <- file.path(script_dir(), "ecp_metrics_debug.json")
+    tryCatch(
+      write_json_file(debug_path, ecp),
+      error = function(error) {
+        message(paste0("Failed to write ECP debug JSON: ", conditionMessage(error)))
+      }
+    )
+
     payload <- list(
       lrt = compute_lrt(df),
-      ecp = compute_ecp(df),
+      ecp = ecp,
       n_samples = nrow(df)
     )
     emit_json(payload)
