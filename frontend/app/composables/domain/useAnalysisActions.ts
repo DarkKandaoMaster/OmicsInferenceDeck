@@ -1,4 +1,4 @@
-import { evaluateCustom, runAlgorithm, runAnalysis as apiRunAnalysis, runParameterSearch } from '~/utils/api'
+import { computeMetrics, evaluateCustom, renderClusterScatter, runAlgorithm, runParameterSearch } from '~/utils/api'
 import { useSession } from '~/composables/core/useSession'
 import { useUIState } from '~/composables/core/useUIState'
 import { useDataState } from '~/composables/domain/useDataState'
@@ -58,6 +58,31 @@ export function useAnalysisActions() {
     }
   }
 
+  async function loadMetricsAndScatter() {
+    analysisStatus.value = '正在计算聚类指标...'
+    const metricsRes = await computeMetrics({
+      session_id: sessionId.value,
+    })
+
+    analysisStatus.value = '正在绘制聚类散点图...'
+    const plotRes = await renderClusterScatter({
+      session_id: sessionId.value,
+      reduction: currentReduction.value,
+      random_state: randomSeed.value,
+    })
+
+    backendResponse.value = {
+      ...metricsRes.data,
+      data: {
+        ...metricsRes.data.data,
+        reduction: currentReduction.value,
+        plots: {
+          cluster_scatter: plotRes.data.svg,
+        },
+      },
+    }
+  }
+
   async function runAnalysisFlow() {
     if (isCustomEvalMode.value) {
       if (!customEvalFile.value) { alert('请先选择结果数据文件。'); return }
@@ -76,13 +101,7 @@ export function useAnalysisActions() {
         formData.append('session_id', sessionId.value)
 
         await evaluateCustom(formData)
-        const res = await apiRunAnalysis({
-          session_id: sessionId.value,
-          reduction: currentReduction.value,
-          random_state: randomSeed.value,
-        })
-
-        backendResponse.value = res.data
+        await loadMetricsAndScatter()
         await runDownstreamAnalyses()
       } catch (error: any) {
         setError(error.response?.data?.detail || '评估失败，请检查数据。')
@@ -114,14 +133,7 @@ export function useAnalysisActions() {
         n_neighbors: nNeighbors.value,
       })
 
-      analysisStatus.value = '正在计算指标与后端绘图...'
-      const res = await apiRunAnalysis({
-        session_id: sessionId.value,
-        reduction: currentReduction.value,
-        random_state: randomSeed.value,
-      })
-
-      backendResponse.value = res.data
+      await loadMetricsAndScatter()
       await runDownstreamAnalyses()
     } catch (error: any) {
       setError(error.response?.data?.detail || '连接后端失败或上传出错。')
@@ -137,12 +149,22 @@ export function useAnalysisActions() {
 
     isLoading.value = true
     try {
-      const res = await apiRunAnalysis({
+      const res = await renderClusterScatter({
         session_id: sessionId.value,
         reduction: currentReduction.value,
         random_state: randomSeed.value,
       })
-      backendResponse.value = res.data
+      backendResponse.value = {
+        ...backendResponse.value,
+        data: {
+          ...backendResponse.value?.data,
+          reduction: currentReduction.value,
+          plots: {
+            ...(backendResponse.value?.data?.plots || {}),
+            cluster_scatter: res.data.svg,
+          },
+        },
+      }
     } catch (error: any) {
       setError(error.response?.data?.detail || '降维切换失败。')
     } finally {

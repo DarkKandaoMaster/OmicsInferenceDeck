@@ -22,7 +22,6 @@ from plots.base import (
     session_dir,
 )
 from plots.cluster_scatter import build_figure as build_cluster_scatter_figure
-from plots.cluster_scatter import render_svg as render_cluster_scatter_svg
 from plots.differential_volcano import build_figure as build_volcano_figure
 from plots.differential_volcano import render_svg as render_volcano_svg
 from plots.parameter_surface import build_figure as build_parameter_figure
@@ -32,12 +31,6 @@ from plots.survival_curve import render_svg as render_survival_svg
 
 
 router = APIRouter()
-
-
-class ClusterPlotRequest(BaseModel):
-    session_id: str
-    reduction: str = "PCA"
-    random_state: int = 42
 
 
 class ClusterSpecificPlotRequest(BaseModel):
@@ -156,15 +149,6 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
         return payload, f"enrichment_{database.upper()}_bubble_{mode}"
 
     raise ValueError(f"Unsupported plot_type: {request.plot_type}")
-
-
-@router.post("/api/plots/cluster_scatter")
-async def cluster_scatter(request: ClusterPlotRequest):
-    try:
-        path = plot_path(request.session_id, CLUSTER_RESULT_FILE)
-        return {"status": "success", "svg": render_cluster_scatter_svg(str(path), request.reduction, request.random_state)}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/api/plots/differential_volcano")
