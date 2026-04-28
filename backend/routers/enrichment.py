@@ -1,3 +1,10 @@
+"""对差异分析得到的基因做 GO 或 KEGG 富集分析。
+
+本文件通常读取 differential.py 保存的 differential_volcano.parquet，从每个聚类中
+挑出显著基因，再用本地 GO/KEGG 参考文件做富集分析。结果会保存为 enrichment
+文件，并返回前端可显示的柱状图和气泡图 SVG。
+"""
+
 from pathlib import Path
 
 import gseapy as gp

@@ -1,3 +1,10 @@
+"""提供多种分析图的重新绘制和下载接口。
+
+本文件不直接重新运行分析算法，而是读取其他路由已经保存的结果文件，例如
+cluster_result.parquet、differential_volcano.parquet、survival 数据和 enrichment 结果。
+它把这些结果渲染成 SVG，或导出为前端下载所需的图片文件格式。
+"""
+
 import io
 import re
 

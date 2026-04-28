@@ -1,3 +1,10 @@
+"""比较不同聚类之间的组学特征差异。
+
+本文件读取 upload.py 保存的组学数据和 run.py 或 evaluate_run.py 生成的聚类结果，
+对每个聚类做“该聚类 vs 其他聚类”的差异分析。它会保存火山图和热图所需的数据，
+供 enrichment.py 继续做富集分析，也供 plots.py 重新绘图或下载。
+"""
+
 import numpy as np
 import pandas as pd
 from fastapi import APIRouter, HTTPException

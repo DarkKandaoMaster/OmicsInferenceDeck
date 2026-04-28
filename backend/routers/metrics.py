@@ -1,3 +1,10 @@
+"""计算聚类结果和临床结果的评价指标。
+
+本文件读取 run.py 或 evaluate_run.py 生成的 cluster_result.parquet，并调用 R 脚本
+计算聚类质量指标。它也会把聚类标签和 upload.py 保存的临床数据合并，计算临床
+相关指标，并把生存分析需要的 p 值写入 survival_meta.json，供 survival.py 和 plots.py 使用。
+"""
+
 import datetime
 import json
 import subprocess

@@ -1,3 +1,10 @@
+"""根据聚类结果生成样本散点图。
+
+本文件读取 run.py 或 evaluate_run.py 保存的 cluster_result.parquet，把高维特征用
+PCA、t-SNE 或 UMAP 等方法降到二维，并返回前端可以显示的 SVG。它只负责画图，
+不负责重新运行聚类算法。
+"""
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
