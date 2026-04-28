@@ -21,4 +21,6 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 R包：
 install.packages("devtools")
 install.packages("SNFtool")
+install.packages("survival")
+install.packages("gtsummary")
 devtools::install_github("Shamir-Lab/NEMO/NEMO")
