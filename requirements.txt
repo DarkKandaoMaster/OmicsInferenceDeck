@@ -10,7 +10,6 @@ snfpy
 umap-learn
 lifelines
 gseapy
-joblib
 python-multipart
 openpyxl
 pyarrow

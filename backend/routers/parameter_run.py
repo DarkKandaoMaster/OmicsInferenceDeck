@@ -1,7 +1,4 @@
-from __future__ import annotations
-
 import itertools
-import joblib
 import numpy as np
 import pandas as pd
 from fastapi import APIRouter, HTTPException
@@ -9,6 +6,7 @@ from lifelines.statistics import multivariate_logrank_test
 from pydantic import BaseModel
 
 from algorithms import load_algorithm
+from routers.upload import CLINICAL_DATA_FILE, OMICS_DATA_FILE, load_frame_dict
 from plots.base import PARAMETER_SEARCH_FILE, PARAMETER_SEARCH_META_FILE, empty_svg, plot_path, write_json
 from plots.parameter_surface import render_svg as render_parameter_svg
 
@@ -26,15 +24,15 @@ class ParameterSearchRequest(BaseModel):
 @router.post("/api/parameter_search")
 async def run_parameter_search(request: ParameterSearchRequest):
     try:
-        omics_path = plot_path(request.session_id, "omics_data.joblib")
-        clinical_path = plot_path(request.session_id, "clinical_data.joblib")
+        omics_path = plot_path(request.session_id, OMICS_DATA_FILE)
+        clinical_path = plot_path(request.session_id, CLINICAL_DATA_FILE)
         if not omics_path.exists():
-            raise FileNotFoundError("omics_data.joblib not found.")
+            raise FileNotFoundError("omics_data.parquet not found.")
         if not clinical_path.exists():
-            raise FileNotFoundError("clinical_data.joblib not found.")
+            raise FileNotFoundError("clinical_data.parquet not found.")
 
-        omics_dict = joblib.load(omics_path)
-        clinical_dict = joblib.load(clinical_path)
+        omics_dict = load_frame_dict(omics_path)
+        clinical_dict = load_frame_dict(clinical_path)
         clinical_df = list(clinical_dict.values())[0].copy()
         clinical_df.index = clinical_df.index.astype(str)
 

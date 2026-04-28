@@ -3,11 +3,11 @@
 # =============================================================================
 import os
 import datetime
-import joblib
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from algorithms import load_algorithm
+from routers.upload import OMICS_DATA_FILE, load_frame_dict
 
 # 创建路由器实例
 router=APIRouter()
@@ -59,12 +59,12 @@ async def run_analysis(request:AnalysisRequest): #指定record的类型为Analys
     try:
         # 1.读取"/api/upload"已经处理好的组学数据文件
         # file_path=os.path.join("upload",request.filename) #"/api/upload"已经处理好的组学数据文件的所在路径
-        # 【修改】加载 joblib 二进制字典
-        file_path=os.path.join("upload",request.session_id,"omics_data.joblib")
+        # 加载 parquet 输入数据和 JSON 元数据
+        file_path=os.path.join("upload",request.session_id,OMICS_DATA_FILE)
         if not os.path.exists(file_path): #检查该路径是否存在
             # raise FileNotFoundError(f"找不到文件: {request.filename}")
             raise FileNotFoundError(f"找不到组学数据文件，请先上传数据")
-        data_dict = joblib.load(file_path)
+        data_dict = load_frame_dict(file_path)
 
         # 2. 动态加载算法，并传入所有的参数实例化
         algo_class = load_algorithm(request.algorithm)

@@ -1,11 +1,9 @@
-from __future__ import annotations
-
-import joblib
 import numpy as np
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 from lifelines.statistics import multivariate_logrank_test
 from pydantic import BaseModel
+from routers.upload import CLINICAL_DATA_FILE, load_frame_dict
 
 from plots.base import CLUSTER_RESULT_FILE, SURVIVAL_DATA_FILE, empty_svg, plot_path, write_json
 from plots.survival_curve import render_svg as render_survival_svg
@@ -23,15 +21,15 @@ class SurvivalRequest(BaseModel):
 @router.post("/api/survival_analysis")
 async def run_survival_analysis(request: SurvivalRequest):
     try:
-        clinical_path = plot_path(request.session_id, "clinical_data.joblib")
+        clinical_path = plot_path(request.session_id, CLINICAL_DATA_FILE)
         if not clinical_path.exists():
-            raise FileNotFoundError("clinical_data.joblib not found. Please upload clinical data first.")
+            raise FileNotFoundError("clinical_data.parquet not found. Please upload clinical data first.")
 
         cluster_path = plot_path(request.session_id, CLUSTER_RESULT_FILE)
         if not cluster_path.exists():
             raise FileNotFoundError("cluster_result.parquet not found. Please run clustering first.")
 
-        clinical_dict = joblib.load(clinical_path)
+        clinical_dict = load_frame_dict(clinical_path)
         clinical_df = list(clinical_dict.values())[0].copy()
         clinical_df.index = clinical_df.index.astype(str)
 

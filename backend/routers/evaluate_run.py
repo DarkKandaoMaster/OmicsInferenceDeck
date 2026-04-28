@@ -4,10 +4,10 @@
 import os
 import shutil
 import datetime
-import joblib
 import pandas as pd
 from fastapi import APIRouter, HTTPException, File, UploadFile, Form
 from cleanup import cleanup_temp_files
+from routers.upload import CLINICAL_DATA_FILE, OMICS_DATA_FILE, load_frame_dict
 
 # 创建路由器实例
 router = APIRouter()
@@ -51,9 +51,9 @@ async def evaluate_custom(
         # 3. 与已上传的组学/临床数据取交集，过滤无效样本
         valid_samples = set(sample_names)
 
-        omics_path = os.path.join(UPLOAD_PATH, "omics_data.joblib")
+        omics_path = os.path.join(UPLOAD_PATH, OMICS_DATA_FILE)
         if os.path.exists(omics_path):
-            omics_dict = joblib.load(omics_path)
+            omics_dict = load_frame_dict(omics_path)
             omics_samples = set()
             for o_df in omics_dict.values():
                 if not omics_samples:
@@ -62,9 +62,9 @@ async def evaluate_custom(
                     omics_samples &= set(o_df.index.astype(str))
             valid_samples &= omics_samples
 
-        clinical_path = os.path.join(UPLOAD_PATH, "clinical_data.joblib")
+        clinical_path = os.path.join(UPLOAD_PATH, CLINICAL_DATA_FILE)
         if os.path.exists(clinical_path):
-            clinical_dict = joblib.load(clinical_path)
+            clinical_dict = load_frame_dict(clinical_path)
             clinical_df = list(clinical_dict.values())[0]
             valid_samples &= set(clinical_df.index.astype(str))
 

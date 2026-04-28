@@ -1,11 +1,9 @@
-from __future__ import annotations
-
-import joblib
 import numpy as np
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from scipy import stats
+from routers.upload import OMICS_DATA_FILE, load_frame_dict
 
 from plots.base import (
     CLUSTER_RESULT_FILE,
@@ -31,11 +29,11 @@ class DifferentialAnalysisRequest(BaseModel):
 
 
 def _load_omics_frame(session_id: str, omics_type: str) -> pd.DataFrame:
-    omics_path = plot_path(session_id, "omics_data.joblib")
+    omics_path = plot_path(session_id, OMICS_DATA_FILE)
     if not omics_path.exists():
-        raise FileNotFoundError("omics_data.joblib not found. Please upload omics data first.")
+        raise FileNotFoundError("omics_data.parquet not found. Please upload omics data first.")
 
-    data_dict = joblib.load(omics_path)
+    data_dict = load_frame_dict(omics_path)
     if omics_type == "All (Concatenated)":
         return pd.concat(list(data_dict.values()), axis=1, join="inner")
     if omics_type not in data_dict:
