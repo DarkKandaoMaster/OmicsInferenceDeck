@@ -1,9 +1,11 @@
 # Calculate clustering metrics for a persisted cluster_result.parquet file.
 # Usage: Rscript cluster_metrics.R <parquet_file>
 
-suppressWarnings(suppressMessages(library(arrow)))
-suppressWarnings(suppressMessages(library(cluster)))
-suppressWarnings(suppressMessages(library(clusterCrit)))
+suppressPackageStartupMessages({
+  library(arrow)
+  library(cluster)
+  library(clusterCrit)
+})
 
 metric_keys <- c("silhouette", "silhouette_cluster", "calinski", "davies", "dunn", "xb", "s_dbw")
 
