@@ -157,7 +157,7 @@ async def clinical_metrics(request: MetricsRequest):
         clinical_metrics_scores["lost_samples"] = lost_samples
 
         lrt = clinical_metrics_scores.get("lrt") or {}
-        write_json(plot_path(request.session_id, "survival_meta.json"), {"p_value": lrt.get("p_value")}) #方便后续绘制生存曲线时能显示这里计算出的p值
+        write_json(plot_path(request.session_id, "survival_meta.json"), {"p_value": lrt.get("p_value")}) #这样可以方便后续绘制生存曲线时显示这里的已经计算出的p值
 
         return {
             "status": "success",
