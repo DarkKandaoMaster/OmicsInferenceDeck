@@ -27,13 +27,20 @@ export function runAlgorithm(params: {
   return http.post('/run', params)
 }
 
-/** 计算指标 + 降维可视化 */
-export function runAnalysis(params: {
+/** 计算聚类数学指标 */
+export function computeMetrics(params: {
+  session_id: string
+}) {
+  return http.post('/metrics', params)
+}
+
+/** 绘制聚类散点图 */
+export function renderClusterScatter(params: {
   session_id: string
   reduction: string
   random_state: number
 }) {
-  return http.post('/analysis', params)
+  return http.post('/plots/cluster_scatter', params)
 }
 
 /** 自定义评估：解析结果文件 */

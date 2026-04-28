@@ -80,7 +80,7 @@ async def evaluate_custom(
         labels = df_filtered.iloc[:, 0].values
         embeddings = df_filtered.iloc[:, 1:].values
 
-        # 5. 持久化中间结果，供 /api/analysis 读取（Parquet 格式）
+        # 5. 持久化中间结果，供 /api/metrics 和 /api/plots/cluster_scatter 读取（Parquet 格式）
         n_features = embeddings.shape[1]
         df_result = pd.DataFrame(
             embeddings,
@@ -94,10 +94,10 @@ async def evaluate_custom(
         # 清理临时结果文件
         cleanup_temp_files(temp_paths)
 
-        # 6. 返回基础聚类信息（不含指标和散点图，由 /api/analysis 负责）
+        # 6. 返回基础聚类信息（不含指标和散点图，由独立指标/绘图接口负责）
         return {
             "status": "success",
-            "message": "自定义结果解析成功，请调用 /api/analysis 获取评估结果",
+            "message": "自定义结果解析成功，请调用 /api/metrics 获取指标，并调用 /api/plots/cluster_scatter 获取散点图",
             "server_time": datetime.datetime.now().isoformat(),
             "data": {
                 "method": "Custom Evaluation",

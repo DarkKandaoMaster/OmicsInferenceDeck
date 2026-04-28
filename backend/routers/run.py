@@ -82,7 +82,7 @@ async def run_analysis(request:AnalysisRequest): #指定record的类型为Analys
         #   sample_names — 长度 n_samples 的列表，样本名称
         labels, embeddings, sample_names = algo_instance.fit_predict(data_dict)
 
-        # 4. 将中间结果持久化到 cluster_result.parquet，供 /api/analysis 和 analysis.R 读取
+        # 4. 将中间结果持久化到 cluster_result.parquet，供 /api/metrics、/api/plots/cluster_scatter 和 analysis.R 读取
         n_features = embeddings.shape[1]
         df_result = pd.DataFrame(
             embeddings,
@@ -93,10 +93,10 @@ async def run_analysis(request:AnalysisRequest): #指定record的类型为Analys
         result_path = os.path.join("upload", request.session_id, "cluster_result.parquet")
         df_result.to_parquet(result_path, index=False)
 
-        # 5. 返回基础聚类信息（不含指标和散点图，由 /api/analysis 负责）
+        # 5. 返回基础聚类信息（不含指标和散点图，由独立指标/绘图接口负责）
         return {
             "status": "success",
-            "message": f"算法 {request.algorithm} 运行成功，请调用 /api/analysis 获取评估结果",
+            "message": f"算法 {request.algorithm} 运行成功，请调用 /api/metrics 获取指标，并调用 /api/plots/cluster_scatter 获取散点图",
             "server_time": datetime.datetime.now().isoformat(),
             "data": {
                 "method": request.algorithm,

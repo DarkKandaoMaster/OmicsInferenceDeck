@@ -47,8 +47,11 @@ app.include_router(run_router)
 from routers.evaluate_run import router as evaluate_run_router
 app.include_router(evaluate_run_router)
 
-from routers.analysis import router as analysis_router
-app.include_router(analysis_router)
+from routers.metrics import router as metrics_router
+app.include_router(metrics_router)
+
+from routers.cluster_scatter import router as cluster_scatter_router
+app.include_router(cluster_scatter_router)
 
 from routers.survival import router as survival_router
 app.include_router(survival_router)
