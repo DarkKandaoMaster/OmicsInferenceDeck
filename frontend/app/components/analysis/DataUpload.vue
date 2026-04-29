@@ -39,7 +39,7 @@ function handleCancerSubtypeChange() {
       <!-- 组学数据 -->
       <div class="mb-0">
         <div class="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
-          <label class="block text-xs font-medium text-slate-700 mb-1.5">Cancer subtype</label>
+          <label class="block text-xs font-medium text-slate-700 mb-1.5">癌症亚型</label>
           <div class="flex items-center gap-2">
             <select v-model="selectedCancerSubtype" @change="handleCancerSubtypeChange" class="flex-1 min-w-0 px-3 py-2 border border-slate-200 rounded-lg text-[13px] bg-white text-slate-900 cursor-pointer outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
               <option v-for="option in cancerSubtypeOptions" :key="option.type" :value="option.type">
@@ -95,35 +95,35 @@ function handleCancerSubtypeChange() {
 
       <hr class="border-none border-t border-dashed border-slate-200 my-6" />
 
-      <!-- mRNA expression matrix -->
+      <!-- mRNA 表达矩阵 -->
       <div>
-        <h4 class="m-0 mb-3 text-sm flex items-center gap-2">mRNA expression matrix <span class="text-[11px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">optional</span></h4>
+        <h4 class="m-0 mb-3 text-sm flex items-center gap-2">mRNA 表达矩阵 <span class="text-[11px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">选填</span></h4>
 
         <div class="flex flex-col gap-2 mb-4">
           <label class="flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer px-3 py-2 rounded-lg border border-slate-200 transition-all hover:border-primary" :class="{ 'bg-indigo-50 !border-primary !text-primary font-medium': expressionMatrixIsRowSample }">
             <input type="checkbox" v-model="expressionMatrixIsRowSample" @change="handleExpressionMatrixFormatChange" class="hidden" />
-            Rows are genes, columns are samples
+            行代表基因，列代表样本
           </label>
           <label class="flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer px-3 py-2 rounded-lg border border-slate-200 transition-all hover:border-primary" :class="{ 'bg-indigo-50 !border-primary !text-primary font-medium': expressionMatrixHasHeader }">
             <input type="checkbox" v-model="expressionMatrixHasHeader" @change="handleExpressionMatrixFormatChange" class="hidden" />
-            Contains header row
+            包含表头行
           </label>
           <label class="flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer px-3 py-2 rounded-lg border border-slate-200 transition-all hover:border-primary" :class="{ 'bg-indigo-50 !border-primary !text-primary font-medium': expressionMatrixHasIndex }">
             <input type="checkbox" v-model="expressionMatrixHasIndex" @change="handleExpressionMatrixFormatChange" class="hidden" />
-            Contains index column
+            包含索引列
           </label>
         </div>
 
         <div class="bg-slate-800 rounded-lg p-3 mb-4">
-          <div class="text-[11px] text-slate-400 mb-2 uppercase tracking-wider">TXT / CSV preview</div>
+          <div class="text-[11px] text-slate-400 mb-2 uppercase tracking-wider">TXT / CSV 格式预览</div>
           <pre class="m-0 text-slate-100 font-mono text-xs leading-relaxed overflow-x-auto">{{ expressionMatrixExampleText }}</pre>
         </div>
 
         <div class="relative border-2 border-dashed border-slate-200 rounded-lg bg-slate-100 hover:border-primary hover:bg-indigo-50 transition-all text-center">
           <input type="file" @change="handleExpressionMatrixFileChange" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" id="expression-matrix-file" />
           <label for="expression-matrix-file" class="flex flex-col p-5 pointer-events-none">
-            <span class="text-sm font-medium text-slate-900">Upload mRNA expression matrix</span>
-            <small class="text-xs text-slate-500 mt-1">Used for tumor-vs-normal differential expression and GO/KEGG enrichment; it will not participate in clustering.</small>
+            <span class="text-sm font-medium text-slate-900">点击选择 mRNA 表达矩阵</span>
+            <small class="text-xs text-slate-500 mt-1">用于肿瘤与正常样本差异表达分析及 GO/KEGG 富集分析；不参与聚类。</small>
           </label>
         </div>
 
