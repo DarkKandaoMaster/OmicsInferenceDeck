@@ -26,20 +26,25 @@ class Algorithm(BaseAlgorithm):
         random_state = self.params.get("random_state")
         seed_arg = "" if random_state is None else str(int(random_state))
 
-        result = subprocess.run(
-            [
-                "Rscript",
-                str(script_path),
-                str(input_path),
-                str(n_clusters),
-                seed_arg,
-            ],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=int(self.params.get("timeout", 3600)),
-        )
+        try:
+            result = subprocess.run(
+                [
+                    "Rscript",
+                    str(script_path),
+                    str(input_path),
+                    str(n_clusters),
+                    seed_arg,
+                ],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=int(self.params.get("timeout", 3600)),
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError(
+                f"MOSD exceeded the {int(self.params.get('timeout', 3600))} second timeout."
+            ) from exc
 
         payload = self._parse_r_output(result)
 
@@ -73,10 +78,22 @@ class Algorithm(BaseAlgorithm):
                     continue
 
         if result.returncode != 0:
-            message = payload.get("error") or stderr or stdout or "MOSD R script failed."
+            message = payload.get("error") or self._format_r_failure("MOSD R script failed.", stdout, stderr)
             raise RuntimeError(message)
 
         if payload.get("error"):
             raise RuntimeError(str(payload["error"]))
 
+        if not payload:
+            raise RuntimeError(self._format_r_failure("MOSD R script did not return JSON output.", stdout, stderr)) #R 成功退出但没 JSON 时，明确报 MOSD R script did not return JSON output.
+
         return payload
+
+    def _format_r_failure(self, prefix: str, stdout: str, stderr: str) -> str: #R 脚本失败但没返回 JSON 时，返回 stdout/stderr 最后 20 行，方便定位。
+        chunks = [prefix]
+        for name, text in (("stderr", stderr), ("stdout", stdout)):
+            lines = text.splitlines()
+            if lines:
+                tail = "\n".join(lines[-20:])
+                chunks.append(f"{name}:\n{tail}")
+        return "\n".join(chunks)
