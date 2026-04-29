@@ -1,5 +1,6 @@
 """Post-process calculated metrics into AWA and 3D-AWA scores."""
 
+import json
 import math
 from typing import Any
 
@@ -135,3 +136,62 @@ def compute_awa_metrics(
         },
         "components": components,
     }
+
+
+def _prompt_number(label: str, default: float | None = None) -> float | None:
+    default_text = "" if default is None else f" [默认 {default}]"
+    while True:
+        raw_value = input(f"{label}{default_text}: ").strip()
+        if not raw_value:
+            return default
+        number = _number(raw_value)
+        if number is not None:
+            return number
+        print("请输入有效数字，或直接回车跳过。")
+
+
+
+if __name__ == "__main__":
+    print("请输入 AWA / 3D-AWA 所需指标。留空表示该指标缺失，缺失值按 0 分处理。")
+    print("\n[聚类指标]")
+    cluster_metrics = {
+        "silhouette": _prompt_number("Silhouette（范围通常为 -1 到 1）"),
+        "calinski": _prompt_number("Calinski-Harabasz"),
+        "dunn": _prompt_number("Dunn"),
+    }
+
+    print("\n[临床指标]")
+    clinical_metrics = {
+        "lrt": {
+            "p_value": _prompt_number("Log-rank test p-value"),
+        },
+        "ecp": {
+            "significant_count": _prompt_number("显著临床参数数量"),
+            "total_parameters": _prompt_number("临床参数总数量"),
+        },
+    }
+
+    print("\n[生物机制指标]")
+    biology_metrics = {
+        "significant_pathway_count": _prompt_number("显著通路数量"),
+        "total_pathways": _prompt_number("通路总数量"),
+        "core_pathway_score": _prompt_number("核心通路得分（0 到 10）"),
+    }
+
+    print("\n[AWA 权重]")
+    awa_w1 = _prompt_number("聚类指标权重 w1", 1.0)
+    awa_w2 = _prompt_number("临床指标权重 w2", 1.0)
+
+    result = compute_awa_metrics(
+        cluster_metrics,
+        clinical_metrics,
+        biology_metrics,
+        awa_w1=awa_w1 or 0.0,
+        awa_w2=awa_w2 or 0.0,
+    )
+
+    print("\n计算结果：")
+    print(f"AWA: {result['awa']}")
+    print(f"3D-AWA: {result['three_d_awa']}")
+    print("\n完整结果：")
+    print(json.dumps(result, ensure_ascii=False, indent=2))
