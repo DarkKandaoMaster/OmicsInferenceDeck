@@ -94,7 +94,7 @@ const expressionMatrixExampleText = computed(() => {
     case 'row_sample_yes_no': return `GeneA,GeneB,GeneC,...\n11,12,13\n21,22,23\n31,32,33\n...`
     case 'row_sample_no_yes': return `病人1,11,12,13,...\n病人2,21,22,23\n病人3,31,32,33\n...`
     case 'row_sample_no_no': return `11,12,13,...\n21,22,23\n31,32,33\n...`
-    case 'row_feature_yes_yes': return `id,病人1,病人2,病人3\nGeneA,11,21,31\nGeneB,12,22,32\nGeneC,13,23,33\n...`
+    case 'row_feature_yes_yes': return `,病人1,病人2,病人3\nGeneA,11,21,31\nGeneB,12,22,32\nGeneC,13,23,33\n...`
     case 'row_feature_yes_no': return `病人1,病人2,病人3\n11,21,31\n12,22,32\n13,23,33\n...`
     case 'row_feature_no_yes': return `GeneA,11,21,31\nGeneB,12,22,32\nGeneC,13,23,33\n...`
     case 'row_feature_no_no': return `11,21,31\n12,22,32\n13,23,33\n...`
