@@ -275,6 +275,10 @@ export function useAnalysisActions() {
         }
         psParam1.value = 'n_clusters'
         psParam2.value = 'n_neighbors'
+      } else if (selectedAlgorithm.value[0] === 'PIntMF') {
+        paramGridObj = { n_clusters: testNClusters.value.split(',').map(Number) }
+        psParam1.value = 'n_clusters'
+        psParam2.value = ''
       } else if (selectedAlgorithm.value[0] === 'MOSD') {
         paramGridObj = { n_clusters: testNClusters.value.split(',').map(Number) }
         psParam1.value = 'n_clusters'
