@@ -32,6 +32,7 @@ watch(psResult, async (val) => {
       <ResultsEvaluationMetrics />
       <ResultsClinicalMetrics />
       <ResultsBiologyMetrics />
+      <ResultsAwaMetrics />
       <div class="results-grid mt-8">
         <ResultsClusteringView />
         <ResultsDifferentialView />

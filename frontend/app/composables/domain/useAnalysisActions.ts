@@ -1,4 +1,4 @@
-import { computeBiologyMetrics, computeClinicalMetrics, computeMetrics, evaluateCustom, renderClusterScatter, runAlgorithm, runParameterSearch } from '~/utils/api'
+import { computeAwaMetrics, computeBiologyMetrics, computeClinicalMetrics, computeMetrics, evaluateCustom, renderClusterScatter, runAlgorithm, runParameterSearch } from '~/utils/api'
 import { useSession } from '~/composables/core/useSession'
 import { useUIState } from '~/composables/core/useUIState'
 import { useDataState } from '~/composables/domain/useDataState'
@@ -67,11 +67,31 @@ export function useAnalysisActions() {
         }
       }
 
+      analysisStatus.value = '正在计算 AWA / 3D-AWA 指标...'
+      let awaMetrics: any = null
+      if (biologyMetrics && !biologyMetrics.error) {
+        try {
+          const awaMetricsRes = await computeAwaMetrics({
+            session_id: sessionId.value,
+            database: enrichmentResult.value.database || 'GO',
+            metrics: backendResponse.value?.data?.metrics || {},
+            clinical_metrics: backendResponse.value?.data?.clinical_metrics || {},
+            biology_metrics: biologyMetrics,
+          })
+          awaMetrics = awaMetricsRes.data?.data?.awa_metrics || null
+        } catch (error: any) {
+          awaMetrics = {
+            error: error.response?.data?.detail || 'AWA / 3D-AWA 指标计算失败',
+          }
+        }
+      }
+
       backendResponse.value = {
         ...backendResponse.value,
         data: {
           ...(backendResponse.value?.data || {}),
           biology_metrics: biologyMetrics,
+          awa_metrics: awaMetrics,
         },
       }
     }

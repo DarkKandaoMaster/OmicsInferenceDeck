@@ -9,11 +9,13 @@ import datetime
 import json
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from metrics.awa_metrics import compute_awa_metrics
 from plots.base import CLUSTER_RESULT_FILE, enrichment_file, plot_path, write_json
 from routers.upload import CLINICAL_DATA_FILE, load_frame_dict
 
@@ -33,6 +35,16 @@ class MetricsRequest(BaseModel):
 class BiologyMetricsRequest(BaseModel):
     session_id: str
     database: str = "GO"
+
+
+class AwaMetricsRequest(BaseModel):
+    session_id: str
+    database: str = "GO"
+    metrics: dict[str, Any] | None = None
+    clinical_metrics: dict[str, Any] | None = None
+    biology_metrics: dict[str, Any] | None = None
+    awa_w1: float = 1.0
+    awa_w2: float = 1.0
 
 
 def parse_r_payload(result: subprocess.CompletedProcess[str], fallback_message: str) -> dict:
@@ -224,3 +236,52 @@ async def biology_metrics(request: BiologyMetricsRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Biology metrics calculation failed: {str(e)}")
+
+
+@router.post("/api/metrics/awa")
+async def awa_metrics(request: AwaMetricsRequest):
+    try:
+        database = request.database.upper()
+        if database not in {"GO", "KEGG"}:
+            raise ValueError("database must be GO or KEGG")
+
+        metrics_scores = request.metrics
+        if metrics_scores is None:
+            result_path = plot_path(request.session_id, CLUSTER_RESULT_FILE)
+            if not result_path.exists():
+                raise FileNotFoundError("cluster_result.parquet not found. Please run clustering first.")
+            metrics_scores, _, _ = compute_cluster_metrics(str(result_path))
+
+        clinical_metrics_scores = request.clinical_metrics
+        if clinical_metrics_scores is None:
+            input_path, matched_samples, lost_samples = build_clinical_metrics_input(request.session_id)
+            clinical_metrics_scores = compute_clinical_metrics(str(input_path))
+            clinical_metrics_scores["matched_samples"] = matched_samples
+            clinical_metrics_scores["lost_samples"] = lost_samples
+
+        biology_metrics_scores = request.biology_metrics
+        if biology_metrics_scores is None:
+            enrichment_path = plot_path(request.session_id, enrichment_file(database))
+            if not enrichment_path.exists():
+                raise FileNotFoundError(f"{enrichment_file(database)} not found. Please run enrichment analysis first.")
+            biology_metrics_scores = compute_biology_metrics(str(enrichment_path), database)
+
+        awa_metrics_scores = compute_awa_metrics(
+            metrics_scores,
+            clinical_metrics_scores,
+            biology_metrics_scores,
+            awa_w1=request.awa_w1,
+            awa_w2=request.awa_w2,
+        )
+
+        return {
+            "status": "success",
+            "message": "AWA metrics calculated.",
+            "server_time": datetime.datetime.now().isoformat(),
+            "data": {
+                "method": "AWA",
+                "awa_metrics": awa_metrics_scores,
+            },
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"AWA metrics calculation failed: {str(e)}")
