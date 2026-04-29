@@ -1,4 +1,4 @@
-import { computeClinicalMetrics, computeMetrics, evaluateCustom, renderClusterScatter, runAlgorithm, runParameterSearch } from '~/utils/api'
+import { computeBiologyMetrics, computeClinicalMetrics, computeMetrics, evaluateCustom, renderClusterScatter, runAlgorithm, runParameterSearch } from '~/utils/api'
 import { useSession } from '~/composables/core/useSession'
 import { useUIState } from '~/composables/core/useUIState'
 import { useDataState } from '~/composables/domain/useDataState'
@@ -41,7 +41,7 @@ export function useAnalysisActions() {
 
   async function runDownstreamAnalyses() {
     const { runDifferentialAnalysis, diffResult } = useDifferential()
-    const { runEnrichmentAnalysis } = useEnrichment()
+    const { runEnrichmentAnalysis, enrichmentResult } = useEnrichment()
     const { runSurvivalAnalysis } = useSurvival()
 
     analysisStatus.value = '正在运行差异表达分析...'
@@ -50,6 +50,30 @@ export function useAnalysisActions() {
     if (diffResult.value?.clusters) {
       analysisStatus.value = '正在运行功能富集分析...'
       await runEnrichmentAnalysis('GO', { silent: true })
+
+      analysisStatus.value = '正在计算生物学机制指标...'
+      let biologyMetrics: any = null
+      if (enrichmentResult.value?.status === 'success') {
+        try {
+          const biologyMetricsRes = await computeBiologyMetrics({
+            session_id: sessionId.value,
+            database: enrichmentResult.value.database || 'GO',
+          })
+          biologyMetrics = biologyMetricsRes.data?.data?.biology_metrics || null
+        } catch (error: any) {
+          biologyMetrics = {
+            error: error.response?.data?.detail || '生物学机制指标计算失败',
+          }
+        }
+      }
+
+      backendResponse.value = {
+        ...backendResponse.value,
+        data: {
+          ...(backendResponse.value?.data || {}),
+          biology_metrics: biologyMetrics,
+        },
+      }
     }
 
     if (clinicalFile.value) {

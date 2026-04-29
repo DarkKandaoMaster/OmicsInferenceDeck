@@ -41,6 +41,14 @@ export function computeClinicalMetrics(params: {
   return http.post('/metrics/clinical', params)
 }
 
+/** Calculate biology mechanism metrics from enrichment results */
+export function computeBiologyMetrics(params: {
+  session_id: string
+  database?: string
+}) {
+  return http.post('/metrics/biology', params)
+}
+
 /** 绘制聚类散点图 */
 export function renderClusterScatter(params: {
   session_id: string
