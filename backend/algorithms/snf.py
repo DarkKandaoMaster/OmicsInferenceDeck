@@ -1,49 +1,106 @@
-import pandas as pd
+import json
+import subprocess
+from pathlib import Path
+
 import numpy as np
-import snf
-from sklearn.manifold import spectral_embedding
-from sklearn.cluster import spectral_clustering
+import pandas as pd
+
 from .base import BaseAlgorithm
+
 
 class Algorithm(BaseAlgorithm):
     def fit_predict(self, data: dict[str, pd.DataFrame]) -> tuple[np.ndarray, np.ndarray, list[str]]:
-        # 1. 对齐样本：由于不同组学的样本必须严格一一对应，我们先取交集
-        df_concat = pd.concat(data.values(), axis=1, join='inner')
-        sample_names = df_concat.index.tolist()
-        
-        # 将对齐后的数据分别提取出来，转换为 SNF 需要的矩阵列表
-        aligned_matrices = []
-        for df in data.values():
-            aligned_df = df.loc[sample_names]
-            aligned_matrices.append(aligned_df.values)
-            
-        # 2. 提取参数
-        n_clusters = self.params.get('n_clusters', 3)
-        # SNF 的 K 值代表构建 KNN 图时的邻居数，前端如果没有传，默认给 20
-        k_neighbors = self.params.get('n_neighbors', 20)
-        
-        # 3. 运行 SNF 核心逻辑
-        # 构建各个组学的亲和度网络
-        affinity_networks = snf.make_affinity(aligned_matrices, metric='euclidean', K=k_neighbors, mu=0.5)
-        
-        # 如果只有一个网络，直接使用它，无需融合；如果是多个网络，再调用 SNF 融合
-        # 如果aligned_matrices 列表的长度为 1，snf.make_affinity 生成了只包含 1 个亲和度网络的列表。
-        # 由于融合算法的数学公式中涉及到除以 (网络数量 - 1)，也就是 (1 - 1) = 0，导致了除以零的错误，在后端日志里报错
-        # 除以零产生了 NaN（空值），随后传入 sklearn 的 spectral_clustering，引发了最终的崩溃：Input X contains NaN。
-        if len(affinity_networks) == 1:
-            fused_network = affinity_networks[0]
-        else:
-            fused_network = snf.snf(affinity_networks, K=k_neighbors)
+        omics_path = self.params.get("omics_path")
+        if not omics_path:
+            raise ValueError("SNF requires omics_path so R can read the saved omics_data.parquet directly.")
 
-        # 融合网络
-        # fused_network = snf.snf(affinity_networks, K=k_neighbors)
-        # 基于融合网络进行谱聚类，直接调用 sklearn 的 spectral_clustering
-        labels = spectral_clustering(fused_network, n_clusters=n_clusters)
-        
-        # 4. 生成用于降维和评估的特征矩阵
-        # 因为 SNF 生成的是一个 N x N 的相似度矩阵，为了配合后端的 PCA/t-SNE 降维，
-        # 我们使用谱嵌入（Spectral Embedding）将其转换为低维特征矩阵
-        n_components = min(10, len(sample_names) - 1)
-        embeddings = spectral_embedding(fused_network, n_components=n_components)
-        
+        input_path = Path(omics_path)
+        if not input_path.exists():
+            raise FileNotFoundError(f"SNF input file not found: {input_path}")
+
+        script_path = self._script_in_algorithm_dir(__file__)
+        if not script_path.exists():
+            raise FileNotFoundError(f"SNF R script not found: {script_path}")
+
+        n_clusters = int(self.params.get("n_clusters", 3))
+        n_neighbors = int(self.params.get("n_neighbors", 20))
+        alpha = float(self.params.get("snf_alpha", self.params.get("alpha", 0.5)))
+        diffusion_iterations = int(self.params.get("snf_iterations", self.params.get("t", 20)))
+        random_state = self.params.get("random_state")
+        seed_arg = "" if random_state is None else str(int(random_state))
+
+        try:
+            result = subprocess.run(
+                [
+                    "Rscript",
+                    str(script_path),
+                    str(input_path),
+                    str(n_clusters),
+                    str(n_neighbors),
+                    str(alpha),
+                    str(diffusion_iterations),
+                    seed_arg,
+                ],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=int(self.params.get("timeout", 3600)),
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError(
+                f"SNF exceeded the {int(self.params.get('timeout', 3600))} second timeout."
+            ) from exc
+
+        payload = self._parse_r_output(result)
+
+        sample_names = [str(sample) for sample in payload.get("sample_names", [])]
+        labels = np.asarray(payload.get("labels", []), dtype=int)
+        embeddings = np.asarray(payload.get("embeddings", []), dtype=float)
+
+        if labels.ndim != 1:
+            raise ValueError("SNF returned labels with an invalid shape.")
+        if embeddings.ndim != 2 or embeddings.shape[1] < 1:
+            raise ValueError("SNF returned embeddings with an invalid shape.")
+        if len(sample_names) != len(labels) or embeddings.shape[0] != len(labels):
+            raise ValueError("SNF returned inconsistent sample, label, and embedding counts.")
+        if not np.isfinite(embeddings).all():
+            raise ValueError("SNF returned missing or non-finite embedding values.")
+
         return labels, embeddings, sample_names
+
+    def _parse_r_output(self, result: subprocess.CompletedProcess[str]) -> dict:
+        stdout = (result.stdout or "").strip()
+        stderr = (result.stderr or "").strip()
+
+        payload: dict = {}
+        if stdout:
+            for line in reversed(stdout.splitlines()):
+                candidate = line.strip()
+                if not candidate.startswith("{"):
+                    continue
+                try:
+                    payload = json.loads(candidate)
+                    break
+                except json.JSONDecodeError:
+                    continue
+
+        if result.returncode != 0:
+            message = payload.get("error") or self._format_r_failure("SNF R script failed.", stdout, stderr)
+            raise RuntimeError(message)
+
+        if payload.get("error"):
+            raise RuntimeError(str(payload["error"]))
+
+        if not payload:
+            raise RuntimeError(self._format_r_failure("SNF R script did not return JSON output.", stdout, stderr))
+
+        return payload
+
+    def _format_r_failure(self, prefix: str, stdout: str, stderr: str) -> str:
+        chunks = [prefix]
+        for name, text in (("stderr", stderr), ("stdout", stdout)):
+            lines = text.splitlines()
+            if lines:
+                chunks.append(f"{name}:\n" + "\n".join(lines[-20:]))
+        return "\n".join(chunks)
