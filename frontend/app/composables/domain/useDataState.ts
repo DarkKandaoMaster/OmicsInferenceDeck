@@ -87,17 +87,17 @@ const clinicalExampleText = computed(() => {
   }
 })
 
-/** 当前已上传文件对应的组学类型列表（去重 + 可选拼接 All） */
+/** 当前已上传文件对应的组学类型列表 */
 const expressionMatrixExampleText = computed(() => {
   switch (expressionMatrixDataFormat.value) {
-    case 'row_sample_yes_yes': return `,GeneA,GeneB,GeneC,...\nTCGA-XX-0001-01A,11,12,13\nTCGA-XX-0001-11A,21,22,23\nTCGA-XX-0002-01A,31,32,33\n...`
+    case 'row_sample_yes_yes': return `,GeneA,GeneB,GeneC,...\n病人1,11,12,13\n病人2,21,22,23\n病人3,31,32,33\n...`
     case 'row_sample_yes_no': return `GeneA,GeneB,GeneC,...\n11,12,13\n21,22,23\n31,32,33\n...`
-    case 'row_sample_no_yes': return `TCGA-XX-0001-01A,11,12,13,...\nTCGA-XX-0001-11A,21,22,23\nTCGA-XX-0002-01A,31,32,33\n...`
+    case 'row_sample_no_yes': return `病人1,11,12,13,...\n病人2,21,22,23\n病人3,31,32,33\n...`
     case 'row_sample_no_no': return `11,12,13,...\n21,22,23\n31,32,33\n...`
-    case 'row_feature_yes_yes': return `id\tTCGA-XX-0001-01A\tTCGA-XX-0001-11A\tTCGA-XX-0002-01A\nGeneA\t11\t21\t31\nGeneB\t12\t22\t32\nGeneC\t13\t23\t33\n...`
-    case 'row_feature_yes_no': return `TCGA-XX-0001-01A\tTCGA-XX-0001-11A\tTCGA-XX-0002-01A\n11\t21\t31\n12\t22\t32\n13\t23\t33\n...`
-    case 'row_feature_no_yes': return `GeneA\t11\t21\t31\nGeneB\t12\t22\t32\nGeneC\t13\t23\t33\n...`
-    case 'row_feature_no_no': return `11\t21\t31\n12\t22\t32\n13\t23\t33\n...`
+    case 'row_feature_yes_yes': return `id,病人1,病人2,病人3\nGeneA,11,21,31\nGeneB,12,22,32\nGeneC,13,23,33\n...`
+    case 'row_feature_yes_no': return `病人1,病人2,病人3\n11,21,31\n12,22,32\n13,23,33\n...`
+    case 'row_feature_no_yes': return `GeneA,11,21,31\nGeneB,12,22,32\nGeneC,13,23,33\n...`
+    case 'row_feature_no_no': return `11,21,31\n12,22,32\n13,23,33\n...`
     default: return ''
   }
 })
