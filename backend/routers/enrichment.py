@@ -71,7 +71,7 @@ def _run_enrichment_r(database: str, input_path: Path, output_path: Path, input_
     if not ENRICHMENT_SCRIPT.exists():
         raise FileNotFoundError(f"R enrichment script not found: {ENRICHMENT_SCRIPT}")
 
-    gmt_base = Path("references") / "GO_KEGG"
+    gmt_base = Path(__file__).resolve().parents[1] / "references" / "GO_KEGG"
     result = subprocess.run(
         [
             "Rscript",
