@@ -1,4 +1,4 @@
-const algorithms = ['K-means', 'Spectral Clustering', 'PIntMF', 'Subtype-GAN', 'NEMO', 'SNF', 'MOSD']
+const algorithms = ['K-means', 'Spectral Clustering', 'PIntMF', 'Subtype-GAN', 'NEMO', 'SNF', 'MOSD', 'Parea']
 const selectedAlgorithm = ref<string[]>([])
 
 const kValue = ref(3)
