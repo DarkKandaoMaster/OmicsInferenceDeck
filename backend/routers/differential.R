@@ -3,6 +3,7 @@
 
 suppressPackageStartupMessages({
   library(arrow)
+  library(limma)
 })
 
 json_escape <- function(value) {
@@ -64,14 +65,34 @@ empty_volcano <- function(cluster_id, genes) {
   )
 }
 
-safe_t_pvalue <- function(group_a, group_b) {
-  tryCatch(
-    {
-      p_value <- stats::t.test(group_a, group_b, var.equal = FALSE)$p.value
-      if (is.na(p_value) || !is.finite(p_value)) 1.0 else max(p_value, 0.0)
-    },
-    error = function(e) 1.0
+run_limma_cluster <- function(expr, labels, cluster_id) {
+  group <- factor(ifelse(labels == cluster_id, "target", "rest"), levels = c("rest", "target"))
+  if (sum(group == "target") < 2 || sum(group == "rest") < 2) {
+    return(empty_volcano(cluster_id, rownames(expr)))
+  }
+
+  design <- stats::model.matrix(~0 + group)
+  colnames(design) <- levels(group)
+  contrast <- limma::makeContrasts(target - rest, levels = design)
+  fit <- limma::lmFit(expr, design)
+  fit <- limma::contrasts.fit(fit, contrast)
+  fit <- limma::eBayes(fit)
+  table <- limma::topTable(fit, number = Inf, sort.by = "none", adjust.method = "BH")
+
+  p_values <- as.numeric(table$P.Value)
+  p_values[is.na(p_values) | !is.finite(p_values)] <- 1.0
+  p_values <- pmax(p_values, 0.0)
+
+  result <- data.frame(
+    cluster = cluster_id,
+    gene = rownames(table),
+    logFC = as.numeric(table$logFC),
+    t_pvalue = p_values,
+    negLog10P = -log10(p_values + 1e-300),
+    stringsAsFactors = FALSE
   )
+  result$logFC[is.na(result$logFC) | !is.finite(result$logFC)] <- 0.0
+  result
 }
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -102,8 +123,16 @@ tryCatch(
       stop("Cluster column contains missing or non-integer values")
     }
 
-    for (gene in genes) {
-      df[[gene]] <- suppressWarnings(as.numeric(df[[gene]]))
+    expr <- t(as.matrix(df[, genes, drop = FALSE]))
+    storage.mode(expr) <- "double"
+    rownames(expr) <- genes
+    colnames(expr) <- df$sample_name
+    expr[!is.finite(expr)] <- NA_real_
+    expr <- limma::avereps(expr)
+    keep <- rowSums(!is.na(expr)) > 0
+    expr <- expr[keep, , drop = FALSE]
+    if (nrow(expr) < 1) {
+      stop("no analyzable features after numeric conversion")
     }
 
     clusters <- sort(unique(df$Cluster))
@@ -111,35 +140,7 @@ tryCatch(
     top_genes <- character(0)
 
     for (cluster_id in clusters) {
-      group_a <- df[df$Cluster == cluster_id, genes, drop = FALSE]
-      group_b <- df[df$Cluster != cluster_id, genes, drop = FALSE]
-
-      if (nrow(group_a) < 2 || nrow(group_b) < 2) {
-        cluster_result <- empty_volcano(cluster_id, genes)
-        volcano_frames[[length(volcano_frames) + 1]] <- cluster_result
-        next
-      }
-
-      mean_a <- colMeans(group_a, na.rm = TRUE)
-      mean_b <- colMeans(group_b, na.rm = TRUE)
-      log_fc <- mean_a - mean_b
-      p_values <- vapply(
-        genes,
-        function(gene) safe_t_pvalue(group_a[[gene]], group_b[[gene]]),
-        numeric(1)
-      )
-      p_values[is.na(p_values) | !is.finite(p_values)] <- 1.0
-      p_values <- pmax(p_values, 0.0)
-
-      cluster_result <- data.frame(
-        cluster = cluster_id,
-        gene = as.character(genes),
-        logFC = as.numeric(log_fc),
-        t_pvalue = as.numeric(p_values),
-        stringsAsFactors = FALSE
-      )
-      cluster_result$logFC[is.na(cluster_result$logFC) | !is.finite(cluster_result$logFC)] <- 0.0
-      cluster_result$negLog10P <- -log10(cluster_result$t_pvalue + 1e-300)
+      cluster_result <- run_limma_cluster(expr, df$Cluster, cluster_id)
       volcano_frames[[length(volcano_frames) + 1]] <- cluster_result
 
       significant <- cluster_result[cluster_result$t_pvalue < 0.05 & cluster_result$logFC > 0.5, , drop = FALSE]
@@ -161,7 +162,8 @@ tryCatch(
     arrow::write_parquet(volcano_df, volcano_path)
 
     if (length(top_genes) > 0) {
-      heatmap_df <- df[, c("sample_name", "Cluster", top_genes), drop = FALSE]
+      expr_for_heatmap <- t(expr[top_genes, , drop = FALSE])
+      heatmap_df <- data.frame(sample_name = df$sample_name, Cluster = df$Cluster, expr_for_heatmap, check.names = FALSE)
       for (gene in top_genes) {
         values <- heatmap_df[[gene]]
         std <- stats::sd(values, na.rm = TRUE)
@@ -184,7 +186,7 @@ tryCatch(
       clusters = as.list(as.integer(clusters)),
       selected_cluster = if (length(clusters) > 0) as.integer(clusters[[1]]) else 0L,
       top_genes = as.list(top_genes),
-      n_features = length(genes),
+      n_features = nrow(expr),
       n_top_genes = length(top_genes)
     ))
   },

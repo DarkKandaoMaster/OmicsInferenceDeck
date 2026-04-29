@@ -3,6 +3,7 @@
 
 suppressPackageStartupMessages({
   library(arrow)
+  library(clusterProfiler)
 })
 
 RESULT_COLUMNS <- c(
@@ -96,80 +97,75 @@ gmt_files <- function(database, base_dir) {
   stop("database must be GO or KEGG")
 }
 
-read_gmt <- function(path) {
+read_term2gene <- function(path) {
   if (!file.exists(path)) {
     stop(paste0("GMT file not found: ", path))
   }
-  lines <- readLines(path, warn = FALSE, encoding = "UTF-8")
-  terms <- list()
-  for (line in lines) {
-    parts <- strsplit(line, "\t", fixed = TRUE)[[1]]
-    if (length(parts) < 3) {
-      next
-    }
-    term <- parts[[1]]
-    genes <- unique(as.character(parts[-c(1, 2)]))
-    genes <- genes[nzchar(genes)]
-    if (length(genes) > 0) {
-      terms[[term]] <- genes
-    }
+  term2gene <- clusterProfiler::read.gmt(path)
+  if (ncol(term2gene) < 2) {
+    stop(paste0("invalid GMT file: ", path))
   }
-  terms
+  names(term2gene)[1:2] <- c("term", "gene")
+  term2gene[, c("term", "gene"), drop = FALSE]
 }
 
-enrich_one_category <- function(cluster_id, query_genes, category, terms) {
-  universe <- unique(unlist(terms, use.names = FALSE))
+ratio_numerator <- function(value) {
+  parts <- strsplit(as.character(value), "/", fixed = TRUE)[[1]]
+  if (length(parts) != 2) {
+    return(NA_real_)
+  }
+  suppressWarnings(as.numeric(parts[[1]]))
+}
+
+format_clusterprofiler_result <- function(cluster_id, category, result_df) {
+  if (is.null(result_df) || nrow(result_df) == 0) {
+    return(empty_result())
+  }
+
+  result_df <- result_df[result_df$pvalue < 0.05, , drop = FALSE]
+  if (nrow(result_df) == 0) {
+    return(empty_result())
+  }
+  result_df <- result_df[order(result_df$pvalue), , drop = FALSE]
+  result_df <- head(result_df, 5)
+
+  term_sizes <- vapply(result_df$BgRatio, ratio_numerator, numeric(1))
+  hit_counts <- as.numeric(result_df$Count)
+  rich_factor <- hit_counts / term_sizes
+  rich_factor[is.na(rich_factor) | !is.finite(rich_factor)] <- 0.0
+
+  data.frame(
+    cluster = as.integer(cluster_id),
+    Term = as.character(result_df$Description),
+    P_value = as.numeric(result_df$pvalue),
+    Adjusted_P = as.numeric(result_df$p.adjust),
+    Overlap = paste0(hit_counts, "/", term_sizes),
+    Genes = gsub("/", ";", as.character(result_df$geneID), fixed = TRUE),
+    Gene_Count = as.integer(hit_counts),
+    Category = as.character(category),
+    Rich_Factor = as.numeric(rich_factor),
+    stringsAsFactors = FALSE
+  )[, RESULT_COLUMNS, drop = FALSE]
+}
+
+enrich_one_category <- function(cluster_id, query_genes, category, term2gene) {
+  universe <- unique(as.character(term2gene$gene))
   query <- unique(intersect(as.character(query_genes), universe))
   if (length(query) < 3 || length(universe) < 1) {
     return(empty_result())
   }
 
-  rows <- list()
-  p_values <- numeric(0)
-
-  for (term in names(terms)) {
-    term_genes <- unique(intersect(terms[[term]], universe))
-    hit_genes <- intersect(query, term_genes)
-    hit_count <- length(hit_genes)
-    if (hit_count < 1) {
-      next
-    }
-
-    p_value <- stats::phyper(
-      q = hit_count - 1,
-      m = length(term_genes),
-      n = length(universe) - length(term_genes),
-      k = length(query),
-      lower.tail = FALSE
-    )
-    p_values <- c(p_values, p_value)
-    rows[[length(rows) + 1]] <- data.frame(
-      cluster = as.integer(cluster_id),
-      Term = as.character(term),
-      P_value = as.numeric(p_value),
-      Adjusted_P = as.numeric(p_value),
-      Overlap = paste0(hit_count, "/", length(term_genes)),
-      Genes = paste(hit_genes, collapse = ";"),
-      Gene_Count = as.integer(hit_count),
-      Category = as.character(category),
-      Rich_Factor = as.numeric(hit_count / length(term_genes)),
-      stringsAsFactors = FALSE
-    )
-  }
-
-  if (length(rows) == 0) {
-    return(empty_result())
-  }
-
-  result <- do.call(rbind, rows)
-  result$Adjusted_P <- stats::p.adjust(p_values, method = "BH")
-  result <- result[result$P_value < 0.05, , drop = FALSE]
-  if (nrow(result) == 0) {
-    return(empty_result())
-  }
-
-  result <- result[order(result$P_value), , drop = FALSE]
-  head(result, 5)[, RESULT_COLUMNS, drop = FALSE]
+  enrichment <- clusterProfiler::enricher(
+    gene = query,
+    universe = universe,
+    TERM2GENE = term2gene,
+    pvalueCutoff = 1,
+    pAdjustMethod = "BH",
+    qvalueCutoff = 1,
+    minGSSize = 1,
+    maxGSSize = 5000
+  )
+  format_clusterprofiler_result(cluster_id, category, as.data.frame(enrichment))
 }
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -211,7 +207,7 @@ tryCatch(
 
     clusters <- sort(unique(cluster_gene_df$cluster))
     files <- gmt_files(database, gmt_base_dir)
-    term_sets <- lapply(files, read_gmt)
+    term_sets <- lapply(files, read_term2gene)
 
     rows <- list()
     for (cluster_id in clusters) {
