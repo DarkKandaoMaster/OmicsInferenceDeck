@@ -18,13 +18,17 @@ from typing import Any
 
 OMICS_DATA_FILE = "omics_data.parquet"
 CLINICAL_DATA_FILE = "clinical_data.parquet"
+EXPRESSION_DATA_FILE = "expression_data.parquet"
 OMICS_META_FILE = "omics_data.json"
 CLINICAL_META_FILE = "clinical_data.json"
+EXPRESSION_META_FILE = "expression_data.json"
 
 
 def input_data_files(file_type: str) -> tuple[str, str]:
     if file_type == "omics":
         return OMICS_DATA_FILE, OMICS_META_FILE
+    if file_type == "expression":
+        return EXPRESSION_DATA_FILE, EXPRESSION_META_FILE
     return CLINICAL_DATA_FILE, CLINICAL_META_FILE
 
 
@@ -71,6 +75,81 @@ def load_frame_dict(parquet_path: str | Path, metadata_path: str | Path | None =
         frame.columns = display_names
         data[str(frame_meta["key"])] = frame.dropna(how="all")
     return data
+
+
+def read_uploaded_dataframe(file_location: str | Path, data_format: str, filename: str) -> pd.DataFrame:
+    need_transpose = False
+    read_params = {
+        "sep": None,
+        "engine": "python",
+        "header": 0,
+        "index_col": 0,
+    }
+
+    if data_format == "row_sample_yes_yes":
+        pass
+    elif data_format == "row_sample_yes_no":
+        read_params["index_col"] = None
+    elif data_format == "row_sample_no_yes":
+        read_params["header"] = None
+    elif data_format == "row_sample_no_no":
+        read_params["header"] = None
+        read_params["index_col"] = None
+    elif data_format == "row_feature_yes_yes":
+        need_transpose = True
+    elif data_format == "row_feature_yes_no":
+        read_params["index_col"] = None
+        need_transpose = True
+    elif data_format == "row_feature_no_yes":
+        read_params["header"] = None
+        need_transpose = True
+    elif data_format == "row_feature_no_no":
+        read_params["header"] = None
+        read_params["index_col"] = None
+        need_transpose = True
+    else:
+        raise ValueError(f"Unsupported data format: {data_format}")
+
+    try:
+        df_single = pd.read_csv(file_location, **read_params)
+    except Exception:
+        excel_params = dict(read_params)
+        excel_params.pop("sep", None)
+        excel_params.pop("engine", None)
+        try:
+            df_single = pd.read_excel(file_location, **excel_params)
+        except Exception as e_read:
+            raise ValueError(f"File {filename} parse failed: {str(e_read)}")
+
+    if need_transpose:
+        df_single = df_single.T
+    return df_single
+
+
+def validate_numeric_frame(df: pd.DataFrame, data_label: str, allow_duplicate_columns: bool = False) -> pd.DataFrame:
+    if df.empty:
+        raise ValueError(f"{data_label} is empty.")
+    if df.shape[1] < 1:
+        raise ValueError(f"{data_label} must contain at least one feature column.")
+
+    df = df.copy()
+    df.index = df.index.astype(str)
+    df.columns = [str(column) for column in df.columns]
+
+    if df.index.has_duplicates:
+        duplicated = df.index[df.index.duplicated()].unique().tolist()
+        raise ValueError(f"{data_label} contains duplicated sample names: {duplicated}")
+    if not allow_duplicate_columns and df.columns.has_duplicates:
+        duplicated = df.columns[df.columns.duplicated()].unique().tolist()
+        raise ValueError(f"{data_label} contains duplicated feature names: {duplicated}")
+
+    numeric_df = df.apply(pd.to_numeric, errors="coerce")
+    missing_count = int(numeric_df.isnull().sum().sum())
+    if missing_count > 0:
+        raise ValueError(f"{data_label} contains {missing_count} missing or non-numeric values.")
+    if not np.isfinite(numeric_df.to_numpy(dtype=float)).all():
+        raise ValueError(f"{data_label} contains non-finite values.")
+    return numeric_df
 
 
 
@@ -303,3 +382,58 @@ async def upload_file(   files:List[UploadFile]=File(...)   ,   data_format:str=
         cleanup_temp_files(temp_file_paths) #删除用户上传的各个文件
         print(f"[后端日志] 严重错误，文件已删除: {str(e)}")
         raise HTTPException(status_code=500,detail=f"服务器内部错误: {str(e)}") #抛出错误给前端
+
+
+
+@router.post("/api/upload_expression")
+async def upload_expression_matrix(
+    file: UploadFile = File(...),
+    data_format: str = Form(...),
+    session_id: str = Form(...),
+):
+    """Upload an mRNA expression matrix for downstream differential/enrichment analysis.
+
+    This file is stored separately from omics_data.parquet so it does not change
+    the multi-omics sample intersection used by clustering.
+    """
+    upload_path = os.path.join("upload", session_id)
+    os.makedirs(upload_path, exist_ok=True)
+
+    original_name = os.path.basename(file.filename or "expression_matrix")
+    temp_path = os.path.join(upload_path, original_name)
+    temp_paths = [temp_path]
+
+    try:
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        df = read_uploaded_dataframe(temp_path, data_format, original_name)
+        df = validate_numeric_frame(
+            df,
+            "mRNA expression matrix",
+            allow_duplicate_columns=True,
+        )
+
+        final_file_location = os.path.join(upload_path, EXPRESSION_DATA_FILE)
+        final_metadata_location = os.path.join(upload_path, EXPRESSION_META_FILE)
+        legacy_joblib_location = os.path.join(upload_path, "expression_data.joblib")
+        for existing_path in (final_file_location, final_metadata_location, legacy_joblib_location):
+            if os.path.exists(existing_path):
+                os.remove(existing_path)
+
+        save_frame_dict({"mRNA Expression Matrix": df}, final_file_location, final_metadata_location)
+        cleanup_temp_files(temp_paths)
+
+        return {
+            "status": "success",
+            "original_filename": original_name,
+            "n_samples": int(df.shape[0]),
+            "n_features": int(df.shape[1]),
+            "message": "mRNA expression matrix uploaded successfully.",
+        }
+    except HTTPException as he:
+        cleanup_temp_files(temp_paths)
+        raise he
+    except Exception as e:
+        cleanup_temp_files(temp_paths)
+        raise HTTPException(status_code=400, detail=f"mRNA expression matrix upload failed: {str(e)}")

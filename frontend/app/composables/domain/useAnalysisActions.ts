@@ -20,6 +20,9 @@ export function useAnalysisActions() {
     omicsFileConfigs,
     doUploadOmics,
     doUploadClinical,
+    doUploadExpressionMatrix,
+    expressionMatrixFile,
+    isExpressionMatrixUploaded,
     isCustomEvalMode,
     customEvalFile,
   } = useDataState()
@@ -155,6 +158,7 @@ export function useAnalysisActions() {
       try {
         if (omicsFileConfigs.value.length > 0 && !isOmicsUploaded.value) await doUploadOmics(sessionId.value)
         if (clinicalFile.value && !isClinicalUploaded.value) await doUploadClinical(sessionId.value)
+        if (expressionMatrixFile.value && !isExpressionMatrixUploaded.value) await doUploadExpressionMatrix(sessionId.value)
 
         const formData = new FormData()
         formData.append('file', customEvalFile.value)
@@ -183,6 +187,7 @@ export function useAnalysisActions() {
     try {
       if (!isOmicsUploaded.value) await doUploadOmics(sessionId.value)
       if (clinicalFile.value && !isClinicalUploaded.value) await doUploadClinical(sessionId.value)
+      if (expressionMatrixFile.value && !isExpressionMatrixUploaded.value) await doUploadExpressionMatrix(sessionId.value)
 
       analysisStatus.value = '正在跑算法...'
       await runAlgorithm({

@@ -10,7 +10,7 @@ const {
   selectedDiffOmicsType, diffErrorMessage,
   runDifferentialAnalysis,
 } = useDifferential()
-const { uploadedOmicsTypes } = useDataState()
+const { differentialOmicsTypes } = useDataState()
 const { sessionId } = useSession()
 const { runEnrichmentAnalysis } = useEnrichment()
 
@@ -53,7 +53,7 @@ async function handleOmicsTypeChange() {
         <div class="flex items-center gap-3">
           <select v-model="selectedDiffOmicsType" @change="handleOmicsTypeChange" class="chart-select">
             <option value="" disabled>Select omics layer</option>
-            <option v-for="type in uploadedOmicsTypes" :key="type" :value="type">{{ type }}</option>
+            <option v-for="type in differentialOmicsTypes" :key="type" :value="type">{{ type }}</option>
           </select>
           <select v-model.number="selectedVolcanoCluster" @change="handleVolcanoClusterChange" class="chart-select">
             <option v-for="cid in diffResult.clusters" :key="cid" :value="cid">Cluster {{ cid }}</option>

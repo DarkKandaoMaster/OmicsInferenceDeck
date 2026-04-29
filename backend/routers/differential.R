@@ -54,26 +54,31 @@ emit_json <- function(payload) {
   cat(paste0(to_json(payload), "\n"))
 }
 
-empty_volcano <- function(cluster_id, genes) {
+empty_volcano <- function(cluster_id, genes, comparison) {
   data.frame(
     cluster = cluster_id,
     gene = as.character(genes),
     logFC = 0.0,
     t_pvalue = 1.0,
+    FDR = 1.0,
     negLog10P = 0.0,
+    comparison = comparison,
     stringsAsFactors = FALSE
   )
 }
 
-run_limma_cluster <- function(expr, labels, cluster_id) {
-  group <- factor(ifelse(labels == cluster_id, "target", "rest"), levels = c("rest", "target"))
-  if (sum(group == "target") < 2 || sum(group == "rest") < 2) {
-    return(empty_volcano(cluster_id, rownames(expr)))
+run_limma_contrast <- function(expr, group, cluster_id, comparison, positive_level, negative_level) {
+  group <- factor(group, levels = c(negative_level, positive_level))
+  if (sum(group == positive_level, na.rm = TRUE) < 2 || sum(group == negative_level, na.rm = TRUE) < 2) {
+    return(empty_volcano(cluster_id, rownames(expr), comparison))
   }
 
   design <- stats::model.matrix(~0 + group)
   colnames(design) <- levels(group)
-  contrast <- limma::makeContrasts(target - rest, levels = design)
+  contrast <- limma::makeContrasts(
+    contrasts = paste0(positive_level, " - ", negative_level),
+    levels = design
+  )
   fit <- limma::lmFit(expr, design)
   fit <- limma::contrasts.fit(fit, contrast)
   fit <- limma::eBayes(fit)
@@ -83,16 +88,35 @@ run_limma_cluster <- function(expr, labels, cluster_id) {
   p_values[is.na(p_values) | !is.finite(p_values)] <- 1.0
   p_values <- pmax(p_values, 0.0)
 
+  fdr_values <- as.numeric(table$adj.P.Val)
+  fdr_values[is.na(fdr_values) | !is.finite(fdr_values)] <- 1.0
+  fdr_values <- pmax(fdr_values, 0.0)
+
   result <- data.frame(
     cluster = cluster_id,
     gene = rownames(table),
     logFC = as.numeric(table$logFC),
     t_pvalue = p_values,
+    FDR = fdr_values,
     negLog10P = -log10(p_values + 1e-300),
+    comparison = comparison,
     stringsAsFactors = FALSE
   )
   result$logFC[is.na(result$logFC) | !is.finite(result$logFC)] <- 0.0
   result
+}
+
+top_significant_genes <- function(cluster_result) {
+  significant <- cluster_result[
+    cluster_result$FDR < 0.05 & abs(cluster_result$logFC) >= 0.5,
+    ,
+    drop = FALSE
+  ]
+  if (nrow(significant) == 0) {
+    return(character(0))
+  }
+  significant <- significant[order(significant$FDR, -abs(significant$logFC)), , drop = FALSE]
+  head(significant$gene, 10)
 }
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -112,7 +136,8 @@ tryCatch(
       stop("input parquet must contain sample_name and Cluster columns")
     }
 
-    genes <- setdiff(names(df), c("sample_name", "Cluster"))
+    reserved_columns <- c("sample_name", "Cluster", "SampleType")
+    genes <- setdiff(names(df), reserved_columns)
     if (length(genes) < 1) {
       stop("input parquet must contain at least one feature column")
     }
@@ -131,8 +156,23 @@ tryCatch(
     expr <- limma::avereps(expr)
     keep <- rowSums(!is.na(expr)) > 0
     expr <- expr[keep, , drop = FALSE]
+    expr[is.na(expr)] <- 0
     if (nrow(expr) < 1) {
       stop("no analyzable features after numeric conversion")
+    }
+
+    expression_mode <- "SampleType" %in% names(df)
+    if (expression_mode) {
+      df$SampleType <- tolower(as.character(df$SampleType))
+      valid_type <- df$SampleType %in% c("tumor", "normal")
+      if (!any(valid_type)) {
+        stop("mRNA expression differential analysis requires TCGA tumor and normal sample barcodes")
+      }
+      expr_for_model <- log2(pmax(expr, 0) + 1)
+      mode <- "tumor_vs_normal_within_cluster"
+    } else {
+      expr_for_model <- expr
+      mode <- "cluster_vs_rest"
     }
 
     clusters <- sort(unique(df$Cluster))
@@ -140,16 +180,32 @@ tryCatch(
     top_genes <- character(0)
 
     for (cluster_id in clusters) {
-      cluster_result <- run_limma_cluster(expr, df$Cluster, cluster_id)
-      volcano_frames[[length(volcano_frames) + 1]] <- cluster_result
+      if (expression_mode) {
+        idx <- df$Cluster == cluster_id & df$SampleType %in% c("tumor", "normal")
+        cluster_result <- run_limma_contrast(
+          expr_for_model[, idx, drop = FALSE],
+          df$SampleType[idx],
+          cluster_id,
+          "Tumor vs Normal",
+          "tumor",
+          "normal"
+        )
+      } else {
+        group <- ifelse(df$Cluster == cluster_id, "target", "rest")
+        cluster_result <- run_limma_contrast(
+          expr_for_model,
+          group,
+          cluster_id,
+          "Cluster vs Rest",
+          "target",
+          "rest"
+        )
+      }
 
-      significant <- cluster_result[cluster_result$t_pvalue < 0.05 & cluster_result$logFC > 0.5, , drop = FALSE]
-      if (nrow(significant) > 0) {
-        significant <- significant[order(-significant$logFC, significant$t_pvalue), , drop = FALSE]
-        for (gene in head(significant$gene, 10)) {
-          if (!(gene %in% top_genes)) {
-            top_genes <- c(top_genes, gene)
-          }
+      volcano_frames[[length(volcano_frames) + 1]] <- cluster_result
+      for (gene in top_significant_genes(cluster_result)) {
+        if (!(gene %in% top_genes)) {
+          top_genes <- c(top_genes, gene)
         }
       }
     }
@@ -157,12 +213,23 @@ tryCatch(
     volcano_df <- if (length(volcano_frames) > 0) {
       do.call(rbind, volcano_frames)
     } else {
-      data.frame(cluster = integer(), gene = character(), logFC = numeric(), t_pvalue = numeric(), negLog10P = numeric())
+      data.frame(
+        cluster = integer(),
+        gene = character(),
+        logFC = numeric(),
+        t_pvalue = numeric(),
+        FDR = numeric(),
+        negLog10P = numeric(),
+        comparison = character()
+      )
     }
     arrow::write_parquet(volcano_df, volcano_path)
 
     if (length(top_genes) > 0) {
-      expr_for_heatmap <- t(expr[top_genes, , drop = FALSE])
+      top_genes <- top_genes[top_genes %in% rownames(expr_for_model)]
+    }
+    if (length(top_genes) > 0) {
+      expr_for_heatmap <- t(expr_for_model[top_genes, , drop = FALSE])
       heatmap_df <- data.frame(sample_name = df$sample_name, Cluster = df$Cluster, expr_for_heatmap, check.names = FALSE)
       for (gene in top_genes) {
         values <- heatmap_df[[gene]]
@@ -186,8 +253,9 @@ tryCatch(
       clusters = as.list(as.integer(clusters)),
       selected_cluster = if (length(clusters) > 0) as.integer(clusters[[1]]) else 0L,
       top_genes = as.list(top_genes),
-      n_features = nrow(expr),
-      n_top_genes = length(top_genes)
+      n_features = nrow(expr_for_model),
+      n_top_genes = length(top_genes),
+      mode = mode
     ))
   },
   error = function(e) {

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { downloadPlot } from '~/utils/api'
+import { downloadPlot, type DownloadPlotParams, type PlotFormat } from '~/utils/api'
 
-type PlotFormat = 'png' | 'svg' | 'pdf'
+type PlotDownloadParams = Omit<DownloadPlotParams, 'plot_type' | 'format'>
 
 const props = withDefaults(defineProps<{
   plotType: string
-  params: Record<string, any>
+  params: PlotDownloadParams
   filenamePrefix?: string
   disabled?: boolean
 }>(), {
@@ -43,11 +43,12 @@ async function handleDownload(format: PlotFormat) {
   isDownloading.value = format
 
   try {
-    const response = await downloadPlot({
+    const payload: DownloadPlotParams = {
       ...props.params,
       plot_type: props.plotType,
       format,
-    })
+    }
+    const response = await downloadPlot(payload)
     const contentType = response.headers['content-type'] || extensionContentType(format)
     const blob = response.data instanceof Blob
       ? response.data

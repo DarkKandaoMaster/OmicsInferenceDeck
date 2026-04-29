@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid'
-import { uploadOmics, uploadClinical } from '~/utils/api'
+import { uploadOmics, uploadClinical, uploadExpressionMatrix } from '~/utils/api'
 
 // =================== 组学数据状态 ===================
 const omicsFileConfigs = ref<Array<{ id: string; file: File; originalName: string; type: string }>>([])
@@ -11,6 +11,11 @@ const uploadStatus = ref('')
 const clinicalFile = ref<File | null>(null)
 const isClinicalUploaded = ref(false)
 const clinicalUploadStatus = ref('')
+
+// =================== mRNA expression matrix state ===================
+const expressionMatrixFile = ref<File | null>(null)
+const isExpressionMatrixUploaded = ref(false)
+const expressionMatrixUploadStatus = ref('')
 
 // =================== 自定义评估模式 ===================
 const isCustomEvalMode = ref(false)
@@ -27,6 +32,11 @@ const clinicalIsRowSample = ref(false)
 const clinicalHasHeader = ref(true)
 const clinicalHasIndex = ref(true)
 
+// =================== mRNA expression matrix format ===================
+const expressionMatrixIsRowSample = ref(true)
+const expressionMatrixHasHeader = ref(true)
+const expressionMatrixHasIndex = ref(true)
+
 // =================== Computed ===================
 const dataFormat = computed(() => {
   const p1 = omicsIsRowSample.value ? 'row_feature' : 'row_sample'
@@ -39,6 +49,13 @@ const clinicalDataFormat = computed(() => {
   const p1 = clinicalIsRowSample.value ? 'row_feature' : 'row_sample'
   const p2 = clinicalHasHeader.value ? 'yes' : 'no'
   const p3 = clinicalHasIndex.value ? 'yes' : 'no'
+  return `${p1}_${p2}_${p3}`
+})
+
+const expressionMatrixDataFormat = computed(() => {
+  const p1 = expressionMatrixIsRowSample.value ? 'row_feature' : 'row_sample'
+  const p2 = expressionMatrixHasHeader.value ? 'yes' : 'no'
+  const p3 = expressionMatrixHasIndex.value ? 'yes' : 'no'
   return `${p1}_${p2}_${p3}`
 })
 
@@ -71,10 +88,34 @@ const clinicalExampleText = computed(() => {
 })
 
 /** 当前已上传文件对应的组学类型列表（去重 + 可选拼接 All） */
+const expressionMatrixExampleText = computed(() => {
+  switch (expressionMatrixDataFormat.value) {
+    case 'row_sample_yes_yes': return `,GeneA,GeneB,GeneC,...\nTCGA-XX-0001-01A,11,12,13\nTCGA-XX-0001-11A,21,22,23\nTCGA-XX-0002-01A,31,32,33\n...`
+    case 'row_sample_yes_no': return `GeneA,GeneB,GeneC,...\n11,12,13\n21,22,23\n31,32,33\n...`
+    case 'row_sample_no_yes': return `TCGA-XX-0001-01A,11,12,13,...\nTCGA-XX-0001-11A,21,22,23\nTCGA-XX-0002-01A,31,32,33\n...`
+    case 'row_sample_no_no': return `11,12,13,...\n21,22,23\n31,32,33\n...`
+    case 'row_feature_yes_yes': return `id\tTCGA-XX-0001-01A\tTCGA-XX-0001-11A\tTCGA-XX-0002-01A\nGeneA\t11\t21\t31\nGeneB\t12\t22\t32\nGeneC\t13\t23\t33\n...`
+    case 'row_feature_yes_no': return `TCGA-XX-0001-01A\tTCGA-XX-0001-11A\tTCGA-XX-0002-01A\n11\t21\t31\n12\t22\t32\n13\t23\t33\n...`
+    case 'row_feature_no_yes': return `GeneA\t11\t21\t31\nGeneB\t12\t22\t32\nGeneC\t13\t23\t33\n...`
+    case 'row_feature_no_no': return `11\t21\t31\n12\t22\t32\n13\t23\t33\n...`
+    default: return ''
+  }
+})
+
 const uploadedOmicsTypes = computed(() => {
   if (!omicsFileConfigs.value || omicsFileConfigs.value.length === 0) return []
   const types = [...new Set(omicsFileConfigs.value.map(c => c.type))]
   if (types.length > 1) types.push('All (Concatenated)')
+  return types
+})
+
+const expressionMatrixType = 'mRNA Expression Matrix'
+
+const differentialOmicsTypes = computed(() => {
+  const types = [...uploadedOmicsTypes.value]
+  if (expressionMatrixFile.value || isExpressionMatrixUploaded.value) {
+    return [expressionMatrixType, ...types]
+  }
   return types
 })
 
@@ -131,6 +172,26 @@ export function useDataState() {
   }
 
   /** 处理组学文件选择 */
+  async function doUploadExpressionMatrix(sessionId: string) {
+    if (!expressionMatrixFile.value) return
+
+    const formData = new FormData()
+    formData.append('file', expressionMatrixFile.value)
+    formData.append('data_format', expressionMatrixDataFormat.value)
+    formData.append('session_id', sessionId)
+
+    expressionMatrixUploadStatus.value = 'Uploading mRNA expression matrix...'
+    try {
+      const res = await uploadExpressionMatrix(formData)
+      expressionMatrixUploadStatus.value = `Expression matrix ready: ${res.data.original_filename}\n${res.data.n_samples} samples, ${res.data.n_features} genes`
+      isExpressionMatrixUploaded.value = true
+    } catch (error: any) {
+      expressionMatrixUploadStatus.value = `Expression matrix error: ${error.response?.data?.detail || 'upload failed'}`
+      isExpressionMatrixUploaded.value = false
+      throw error
+    }
+  }
+
   function handleFileChange(event: Event) {
     const files = Array.from((event.target as HTMLInputElement).files || [])
     if (files.length > 0) {
@@ -157,6 +218,26 @@ export function useDataState() {
   }
 
   /** 处理临床文件选择 */
+  function handleExpressionMatrixFileChange(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0]
+    if (file) {
+      expressionMatrixFile.value = file
+      expressionMatrixUploadStatus.value = 'mRNA expression matrix selected; it will upload when analysis starts.'
+      isExpressionMatrixUploaded.value = false
+    } else {
+      expressionMatrixFile.value = null
+      expressionMatrixUploadStatus.value = ''
+      isExpressionMatrixUploaded.value = false
+    }
+  }
+
+  function handleExpressionMatrixFormatChange() {
+    if (expressionMatrixFile.value) {
+      expressionMatrixUploadStatus.value = 'mRNA expression matrix format changed; it will be parsed again when analysis starts.'
+      isExpressionMatrixUploaded.value = false
+    }
+  }
+
   function handleClinicalFileChange(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0]
     if (file) {
@@ -191,17 +272,21 @@ export function useDataState() {
     omicsFileConfigs, omicsTypes, isOmicsUploaded, uploadStatus,
     // 临床状态
     clinicalFile, isClinicalUploaded, clinicalUploadStatus,
+    expressionMatrixFile, isExpressionMatrixUploaded, expressionMatrixUploadStatus,
     // 自定义评估
     isCustomEvalMode, customEvalFile, customEvalUploadStatus,
     // 格式状态
     omicsIsRowSample, omicsHasHeader, omicsHasIndex,
     clinicalIsRowSample, clinicalHasHeader, clinicalHasIndex,
+    expressionMatrixIsRowSample, expressionMatrixHasHeader, expressionMatrixHasIndex,
     // 计算属性
-    dataFormat, clinicalDataFormat, exampleText, clinicalExampleText,
-    uploadedOmicsTypes,
+    dataFormat, clinicalDataFormat, expressionMatrixDataFormat,
+    exampleText, clinicalExampleText, expressionMatrixExampleText,
+    uploadedOmicsTypes, expressionMatrixType, differentialOmicsTypes,
     // 操作
-    doUploadOmics, doUploadClinical,
+    doUploadOmics, doUploadClinical, doUploadExpressionMatrix,
     handleFileChange, handleFormatChange,
+    handleExpressionMatrixFileChange, handleExpressionMatrixFormatChange,
     handleClinicalFileChange, handleClinicalFormatChange,
     handleCustomEvalFileChange,
   }

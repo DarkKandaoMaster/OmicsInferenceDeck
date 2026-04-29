@@ -52,7 +52,10 @@ def build_figure(
     ax.set_ylim(0, y_max * 1.12 + 0.1)
     ax.set_xlabel("Log2 Fold Change")
     ax.set_ylabel("-Log10(P-value)")
-    ax.set_title(f"Cluster {cluster_id} vs Others")
+    comparison = "Cluster vs Others"
+    if "comparison" in df.columns and not df["comparison"].dropna().empty:
+        comparison = str(df["comparison"].dropna().iloc[0])
+    ax.set_title(f"Cluster {cluster_id}: {comparison}")
     set_2d_plot_box(ax)
     ax.legend(loc="upper right", frameon=True, facecolor="white", edgecolor="#222222")
     fig.tight_layout()

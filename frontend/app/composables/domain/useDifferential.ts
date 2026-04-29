@@ -11,22 +11,29 @@ const diffErrorMessage = ref('')
 
 export function useDifferential() {
   const { sessionId } = useSession()
-  const { omicsFileConfigs, uploadedOmicsTypes } = useDataState()
+  const { omicsFileConfigs, differentialOmicsTypes, expressionMatrixType, isExpressionMatrixUploaded } = useDataState()
   const { backendResponse } = useAnalysisActions()
 
   async function runDifferentialAnalysis(options: { silent?: boolean } = {}) {
-    if (omicsFileConfigs.value.length === 0 || !backendResponse.value?.data?.metrics) {
+    const hasDifferentialInput = omicsFileConfigs.value.length > 0 || isExpressionMatrixUploaded.value
+    if (!hasDifferentialInput || !backendResponse.value?.data?.metrics) {
       if (!options.silent) alert('请先完成算法分析，得到聚类结果。')
       return
     }
 
     if (!selectedDiffOmicsType.value) {
-      if (uploadedOmicsTypes.value.length > 0) {
-        selectedDiffOmicsType.value = uploadedOmicsTypes.value[0]!
+      if (differentialOmicsTypes.value.length > 0) {
+        selectedDiffOmicsType.value = isExpressionMatrixUploaded.value
+          ? expressionMatrixType
+          : differentialOmicsTypes.value[0]!
       } else {
         if (!options.silent) alert('没有可用的组学数据类型。')
         return
       }
+    } else if (!differentialOmicsTypes.value.includes(selectedDiffOmicsType.value)) {
+      selectedDiffOmicsType.value = isExpressionMatrixUploaded.value
+        ? expressionMatrixType
+        : (differentialOmicsTypes.value[0] || '')
     }
 
     isDiffLoading.value = true

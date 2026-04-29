@@ -1,5 +1,6 @@
 #运行这个算法会报错：[算法错误] only 0-dimensional arrays can be converted to Python scalars
 #之后再来修
+#对了，这个parea是不是不需要至少两个组学文件才能运行？但是我直接在第29行写到 raise ValueError("Parea requires at least two matched samples across omics views.") ，拒绝了两个文件以下的输入
 
 import inspect
 

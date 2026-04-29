@@ -8,7 +8,11 @@ const {
   clinicalUploadStatus,
   clinicalIsRowSample, clinicalHasHeader, clinicalHasIndex,
   clinicalExampleText,
+  expressionMatrixFile, expressionMatrixUploadStatus,
+  expressionMatrixIsRowSample, expressionMatrixHasHeader, expressionMatrixHasIndex,
+  expressionMatrixExampleText,
   handleFileChange, handleFormatChange,
+  handleExpressionMatrixFileChange, handleExpressionMatrixFormatChange,
   handleClinicalFileChange, handleClinicalFormatChange,
 } = useDataState()
 </script>
@@ -64,6 +68,50 @@ const {
 
         <div v-show="uploadStatus" class="mt-2 text-xs p-2 rounded-lg whitespace-pre-wrap break-words" :class="uploadStatus.startsWith('❌') ? 'bg-red-50 text-red-700 border border-red-200' : uploadStatus.startsWith('✅') ? 'bg-green-50 text-green-800 border border-green-200' : ''">
           {{ uploadStatus }}
+        </div>
+      </div>
+
+      <hr class="border-none border-t border-dashed border-slate-200 my-6" />
+
+      <!-- mRNA expression matrix -->
+      <div>
+        <h4 class="m-0 mb-3 text-sm flex items-center gap-2">mRNA expression matrix <span class="text-[11px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">optional</span></h4>
+
+        <div class="flex flex-col gap-2 mb-4">
+          <label class="flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer px-3 py-2 rounded-lg border border-slate-200 transition-all hover:border-primary" :class="{ 'bg-indigo-50 !border-primary !text-primary font-medium': expressionMatrixIsRowSample }">
+            <input type="checkbox" v-model="expressionMatrixIsRowSample" @change="handleExpressionMatrixFormatChange" class="hidden" />
+            Rows are genes, columns are samples
+          </label>
+          <label class="flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer px-3 py-2 rounded-lg border border-slate-200 transition-all hover:border-primary" :class="{ 'bg-indigo-50 !border-primary !text-primary font-medium': expressionMatrixHasHeader }">
+            <input type="checkbox" v-model="expressionMatrixHasHeader" @change="handleExpressionMatrixFormatChange" class="hidden" />
+            Contains header row
+          </label>
+          <label class="flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer px-3 py-2 rounded-lg border border-slate-200 transition-all hover:border-primary" :class="{ 'bg-indigo-50 !border-primary !text-primary font-medium': expressionMatrixHasIndex }">
+            <input type="checkbox" v-model="expressionMatrixHasIndex" @change="handleExpressionMatrixFormatChange" class="hidden" />
+            Contains index column
+          </label>
+        </div>
+
+        <div class="bg-slate-800 rounded-lg p-3 mb-4">
+          <div class="text-[11px] text-slate-400 mb-2 uppercase tracking-wider">TXT / CSV preview</div>
+          <pre class="m-0 text-slate-100 font-mono text-xs leading-relaxed overflow-x-auto">{{ expressionMatrixExampleText }}</pre>
+        </div>
+
+        <div class="relative border-2 border-dashed border-slate-200 rounded-lg bg-slate-100 hover:border-primary hover:bg-indigo-50 transition-all text-center">
+          <input type="file" @change="handleExpressionMatrixFileChange" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" id="expression-matrix-file" />
+          <label for="expression-matrix-file" class="flex flex-col p-5 pointer-events-none">
+            <span class="text-sm font-medium text-slate-900">Upload mRNA expression matrix</span>
+            <small class="text-xs text-slate-500 mt-1">Used for tumor-vs-normal differential expression and GO/KEGG enrichment; it will not participate in clustering.</small>
+          </label>
+        </div>
+
+        <div v-if="expressionMatrixFile" class="mt-4 flex justify-between items-center bg-slate-100 px-3 py-2 rounded-lg border border-slate-200">
+          <span class="text-[13px] text-slate-900 whitespace-nowrap overflow-hidden text-ellipsis max-w-[80%]" :title="expressionMatrixFile.name">{{ expressionMatrixFile.name }}</span>
+          <span class="text-[12px] text-slate-500">mRNA</span>
+        </div>
+
+        <div v-show="expressionMatrixUploadStatus" class="mt-2 text-xs p-2 rounded-lg whitespace-pre-wrap break-words bg-slate-50 text-slate-700 border border-slate-200">
+          {{ expressionMatrixUploadStatus }}
         </div>
       </div>
 

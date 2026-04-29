@@ -184,15 +184,23 @@ tryCatch(
 
     input_df <- as.data.frame(arrow::read_parquet(input_path))
     if (input_mode == "volcano") {
-      required_columns <- c("cluster", "gene", "t_pvalue", "logFC")
+      required_columns <- c("cluster", "gene", "logFC")
       missing_columns <- setdiff(required_columns, names(input_df))
       if (length(missing_columns) > 0) {
         stop(paste0("volcano parquet missing columns: ", paste(missing_columns, collapse = ", ")))
       }
-      input_df$t_pvalue <- suppressWarnings(as.numeric(input_df$t_pvalue))
       input_df$logFC <- suppressWarnings(as.numeric(input_df$logFC))
-      cluster_gene_df <- input_df[input_df$t_pvalue < 0.05 & input_df$logFC > 0.5, c("cluster", "gene"), drop = FALSE]
-      cluster_gene_df <- cluster_gene_df[order(cluster_gene_df$cluster, input_df$t_pvalue[input_df$t_pvalue < 0.05 & input_df$logFC > 0.5]), , drop = FALSE]
+      if ("FDR" %in% names(input_df)) {
+        input_df$significance <- suppressWarnings(as.numeric(input_df$FDR))
+      } else if ("t_pvalue" %in% names(input_df)) {
+        input_df$significance <- suppressWarnings(as.numeric(input_df$t_pvalue))
+      } else {
+        stop("volcano parquet must contain FDR or t_pvalue")
+      }
+      keep <- input_df$significance < 0.05 & abs(input_df$logFC) >= 0.5
+      cluster_gene_df <- input_df[keep, c("cluster", "gene", "significance"), drop = FALSE]
+      cluster_gene_df <- cluster_gene_df[order(cluster_gene_df$cluster, cluster_gene_df$significance), , drop = FALSE]
+      cluster_gene_df <- cluster_gene_df[, c("cluster", "gene"), drop = FALSE]
     } else {
       cluster_gene_df <- input_df
     }

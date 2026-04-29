@@ -14,6 +14,13 @@ export function uploadClinical(formData: FormData) {
   })
 }
 
+/** Upload mRNA expression matrix for downstream differential/enrichment analysis */
+export function uploadExpressionMatrix(formData: FormData) {
+  return http.post('/upload_expression', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
 /** 运行聚类算法 */
 export function runAlgorithm(params: {
   algorithm: string
@@ -154,10 +161,12 @@ export function cleanupSession(sessionId: string) {
   navigator.sendBeacon(`${API_BASE_URL}/cleanup`, formData)
 }
 
-export function downloadPlot(params: {
+export type PlotFormat = 'png' | 'svg' | 'pdf'
+
+export type DownloadPlotParams = {
   session_id: string
   plot_type: string
-  format: 'png' | 'svg' | 'pdf'
+  format: PlotFormat
   reduction?: string
   random_state?: number
   cluster_id?: number
@@ -165,6 +174,8 @@ export function downloadPlot(params: {
   mode?: 'combined' | 'by_gene'
   x_param?: string
   y_param?: string
-}) {
+}
+
+export function downloadPlot(params: DownloadPlotParams) {
   return http.post('/plots/download', params, { responseType: 'blob' })
 }
