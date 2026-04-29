@@ -1,3 +1,6 @@
+#运行这个算法会报错：[算法错误] only 0-dimensional arrays can be converted to Python scalars
+#之后再来修
+
 import inspect
 
 import numpy as np
