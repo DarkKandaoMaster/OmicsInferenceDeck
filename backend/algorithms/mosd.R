@@ -128,9 +128,6 @@ tryCatch(
     if (!file.exists(input_path)) {
       stop(paste("Input parquet not found:", input_path))
     }
-    if (!requireNamespace("MOSD", quietly = TRUE)) {
-      stop('R package MOSD is not installed. Install it with devtools::install_github("DXCODEE/MOSD").')
-    }
     if (seed_arg != "") {
       seed <- suppressWarnings(as.integer(seed_arg))
       if (!is.na(seed)) {
