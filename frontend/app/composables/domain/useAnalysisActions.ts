@@ -283,6 +283,10 @@ export function useAnalysisActions() {
         paramGridObj = { n_clusters: testNClusters.value.split(',').map(Number) }
         psParam1.value = 'n_clusters'
         psParam2.value = ''
+      } else if (selectedAlgorithm.value[0] === 'Parea') {
+        paramGridObj = { n_clusters: testNClusters.value.split(',').map(Number) }
+        psParam1.value = 'n_clusters'
+        psParam2.value = ''
       }
 
       const res = await runParameterSearch({
