@@ -97,7 +97,7 @@ function handleCancerSubtypeChange() {
 
       <!-- mRNA 表达矩阵 -->
       <div>
-        <h4 class="m-0 mb-3 text-sm flex items-center gap-2">mRNA 表达矩阵 <span class="text-[11px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">选填</span></h4>
+        <h4 class="m-0 mb-3 text-sm flex items-center gap-2">mRNA表达矩阵<span class="text-[11px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">选填</span></h4>
 
         <div class="flex flex-col gap-2 mb-4">
           <label class="flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer px-3 py-2 rounded-lg border border-slate-200 transition-all hover:border-primary" :class="{ 'bg-indigo-50 !border-primary !text-primary font-medium': expressionMatrixIsRowSample }">
@@ -115,7 +115,7 @@ function handleCancerSubtypeChange() {
         </div>
 
         <div class="bg-slate-800 rounded-lg p-3 mb-4">
-          <div class="text-[11px] text-slate-400 mb-2 uppercase tracking-wider">TXT / CSV 格式预览</div>
+          <div class="text-[11px] text-slate-400 mb-2 uppercase tracking-wider">CSV 格式预览</div>
           <pre class="m-0 text-slate-100 font-mono text-xs leading-relaxed overflow-x-auto">{{ expressionMatrixExampleText }}</pre>
         </div>
 
