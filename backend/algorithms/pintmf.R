@@ -80,7 +80,21 @@ parse_positive_int <- function(value, default_value) {
   parsed
 }
 
-frame_matrices_from_parquet <- function(input_path) {
+select_top_variable_features <- function(mat, max_features, frame_id) {
+  if (is.null(max_features) || max_features <= 0 || ncol(mat) <= max_features) {
+    return(mat)
+  }
+
+  variances <- apply(mat, 2, stats::var)
+  variances[!is.finite(variances)] <- -Inf
+  keep_idx <- order(variances, decreasing = TRUE)[seq_len(max_features)]
+  if (length(keep_idx) == 0 || all(!is.finite(variances[keep_idx]))) {
+    stop(paste("No finite variable features remain in", frame_id))
+  }
+  mat[, keep_idx, drop = FALSE]
+}
+
+frame_matrices_from_parquet <- function(input_path, max_features) {
   df <- suppressWarnings(suppressMessages(
     arrow::read_parquet(input_path, as_data_frame = TRUE)
   ))
@@ -108,6 +122,7 @@ frame_matrices_from_parquet <- function(input_path) {
     if (ncol(mat) == 0) {
       stop(paste("All features were removed from", frame_id, "because they are constant or invalid."))
     }
+    mat <- select_top_variable_features(mat, max_features, frame_id)
     scale(mat)
   })
 
@@ -118,9 +133,41 @@ frame_matrices_from_parquet <- function(input_path) {
   list(sample_names = sample_names, matrices = matrices)
 }
 
+force_future_sapply_list <- function() {
+  ns <- asNamespace("future.apply")
+  original <- get("future_sapply", envir = ns)
+  wrapper <- function(X, FUN, ..., simplify = TRUE, USE.NAMES = TRUE,
+                      future.envir = parent.frame(), future.label = "future_sapply-%d") {
+    original(
+      X,
+      FUN,
+      ...,
+      simplify = FALSE,
+      USE.NAMES = USE.NAMES,
+      future.envir = future.envir,
+      future.label = future.label
+    )
+  }
+  unlockBinding("future_sapply", ns)
+  assign("future_sapply", wrapper, envir = ns)
+  lockBinding("future_sapply", ns)
+  original
+}
+
+restore_future_sapply <- function(original) {
+  if (is.null(original)) {
+    return(invisible(NULL))
+  }
+  ns <- asNamespace("future.apply")
+  unlockBinding("future_sapply", ns)
+  assign("future_sapply", original, envir = ns)
+  lockBinding("future_sapply", ns)
+  invisible(NULL)
+}
+
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 5) {
-  emit_error("Usage: Rscript pintmf.R <omics_parquet> <n_clusters> <latent_dim> <max_it> [random_seed] [init_flavor] [flavor_mod] [flavor_mod_w]")
+  emit_error("Usage: Rscript pintmf.R <omics_parquet> <n_clusters> <latent_dim> <max_it> [random_seed] [init_flavor] [flavor_mod] [flavor_mod_w] [max_features]")
   quit(save = "no", status = 1)
 }
 
@@ -138,6 +185,7 @@ tryCatch(
     init_flavor <- if (length(args) >= 6 && args[6] != "") args[6] else "snf"
     flavor_mod <- if (length(args) >= 7 && args[7] != "") args[7] else "glmnet"
     flavor_mod_w <- if (length(args) >= 8 && args[8] != "") args[8] else "glmnet"
+    max_features <- if (length(args) >= 9) parse_positive_int(args[9], 500) else 500
 
     if (!file.exists(input_path)) {
       stop(paste("Input parquet not found:", input_path))
@@ -149,7 +197,7 @@ tryCatch(
       }
     }
 
-    loaded <- frame_matrices_from_parquet(input_path)
+    loaded <- frame_matrices_from_parquet(input_path, max_features)
     if (length(loaded$matrices) < 2) {
       stop("PIntMF requires at least two omics matrices.")
     }
@@ -157,17 +205,27 @@ tryCatch(
       stop("PIntMF latent_dim must be at least 2.")
     }
 
-    pintmf_result <- suppressWarnings(suppressMessages(
-      PintMF::SolveInt(
-        Y = loaded$matrices,
-        p = latent_dim,
-        max.it = max_it,
-        verbose = FALSE,
-        init_flavor = init_flavor,
-        flavor_mod = flavor_mod,
-        flavor_mod_W = flavor_mod_w
-      )
-    ))
+    original_future_sapply <- force_future_sapply_list()
+    on.exit(restore_future_sapply(original_future_sapply), add = TRUE)
+
+    capture.output(
+      {
+        pintmf_result <- suppressWarnings(suppressMessages(
+          PintMF::SolveInt(
+            Y = loaded$matrices,
+            p = latent_dim,
+            max.it = max_it,
+            verbose = FALSE,
+            init_flavor = init_flavor,
+            flavor_mod = flavor_mod,
+            flavor_mod_W = flavor_mod_w
+          )
+        ))
+      },
+      type = "output"
+    )
+    restore_future_sapply(original_future_sapply)
+    original_future_sapply <- NULL
 
     embeddings <- as.matrix(pintmf_result$W)
     storage.mode(embeddings) <- "double"
