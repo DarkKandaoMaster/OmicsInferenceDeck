@@ -14,19 +14,25 @@ import pandas as pd
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from plots.base import CLUSTER_RESULT_FILE, plot_path, write_json
+from plots.base import CLUSTER_RESULT_FILE, enrichment_file, plot_path, write_json
 from routers.upload import CLINICAL_DATA_FILE, load_frame_dict
 
 
 router = APIRouter()
 METRICS_SCRIPT = Path(__file__).resolve().parents[1] / "metrics" / "cluster_metrics.R"
 CLINICAL_METRICS_SCRIPT = Path(__file__).resolve().parents[1] / "metrics" / "clinical_metrics.R"
+BIOLOGY_METRICS_SCRIPT = Path(__file__).resolve().parents[1] / "metrics" / "biology_metrics.R"
 METRIC_KEYS = ("silhouette", "silhouette_cluster", "calinski", "davies", "dunn", "xb", "s_dbw")
 CLINICAL_METRICS_INPUT_FILE = "clinical_metrics_input.parquet"
 
 
 class MetricsRequest(BaseModel):
     session_id: str
+
+
+class BiologyMetricsRequest(BaseModel):
+    session_id: str
+    database: str = "GO"
 
 
 def parse_r_payload(result: subprocess.CompletedProcess[str], fallback_message: str) -> dict:
@@ -132,6 +138,22 @@ def compute_clinical_metrics(input_path: str) -> dict:
     return parse_r_payload(result, "R clinical metrics script failed")
 
 
+def compute_biology_metrics(input_path: str, database: str) -> dict:
+    if not BIOLOGY_METRICS_SCRIPT.exists():
+        raise FileNotFoundError(f"R biology metrics script not found: {BIOLOGY_METRICS_SCRIPT}")
+
+    result = subprocess.run(
+        ["Rscript", str(BIOLOGY_METRICS_SCRIPT), input_path, database],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=3600,
+    )
+
+    return parse_r_payload(result, "R biology metrics script failed")
+
+
 @router.post("/api/metrics")
 async def cluster_metrics(request: MetricsRequest):
     try:
@@ -177,3 +199,28 @@ async def clinical_metrics(request: MetricsRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Clinical metrics calculation failed: {str(e)}")
+
+
+@router.post("/api/metrics/biology")
+async def biology_metrics(request: BiologyMetricsRequest):
+    try:
+        database = request.database.upper()
+        if database not in {"GO", "KEGG"}:
+            raise ValueError("database must be GO or KEGG")
+
+        enrichment_path = plot_path(request.session_id, enrichment_file(database))
+        if not enrichment_path.exists():
+            raise FileNotFoundError(f"{enrichment_file(database)} not found. Please run enrichment analysis first.")
+
+        biology_metrics_scores = compute_biology_metrics(str(enrichment_path), database)
+        return {
+            "status": "success",
+            "message": "Biology mechanism metrics calculated.",
+            "server_time": datetime.datetime.now().isoformat(),
+            "data": {
+                "method": "Biology",
+                "biology_metrics": biology_metrics_scores,
+            },
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Biology metrics calculation failed: {str(e)}")
