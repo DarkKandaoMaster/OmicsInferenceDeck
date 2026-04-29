@@ -41,6 +41,27 @@ export function computeClinicalMetrics(params: {
   return http.post('/metrics/clinical', params)
 }
 
+/** Calculate biology mechanism metrics from enrichment results */
+export function computeBiologyMetrics(params: {
+  session_id: string
+  database?: string
+}) {
+  return http.post('/metrics/biology', params)
+}
+
+/** Calculate aggregate AWA / 3D-AWA metrics from calculated metrics */
+export function computeAwaMetrics(params: {
+  session_id: string
+  database?: string
+  metrics?: Record<string, unknown> | null
+  clinical_metrics?: Record<string, unknown> | null
+  biology_metrics?: Record<string, unknown> | null
+  awa_w1?: number
+  awa_w2?: number
+}) {
+  return http.post('/metrics/awa', params)
+}
+
 /** 绘制聚类散点图 */
 export function renderClusterScatter(params: {
   session_id: string

@@ -20,8 +20,13 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 
 R包：
 install.packages("devtools")
+install.packages("arrow")
 install.packages("SNFtool")
 install.packages("survival")
 install.packages("gtsummary")
 install.packages("broom")
 devtools::install_github("Shamir-Lab/NEMO/NEMO")
+devtools::install_github("DXCODEE/MOSD")
+install.packages("BiocManager")
+BiocManager::install("clusterProfiler")
+BiocManager::install("limma")

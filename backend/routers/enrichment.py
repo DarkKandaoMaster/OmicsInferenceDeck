@@ -6,8 +6,10 @@
 """
 
 from pathlib import Path
+import json
+import subprocess
+import tempfile
 
-import gseapy as gp
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -22,6 +24,8 @@ from plots.base import (
 
 
 router = APIRouter()
+ENRICHMENT_SCRIPT = Path(__file__).with_name("enrichment.R")
+ENRICHMENT_CLUSTER_GENES_FILE = "enrichment_cluster_genes.parquet"
 
 
 class EnrichmentRequest(BaseModel):
@@ -43,99 +47,106 @@ RESULT_COLUMNS = [
 ]
 
 
-def _gmt_files(database: str) -> dict[str, str]:
-    base = Path("references") / "GO_KEGG"
-    if database.upper() == "GO":
-        return {
-            "BP": str(base / "GO_Biological_Process_2025.gmt"),
-            "CC": str(base / "GO_Cellular_Component_2025.gmt"),
-            "MF": str(base / "GO_Molecular_Function_2025.gmt"),
-        }
-    if database.upper() == "KEGG":
-        return {"KEGG": str(base / "KEGG_2026.gmt")}
-    raise ValueError("database must be GO or KEGG")
+def _parse_r_payload(result: subprocess.CompletedProcess[str], fallback_message: str) -> dict:
+    stdout = result.stdout.strip()
+    if result.returncode != 0:
+        message = stdout or result.stderr.strip() or fallback_message
+        try:
+            message = json.loads(stdout).get("error", message)
+        except json.JSONDecodeError:
+            pass
+        raise RuntimeError(message)
 
-
-def _cluster_genes_from_differential(session_id: str) -> dict[str, list[str]]:
-    volcano_path = plot_path(session_id, DIFFERENTIAL_VOLCANO_FILE)
-    if not volcano_path.exists():
-        raise FileNotFoundError("differential_volcano.parquet not found. Please run differential analysis first.")
-    volcano_df = pd.read_parquet(volcano_path)
-    cluster_genes: dict[str, list[str]] = {}
-    for cluster_id, group in volcano_df.groupby("cluster"):
-        significant = group[(group["t_pvalue"] < 0.05) & (group["logFC"] > 0.5)]
-        significant = significant.sort_values(["t_pvalue", "logFC"], ascending=[True, False])
-        cluster_genes[str(int(cluster_id))] = significant["gene"].astype(str).tolist()
-    return cluster_genes
-
-
-def _rich_factor(overlap: str) -> float:
     try:
-        numerator, denominator = str(overlap).split("/")
-        return float(numerator) / float(denominator)
-    except Exception:
-        return 0.0
+        payload = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"Invalid R enrichment output: {stdout[:500]}") from exc
+
+    if "error" in payload:
+        raise RuntimeError(str(payload["error"]))
+    return payload
+
+
+def _run_enrichment_r(database: str, input_path: Path, output_path: Path, input_mode: str) -> dict:
+    if not ENRICHMENT_SCRIPT.exists():
+        raise FileNotFoundError(f"R enrichment script not found: {ENRICHMENT_SCRIPT}")
+
+    gmt_base = Path(__file__).resolve().parents[1] / "references" / "GO_KEGG"
+    result = subprocess.run(
+        [
+            "Rscript",
+            str(ENRICHMENT_SCRIPT),
+            database,
+            str(input_path),
+            str(output_path),
+            str(gmt_base),
+            input_mode,
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=3600,
+    )
+    return _parse_r_payload(result, "R enrichment script failed")
+
+
+def _write_cluster_genes_input(cluster_genes: dict[str, list[str]], output_path: Path) -> None:
+    rows: list[dict] = []
+    for cluster_id, genes in cluster_genes.items():
+        for gene in genes:
+            rows.append({"cluster": int(cluster_id), "gene": str(gene)})
+    pd.DataFrame(rows, columns=["cluster", "gene"]).to_parquet(output_path, index=False)
 
 
 @router.post("/api/enrichment_analysis")
 async def run_enrichment_analysis(request: EnrichmentRequest):
     try:
         database = request.database.upper()
-        gmt_files = _gmt_files(database)
+        if database not in {"GO", "KEGG"}:
+            raise ValueError("database must be GO or KEGG")
 
-        if request.cluster_genes is not None:
-            cluster_genes = request.cluster_genes
-        else:
-            if not request.session_id:
-                raise ValueError("session_id is required when cluster_genes is not provided.")
-            cluster_genes = _cluster_genes_from_differential(request.session_id)
-
-        rows: list[dict] = []
-        for cluster_id, gene_list in cluster_genes.items():
-            if len(gene_list) < 3:
-                continue
-
-            for category, gmt_file in gmt_files.items():
-                enr = gp.enrich(gene_list=gene_list, gene_sets=gmt_file, outdir=None, no_plot=True)
-                results_df = enr.results
-                if not isinstance(results_df, pd.DataFrame) or results_df.empty:
-                    continue
-
-                filtered = results_df[results_df["P-value"] < 0.05].sort_values("P-value")
-                top_results = filtered.head(5)
-                for _, row in top_results.iterrows():
-                    genes = str(row.get("Genes", ""))
-                    rows.append(
-                        {
-                            "cluster": int(cluster_id),
-                            "Term": str(row.get("Term", "")),
-                            "P_value": float(row.get("P-value", 1.0)),
-                            "Adjusted_P": float(row.get("Adjusted P-value", row.get("P-value", 1.0))),
-                            "Overlap": str(row.get("Overlap", "")),
-                            "Genes": genes,
-                            "Gene_Count": len([g for g in genes.split(";") if g]),
-                            "Category": category,
-                            "Rich_Factor": _rich_factor(str(row.get("Overlap", ""))),
-                        }
-                    )
-
-        result_df = pd.DataFrame(rows, columns=RESULT_COLUMNS)
         if request.session_id:
             output_path = plot_path(request.session_id, enrichment_file(database))
-            result_df.to_parquet(output_path, index=False)
         else:
             output_path = None
 
-        clusters = sorted([int(c) for c in cluster_genes.keys()])
-        selected_cluster = clusters[0] if clusters else 0
+        temp_dir_context = tempfile.TemporaryDirectory() if output_path is None else None
+        try:
+            if output_path is None:
+                output_path = Path(temp_dir_context.name) / enrichment_file(database)
 
-        if output_path is not None:
+            if request.cluster_genes is not None:
+                if request.session_id:
+                    input_path = plot_path(request.session_id, ENRICHMENT_CLUSTER_GENES_FILE)
+                else:
+                    input_path = Path(temp_dir_context.name) / ENRICHMENT_CLUSTER_GENES_FILE
+                _write_cluster_genes_input(request.cluster_genes, input_path)
+                input_mode = "genes"
+            else:
+                if not request.session_id:
+                    raise ValueError("session_id is required when cluster_genes is not provided.")
+                input_path = plot_path(request.session_id, DIFFERENTIAL_VOLCANO_FILE)
+                if not input_path.exists():
+                    raise FileNotFoundError("differential_volcano.parquet not found. Please run differential analysis first.")
+                input_mode = "volcano"
+
+            payload = _run_enrichment_r(database, input_path, output_path, input_mode)
+        finally:
+            if temp_dir_context is not None:
+                temp_dir_context.cleanup()
+
+        clusters = [int(c) for c in payload.get("clusters", [])]
+        selected_cluster = int(payload.get("selected_cluster", clusters[0] if clusters else 0))
+
+        if request.session_id:
+            render_path = plot_path(request.session_id, enrichment_file(database))
             try:
-                bar_svg = run_r_svg("enrichment_bar.R", [output_path, selected_cluster])
+                bar_svg = run_r_svg("enrichment_bar.R", [render_path, selected_cluster])
             except Exception as exc:
                 bar_svg = empty_svg(f"Enrichment bar plot failed: {exc}", "Enrichment Bar")
             try:
-                bubble_svg = run_r_svg("enrichment_bubble.R", [output_path, "combined"])
+                bubble_svg = run_r_svg("enrichment_bubble.R", [render_path, "combined"])
             except Exception as exc:
                 bubble_svg = empty_svg(f"Enrichment bubble plot failed: {exc}", "Enrichment Bubble")
         else:
@@ -149,7 +160,7 @@ async def run_enrichment_analysis(request: EnrichmentRequest):
             "selected_cluster": selected_cluster,
             "bar_svg": bar_svg,
             "bubble_svg": bubble_svg,
-            "n_terms": int(len(result_df)),
+            "n_terms": int(payload.get("n_terms", 0)),
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Enrichment analysis failed: {str(e)}")

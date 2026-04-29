@@ -261,6 +261,8 @@ async def upload_file(   files:List[UploadFile]=File(...)   ,   data_format:str=
                 if len(non_numeric_cols)>0:
                     raise ValueError(f"检测到以下列包含非数字内容: {non_numeric_cols}。请确保这两个列只包含数字。")
 
+            data_dict = {key: df.loc[df_concat.index].copy() for key, df in data_dict.items()} #upload.py 保存前会把各组学数据裁剪到已校验过的交集样本
+
             # 保存输入数据：DataFrame 内容写入 parquet，字典结构等元数据写入 JSON。
             parquet_filename, metadata_filename = input_data_files(file_type)
             final_file_location=os.path.join(UPLOAD_PATH, parquet_filename)

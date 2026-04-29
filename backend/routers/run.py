@@ -78,7 +78,8 @@ async def run_analysis(request:AnalysisRequest): #指定record的类型为Analys
             n_clusters=request.n_clusters,
             random_state=seed,
             max_iter=request.max_iter,
-            n_neighbors=request.n_neighbors
+            n_neighbors=request.n_neighbors,
+            omics_path=file_path,
         )
 
         # 3. 运行算法，获取聚类结果

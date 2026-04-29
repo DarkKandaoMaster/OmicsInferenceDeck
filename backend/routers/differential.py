@@ -1,15 +1,17 @@
 """比较不同聚类之间的组学特征差异。
 
-本文件读取 upload.py 保存的组学数据和 run.py 或 evaluate_run.py 生成的聚类结果，
+本文件读取 upload.py 保存的组学数据和 run.py 生成的聚类结果，
 对每个聚类做“该聚类 vs 其他聚类”的差异分析。它会保存火山图和热图所需的数据，
 供 enrichment.py 继续做富集分析，也供 plots.py 重新绘图或下载。
 """
 
-import numpy as np
+import json
+import subprocess
+from pathlib import Path
+
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from scipy import stats
 from routers.upload import OMICS_DATA_FILE, load_frame_dict
 
 from plots.base import (
@@ -20,12 +22,13 @@ from plots.base import (
     empty_svg,
     plot_path,
     run_r_svg,
-    write_json,
 )
 from plots.differential_volcano import render_svg as render_volcano_svg
 
 
 router = APIRouter()
+DIFFERENTIAL_SCRIPT = Path(__file__).with_name("differential.R")
+DIFFERENTIAL_INPUT_FILE = "differential_input.parquet"
 
 
 class DifferentialAnalysisRequest(BaseModel):
@@ -62,6 +65,41 @@ def _load_cluster_info(session_id: str) -> pd.DataFrame:
     return cluster_df
 
 
+def _parse_r_payload(result: subprocess.CompletedProcess[str], fallback_message: str) -> dict:
+    stdout = result.stdout.strip()
+    if result.returncode != 0:
+        message = stdout or result.stderr.strip() or fallback_message
+        try:
+            message = json.loads(stdout).get("error", message)
+        except json.JSONDecodeError:
+            pass
+        raise RuntimeError(message)
+
+    try:
+        payload = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"Invalid R differential output: {stdout[:500]}") from exc
+
+    if "error" in payload:
+        raise RuntimeError(str(payload["error"]))
+    return payload
+
+
+def _run_differential_r(input_path: Path, volcano_path: Path, heatmap_path: Path) -> dict:
+    if not DIFFERENTIAL_SCRIPT.exists():
+        raise FileNotFoundError(f"R differential script not found: {DIFFERENTIAL_SCRIPT}")
+
+    result = subprocess.run(
+        ["Rscript", str(DIFFERENTIAL_SCRIPT), str(input_path), str(volcano_path), str(heatmap_path)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=3600,
+    )
+    return _parse_r_payload(result, "R differential script failed")
+
+
 @router.post("/api/differential_analysis")
 async def run_differential_analysis(request: DifferentialAnalysisRequest):
     try:
@@ -73,71 +111,22 @@ async def run_differential_analysis(request: DifferentialAnalysisRequest):
         if merged_df.empty:
             raise ValueError("No matching samples between omics data and clustering result.")
 
-        genes = merged_df.columns.drop("Cluster")
-        unique_clusters = sorted(merged_df["Cluster"].unique())
-        volcano_frames: list[pd.DataFrame] = []
-        top_genes: list[str] = []
-
-        for target_cluster in unique_clusters:
-            group_a = merged_df[merged_df["Cluster"] == target_cluster][genes]
-            group_b = merged_df[merged_df["Cluster"] != target_cluster][genes]
-
-            if len(group_a) < 2 or len(group_b) < 2:
-                cluster_res_df = pd.DataFrame(
-                    {
-                        "cluster": target_cluster,
-                        "gene": genes.astype(str),
-                        "logFC": 0.0,
-                        "t_pvalue": 1.0,
-                        "negLog10P": 0.0,
-                    }
-                )
-                volcano_frames.append(cluster_res_df)
-                continue
-
-            mean_a = group_a.mean(axis=0)
-            mean_b = group_b.mean(axis=0)
-            log_fc = mean_a - mean_b
-            _, p_values = stats.ttest_ind(group_a, group_b, axis=0, equal_var=False, nan_policy="omit")
-
-            cluster_res_df = pd.DataFrame(
-                {
-                    "cluster": target_cluster,
-                    "gene": genes.astype(str),
-                    "logFC": log_fc.to_numpy(dtype=float),
-                    "t_pvalue": p_values,
-                }
-            )
-            cluster_res_df["t_pvalue"] = cluster_res_df["t_pvalue"].fillna(1.0).clip(lower=0)
-            cluster_res_df["negLog10P"] = -np.log10(cluster_res_df["t_pvalue"] + 1e-300)
-            volcano_frames.append(cluster_res_df)
-
-            significant = cluster_res_df[(cluster_res_df["t_pvalue"] < 0.05) & (cluster_res_df["logFC"] > 0.5)]
-            for gene in significant.sort_values(["logFC", "t_pvalue"], ascending=[False, True]).head(10)["gene"]:
-                if gene not in top_genes:
-                    top_genes.append(str(gene))
-
-        volcano_df = pd.concat(volcano_frames, ignore_index=True) if volcano_frames else pd.DataFrame()
         volcano_path = plot_path(request.session_id, DIFFERENTIAL_VOLCANO_FILE)
-        volcano_df.to_parquet(volcano_path, index=False)
-
         heatmap_path = plot_path(request.session_id, DIFFERENTIAL_HEATMAP_FILE)
-        if top_genes:
-            heatmap_df = merged_df[top_genes + ["Cluster"]].copy()
-            feature_values = heatmap_df[top_genes]
-            std = feature_values.std(axis=0).replace(0, np.nan)
-            heatmap_df[top_genes] = ((feature_values - feature_values.mean(axis=0)) / std).replace([np.inf, -np.inf], np.nan).fillna(0)
-            heatmap_df = heatmap_df.sort_values("Cluster")
-            heatmap_df.insert(0, "sample_name", heatmap_df.index.astype(str))
-            heatmap_df.to_parquet(heatmap_path, index=False)
-        else:
-            pd.DataFrame(columns=["sample_name", "Cluster"]).to_parquet(heatmap_path, index=False)
+        input_path = plot_path(request.session_id, DIFFERENTIAL_INPUT_FILE)
+        genes = merged_df.columns.drop("Cluster")
+        r_input_df = merged_df.copy()
+        r_input_df.insert(0, "sample_name", r_input_df.index.astype(str))
+        r_input_df.to_parquet(input_path, index=False)
 
-        clusters = [int(c) for c in unique_clusters]
-        selected_cluster = clusters[0] if clusters else 0
-        write_json(
-            plot_path(request.session_id, DIFFERENTIAL_META_FILE),
-            {"omics_type": request.omics_type, "clusters": clusters, "top_genes": top_genes},
+        payload = _run_differential_r(input_path, volcano_path, heatmap_path)
+
+        clusters = [int(c) for c in payload.get("clusters", [])]
+        selected_cluster = int(payload.get("selected_cluster", clusters[0] if clusters else 0))
+        top_genes = [str(gene) for gene in payload.get("top_genes", [])]
+        plot_path(request.session_id, DIFFERENTIAL_META_FILE).write_text(
+            json.dumps({"omics_type": request.omics_type, "clusters": clusters, "top_genes": top_genes}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
         )
 
         try:
@@ -157,8 +146,8 @@ async def run_differential_analysis(request: DifferentialAnalysisRequest):
             "selected_cluster": selected_cluster,
             "volcano_svg": volcano_svg,
             "heatmap_svg": heatmap_svg,
-            "n_features": int(len(genes)),
-            "n_top_genes": int(len(top_genes)),
+            "n_features": int(payload.get("n_features", len(genes))),
+            "n_top_genes": int(payload.get("n_top_genes", len(top_genes))),
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

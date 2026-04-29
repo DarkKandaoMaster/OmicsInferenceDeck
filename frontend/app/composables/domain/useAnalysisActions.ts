@@ -1,4 +1,4 @@
-import { computeClinicalMetrics, computeMetrics, evaluateCustom, renderClusterScatter, runAlgorithm, runParameterSearch } from '~/utils/api'
+import { computeAwaMetrics, computeBiologyMetrics, computeClinicalMetrics, computeMetrics, evaluateCustom, renderClusterScatter, runAlgorithm, runParameterSearch } from '~/utils/api'
 import { useSession } from '~/composables/core/useSession'
 import { useUIState } from '~/composables/core/useUIState'
 import { useDataState } from '~/composables/domain/useDataState'
@@ -41,7 +41,7 @@ export function useAnalysisActions() {
 
   async function runDownstreamAnalyses() {
     const { runDifferentialAnalysis, diffResult } = useDifferential()
-    const { runEnrichmentAnalysis } = useEnrichment()
+    const { runEnrichmentAnalysis, enrichmentResult } = useEnrichment()
     const { runSurvivalAnalysis } = useSurvival()
 
     analysisStatus.value = '正在运行差异表达分析...'
@@ -50,6 +50,50 @@ export function useAnalysisActions() {
     if (diffResult.value?.clusters) {
       analysisStatus.value = '正在运行功能富集分析...'
       await runEnrichmentAnalysis('GO', { silent: true })
+
+      analysisStatus.value = '正在计算生物学机制指标...'
+      let biologyMetrics: any = null
+      if (enrichmentResult.value?.status === 'success') {
+        try {
+          const biologyMetricsRes = await computeBiologyMetrics({
+            session_id: sessionId.value,
+            database: enrichmentResult.value.database || 'GO',
+          })
+          biologyMetrics = biologyMetricsRes.data?.data?.biology_metrics || null
+        } catch (error: any) {
+          biologyMetrics = {
+            error: error.response?.data?.detail || '生物学机制指标计算失败',
+          }
+        }
+      }
+
+      analysisStatus.value = '正在计算 AWA / 3D-AWA 指标...'
+      let awaMetrics: any = null
+      if (biologyMetrics && !biologyMetrics.error) {
+        try {
+          const awaMetricsRes = await computeAwaMetrics({
+            session_id: sessionId.value,
+            database: enrichmentResult.value.database || 'GO',
+            metrics: backendResponse.value?.data?.metrics || {},
+            clinical_metrics: backendResponse.value?.data?.clinical_metrics || {},
+            biology_metrics: biologyMetrics,
+          })
+          awaMetrics = awaMetricsRes.data?.data?.awa_metrics || null
+        } catch (error: any) {
+          awaMetrics = {
+            error: error.response?.data?.detail || 'AWA / 3D-AWA 指标计算失败',
+          }
+        }
+      }
+
+      backendResponse.value = {
+        ...backendResponse.value,
+        data: {
+          ...(backendResponse.value?.data || {}),
+          biology_metrics: biologyMetrics,
+          awa_metrics: awaMetrics,
+        },
+      }
     }
 
     if (clinicalFile.value) {
@@ -231,6 +275,10 @@ export function useAnalysisActions() {
         }
         psParam1.value = 'n_clusters'
         psParam2.value = 'n_neighbors'
+      } else if (selectedAlgorithm.value[0] === 'MOSD') {
+        paramGridObj = { n_clusters: testNClusters.value.split(',').map(Number) }
+        psParam1.value = 'n_clusters'
+        psParam2.value = ''
       }
 
       const res = await runParameterSearch({

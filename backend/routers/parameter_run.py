@@ -56,7 +56,7 @@ async def run_parameter_search(request: ParameterSearchRequest):
             params = dict(zip(param_names, combo))
             params_with_seed = {**params, "random_state": request.random_state}
             try:
-                algo_instance = algo_class(**params_with_seed)
+                algo_instance = algo_class(**params_with_seed, omics_path=str(omics_path))
                 labels, _, sample_names = algo_instance.fit_predict(omics_dict)
                 cluster_df = pd.DataFrame({"Cluster": labels}, index=[str(s) for s in sample_names])
                 merged = clinical_df.join(cluster_df, how="inner")
