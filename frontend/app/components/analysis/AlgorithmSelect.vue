@@ -112,6 +112,18 @@ const { algorithms, selectedAlgorithm, isTestMode, testNClusters, testMaxIter, t
               </div>
             </div>
 
+            <div v-if="selectedAlgorithm.includes('Hclust')" class="bg-slate-100 p-4 rounded-lg border border-slate-200">
+              <h4 class="m-0 mb-4 text-sm text-primary font-semibold border-b border-black/5 pb-2">Hclust 参数</h4>
+              <div class="mb-3">
+                <label class="block text-xs text-slate-700 mb-1.5">聚类簇数 (K值)</label>
+                <input type="number" v-model="kValue" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-[13px] text-slate-900 transition-all focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+              </div>
+              <div>
+                <label class="block text-xs text-slate-700 mb-1.5">随机种子 (-1表示None)</label>
+                <input type="number" v-model="randomSeed" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-[13px] text-slate-900 transition-all focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+              </div>
+            </div>
+
             <div v-if="selectedAlgorithm.includes('PIntMF')" class="bg-slate-100 p-4 rounded-lg border border-slate-200">
               <h4 class="m-0 mb-4 text-sm text-primary font-semibold border-b border-black/5 pb-2">PIntMF 参数</h4>
               <div class="mb-3">
@@ -208,6 +220,18 @@ const { algorithms, selectedAlgorithm, isTestMode, testNClusters, testMaxIter, t
               <div class="mb-3">
                 <label class="block text-xs text-slate-700 mb-1.5">邻居数范围 (逗号分隔)</label>
                 <input type="text" v-model="testNNeighbors" placeholder="如: 10,20,30" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-[13px] text-slate-900 transition-all focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+              </div>
+              <div>
+                <label class="block text-xs text-slate-700 mb-1.5">随机种子</label>
+                <input type="number" v-model="randomSeed" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-[13px] text-slate-900 transition-all focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+              </div>
+            </div>
+
+            <div v-if="selectedAlgorithm.includes('Hclust')" class="bg-amber-50 p-4 rounded-lg border border-orange-200">
+              <h4 class="m-0 mb-4 text-sm text-amber-600 font-semibold border-b border-black/5 pb-2">Hclust 测试范围</h4>
+              <div class="mb-3">
+                <label class="block text-xs text-slate-700 mb-1.5">聚类簇数范围 (逗号分隔)</label>
+                <input type="text" v-model="testNClusters" placeholder="如 2,3,4,5" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-[13px] text-slate-900 transition-all focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
               </div>
               <div>
                 <label class="block text-xs text-slate-700 mb-1.5">随机种子</label>
