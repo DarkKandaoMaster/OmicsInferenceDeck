@@ -18,7 +18,7 @@ class Algorithm(BaseAlgorithm):
         if not input_path.exists():
             raise FileNotFoundError(f"Hclust input file not found: {input_path}")
 
-        script_path = Path(__file__).with_suffix(".R")
+        script_path = self._script_in_algorithm_dir(__file__)
         if not script_path.exists():
             raise FileNotFoundError(f"Hclust R script not found: {script_path}")
 
