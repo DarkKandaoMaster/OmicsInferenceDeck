@@ -56,8 +56,7 @@ class Algorithm(BaseAlgorithm):
 
         return labels, embeddings, sample_names
 
-    @staticmethod
-    def _parse_r_output(result: subprocess.CompletedProcess[str]) -> dict:
+    def _parse_r_output(self, result: subprocess.CompletedProcess[str]) -> dict:
         stdout = (result.stdout or "").strip()
         stderr = (result.stderr or "").strip()
 
