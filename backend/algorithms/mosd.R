@@ -16,22 +16,51 @@ json_value <- function(value) {
   if (is.null(value) || length(value) == 0) {
     return("null")
   }
+  if (is.list(value)) {
+    value <- unlist(value, recursive = TRUE, use.names = FALSE)
+    if (length(value) == 0) {
+      return("null")
+    }
+  }
   if (is.numeric(value) || is.integer(value)) {
     value <- as.numeric(value[1])
     if (is.na(value) || !is.finite(value)) {
       return("null")
     }
-    return(format(value, scientific = FALSE, trim = TRUE))
+    return(format(value, scientific = FALSE, trim = TRUE, digits = 17))
+    # digits = 17：用最多 17 位有效数字输出 double，基本能保证 R/Python 之间往返解析时不丢关键精度。
+    # scientific = FALSE：尽量不用科学计数法，输出普通小数形式。
+    # trim = TRUE：去掉多余空格，避免 JSON 里出现不必要的格式字符。
   }
   json_escape(value[1])
 }
 
-emit_success <- function(n_samples, n_features, estimated_k) {
+json_string_vector <- function(values) {
+  paste0("[", paste(vapply(values, json_escape, character(1)), collapse = ","), "]")
+}
+
+json_number_vector <- function(values) {
+  paste0("[", paste(vapply(values, json_value, character(1)), collapse = ","), "]")
+}
+
+json_numeric_matrix <- function(mat) {
+  rows <- vapply(
+    seq_len(nrow(mat)),
+    function(i) json_number_vector(mat[i, ]),
+    character(1)
+  )
+  paste0("[", paste(rows, collapse = ","), "]")
+}
+
+emit_success <- function(sample_names, labels, embeddings, estimated_k) {
   cat(
     paste0(
       "{\"status\":\"success\"",
-      ",\"n_samples\":", json_value(n_samples),
-      ",\"n_features\":", json_value(n_features),
+      ",\"sample_names\":", json_string_vector(sample_names),
+      ",\"labels\":", json_number_vector(labels),
+      ",\"embeddings\":", json_numeric_matrix(embeddings),
+      ",\"n_samples\":", json_value(length(sample_names)),
+      ",\"n_features\":", json_value(ncol(embeddings)),
       ",\"estimated_k\":", json_value(estimated_k),
       "}\n"
     )
@@ -85,17 +114,16 @@ frame_matrices_from_parquet <- function(input_path) {
 }
 
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) < 3) {
-  emit_error("Usage: Rscript mosd.R <omics_parquet> <output_parquet> <n_clusters> [random_seed]")
+if (length(args) < 2) {
+  emit_error("Usage: Rscript mosd.R <omics_parquet> <n_clusters> [random_seed]")
   quit(save = "no", status = 1)
 }
 
 tryCatch(
   {
     input_path <- args[1]
-    output_path <- args[2]
-    k <- parse_k(args[3])
-    seed_arg <- if (length(args) >= 4) args[4] else ""
+    k <- parse_k(args[2])
+    seed_arg <- if (length(args) >= 3) args[3] else ""
 
     if (!file.exists(input_path)) {
       stop(paste("Input parquet not found:", input_path))
@@ -127,18 +155,7 @@ tryCatch(
       stop("MOSD returned missing or non-finite embedding values.")
     }
 
-    emb_df <- as.data.frame(embeddings, check.names = FALSE)
-    names(emb_df) <- paste0("emb_", seq_len(ncol(emb_df)) - 1)
-
-    output_df <- data.frame(
-      sample_name = loaded$sample_names,
-      label = labels,
-      check.names = FALSE
-    )
-    output_df <- cbind(output_df, emb_df)
-
-    arrow::write_parquet(output_df, output_path)
-    emit_success(nrow(output_df), ncol(embeddings), mosd_result$es)
+    emit_success(loaded$sample_names, labels, embeddings, mosd_result$es)
   },
   error = function(e) {
     emit_error(conditionMessage(e))
