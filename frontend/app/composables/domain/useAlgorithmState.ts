@@ -18,8 +18,8 @@ const cancerSubtypeOptions = Object.entries(cancerSubtypeClusterMap).map(([type,
   type: type as CancerSubtype,
   clusters,
 }))
-const selectedCancerSubtype = ref<CancerSubtype | ''>('')
-const kValue = ref(3)
+const selectedCancerSubtype = ref<CancerSubtype>('BRCA')
+const kValue = ref(5)
 const maxIter = ref(300)
 const nNeighbors = ref(10)
 const randomSeed = ref(42)
@@ -37,8 +37,10 @@ const psParam2 = ref('max_iter')
 
 export function useAlgorithmState() {
   function applyCancerSubtypeClusterCount(subtype: CancerSubtype | '') {
-    selectedCancerSubtype.value = subtype
-    if (subtype) kValue.value = cancerSubtypeClusterMap[subtype]
+    if(subtype){
+      selectedCancerSubtype.value = subtype
+      kValue.value = cancerSubtypeClusterMap[subtype]
+    }
   }
 
   return {

@@ -42,12 +42,10 @@ function handleCancerSubtypeChange() {
           <label class="block text-xs font-medium text-slate-700 mb-1.5">Cancer subtype</label>
           <div class="flex items-center gap-2">
             <select v-model="selectedCancerSubtype" @change="handleCancerSubtypeChange" class="flex-1 min-w-0 px-3 py-2 border border-slate-200 rounded-lg text-[13px] bg-white text-slate-900 cursor-pointer outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
-              <option value="">Select cancer subtype</option>
               <option v-for="option in cancerSubtypeOptions" :key="option.type" :value="option.type">
                 {{ option.type }}
               </option>
             </select>
-            <span class="shrink-0 rounded border border-slate-200 bg-white px-3 py-2 text-[13px] font-medium text-slate-700">K={{ kValue }}</span>
           </div>
         </div>
         <h4 class="m-0 mb-3 text-sm flex items-center gap-2">🧬 组学数据 <span class="text-[11px] px-1.5 py-0.5 rounded bg-red-100 text-red-700">必填</span></h4>
