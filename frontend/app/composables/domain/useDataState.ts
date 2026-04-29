@@ -12,7 +12,7 @@ const clinicalFile = ref<File | null>(null)
 const isClinicalUploaded = ref(false)
 const clinicalUploadStatus = ref('')
 
-// =================== mRNA expression matrix state ===================
+// =================== mRNA 表达矩阵状态 ===================
 const expressionMatrixFile = ref<File | null>(null)
 const isExpressionMatrixUploaded = ref(false)
 const expressionMatrixUploadStatus = ref('')
@@ -32,7 +32,7 @@ const clinicalIsRowSample = ref(false)
 const clinicalHasHeader = ref(true)
 const clinicalHasIndex = ref(true)
 
-// =================== mRNA expression matrix format ===================
+// =================== mRNA 表达矩阵格式 ===================
 const expressionMatrixIsRowSample = ref(true)
 const expressionMatrixHasHeader = ref(true)
 const expressionMatrixHasIndex = ref(true)
@@ -180,13 +180,13 @@ export function useDataState() {
     formData.append('data_format', expressionMatrixDataFormat.value)
     formData.append('session_id', sessionId)
 
-    expressionMatrixUploadStatus.value = 'Uploading mRNA expression matrix...'
+    expressionMatrixUploadStatus.value = '正在上传 mRNA 表达矩阵...'
     try {
       const res = await uploadExpressionMatrix(formData)
-      expressionMatrixUploadStatus.value = `Expression matrix ready: ${res.data.original_filename}\n${res.data.n_samples} samples, ${res.data.n_features} genes`
+      expressionMatrixUploadStatus.value = `mRNA 表达矩阵已就绪: ${res.data.original_filename}\n${res.data.n_samples} 个样本，${res.data.n_features} 个基因`
       isExpressionMatrixUploaded.value = true
     } catch (error: any) {
-      expressionMatrixUploadStatus.value = `Expression matrix error: ${error.response?.data?.detail || 'upload failed'}`
+      expressionMatrixUploadStatus.value = `mRNA 表达矩阵错误: ${error.response?.data?.detail || '上传失败'}`
       isExpressionMatrixUploaded.value = false
       throw error
     }
@@ -222,7 +222,7 @@ export function useDataState() {
     const file = (event.target as HTMLInputElement).files?.[0]
     if (file) {
       expressionMatrixFile.value = file
-      expressionMatrixUploadStatus.value = 'mRNA expression matrix selected; it will upload when analysis starts.'
+      expressionMatrixUploadStatus.value = 'mRNA 表达矩阵已选择，将在运行分析时自动上传。'
       isExpressionMatrixUploaded.value = false
     } else {
       expressionMatrixFile.value = null
@@ -233,7 +233,7 @@ export function useDataState() {
 
   function handleExpressionMatrixFormatChange() {
     if (expressionMatrixFile.value) {
-      expressionMatrixUploadStatus.value = 'mRNA expression matrix format changed; it will be parsed again when analysis starts.'
+      expressionMatrixUploadStatus.value = 'mRNA 表达矩阵格式已变更，将在运行分析时重新解析。'
       isExpressionMatrixUploaded.value = false
     }
   }
