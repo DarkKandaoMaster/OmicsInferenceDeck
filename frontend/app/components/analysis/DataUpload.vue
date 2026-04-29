@@ -102,7 +102,7 @@ function handleCancerSubtypeChange() {
         <div class="flex flex-col gap-2 mb-4">
           <label class="flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer px-3 py-2 rounded-lg border border-slate-200 transition-all hover:border-primary" :class="{ 'bg-indigo-50 !border-primary !text-primary font-medium': expressionMatrixIsRowSample }">
             <input type="checkbox" v-model="expressionMatrixIsRowSample" @change="handleExpressionMatrixFormatChange" class="hidden" />
-            行代表基因，列代表样本
+            行代表基因，列代表病人
           </label>
           <label class="flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer px-3 py-2 rounded-lg border border-slate-200 transition-all hover:border-primary" :class="{ 'bg-indigo-50 !border-primary !text-primary font-medium': expressionMatrixHasHeader }">
             <input type="checkbox" v-model="expressionMatrixHasHeader" @change="handleExpressionMatrixFormatChange" class="hidden" />
