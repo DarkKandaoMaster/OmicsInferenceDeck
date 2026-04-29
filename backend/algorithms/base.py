@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Dict, Tuple, List, Any
 import pandas as pd
 import numpy as np
@@ -25,3 +26,8 @@ class BaseAlgorithm(ABC):
             - sample_names: 样本名称列表，长度必须与 labels 相同，确保后端能将标签对应到具体的病人
         """
         pass
+
+    def _script_in_algorithm_dir(self, module_file: str, suffix: str = ".R") -> Path:
+        module_path = Path(module_file)
+        script_path = module_path.with_suffix("") / f"{module_path.stem}{suffix}"
+        return script_path.resolve()
