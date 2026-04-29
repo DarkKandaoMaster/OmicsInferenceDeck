@@ -10,7 +10,7 @@ const navItems = [
 </script>
 
 <template>
-  <header class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-100">
+  <header class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-[9999]">
     <div class="max-w-[1400px] mx-auto h-16 flex items-center justify-between px-6">
       <NuxtLink to="/" class="text-xl font-bold text-primary no-underline">OmicsInferenceDeck</NuxtLink>
       <nav class="flex gap-2">
