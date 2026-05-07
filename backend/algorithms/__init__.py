@@ -4,6 +4,7 @@ ALGORITHM_MAP={ #建立前端算法名称到后端文件名的映射关系。比
     "K-means": "kmeans",
     "Spectral Clustering": "spectral",
     "PIntMF": "pintmf",
+    "NEMO": "nemo",
     "SNF": "snf",
     "MOSD": "mosd",
     "Parea": "parea",
