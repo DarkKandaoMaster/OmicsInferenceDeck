@@ -19,9 +19,9 @@ const capabilities = [
 const workflow = ['上传数据', '配置算法', '运行分析', '查看报告']
 
 const metrics = [
-  { value: '5+', label: '结果视图' },
-  { value: '3', label: '数据维度' },
-  { value: '1', label: '统一流程' },
+  { value: '14', label: '可计算指标' },
+  { value: '6', label: '可生成图表' },
+  { value: '9', label: '已内置算法' },
 ]
 </script>
 
