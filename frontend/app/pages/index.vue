@@ -141,7 +141,7 @@ const metrics = [
       </div>
 
       <svg class="block h-12 w-full fill-white" viewBox="0 0 1440 57" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M1440 0H0V57C720 0 1440 57 1440 57V0Z" />
+        <path d="M1440 57H0V0C720 57 1440 0 1440 0V57Z" />
       </svg>
     </section>
 
