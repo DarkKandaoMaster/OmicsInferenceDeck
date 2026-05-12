@@ -43,11 +43,12 @@ const metrics = [
           </p>
 
           <h1 class="max-w-4xl text-4xl font-extrabold leading-tight md:text-6xl">
-            面向多组学癌症分型的全栈 AI 分析平台
+            多组学癌症亚型识别算法评估平台
           </h1>
 
           <p class="mt-6 max-w-2xl text-lg leading-8 text-indigo-50 md:text-xl">
-            将数据上传、算法配置、亚型推断和可视化评估整合到一个清晰流程中，帮助研究者更快完成癌症分子亚型探索。
+            你可以用你写的算法生成一个结果文件，然后根据平台的指示操作，平台便会为你计算指标、绘制图表；<br>
+            你也可以上传你自己的输入数据集，选择平台内置经典算法，作为基线对照组计算指标、绘制图表。
           </p>
 
           <div class="mt-10 flex flex-col gap-4 sm:flex-row">
