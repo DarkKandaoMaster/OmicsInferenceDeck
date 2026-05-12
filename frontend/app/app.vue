@@ -13,4 +13,10 @@ body {
   margin: 0;
   padding: 0;
 }
+
+html,
+body,
+#__nuxt {
+  overflow-x: hidden;
+}
 </style>
