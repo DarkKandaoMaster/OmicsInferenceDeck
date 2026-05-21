@@ -100,7 +100,7 @@ function handleCancerSubtypeChange() {
 
       <div>
         <div class="mb-3 flex items-center justify-between gap-3">
-          <h4 class="m-0 text-sm font-semibold text-slate-900">mRNA 表达矩阵</h4>
+          <h4 class="m-0 text-sm font-semibold text-slate-900">mRNA表达矩阵</h4>
         </div>
 
         <div class="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3 xl:grid-cols-1">
