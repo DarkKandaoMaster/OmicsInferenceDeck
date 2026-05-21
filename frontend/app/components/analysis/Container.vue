@@ -86,30 +86,33 @@ TCGA-03,1,0.58,0.21,...</pre>
 
     <AnalysisAlgorithmSelect v-else />
 
-    <section class="mx-auto grid w-full max-w-5xl grid-cols-1 gap-5 lg:grid-cols-2">
-      <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-        <div class="mb-4">
-          <h3 class="m-0 text-base font-semibold text-slate-900">5. 选择要绘制的图表</h3>
-          <p class="mt-1 text-xs text-slate-500">暂不支持单独选择，运行后会展示全部可用图表。</p>
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <label v-for="option in chartOptions" :key="option" class="flex cursor-not-allowed items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-[13px] text-slate-400">
-            <input type="checkbox" checked disabled class="h-4 w-4" />
-            <span>{{ option }}</span>
-          </label>
-        </div>
+    <section class="mx-auto w-full max-w-5xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+      <div class="border-b border-slate-200 bg-slate-50 px-5 py-4">
+        <h3 class="m-0 text-base font-semibold text-slate-900">5. 结果内容</h3>
+        <p class="mt-1 text-xs text-slate-500">图表和数学指标暂不支持单独选择，点击运行后会生成全部可用内容。</p>
       </div>
 
-      <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-        <div class="mb-4">
-          <h3 class="m-0 text-base font-semibold text-slate-900">5. 选择要计算的数学指标</h3>
-          <p class="mt-1 text-xs text-slate-500">暂不支持单独选择，运行后会计算全部可用指标。</p>
+      <div class="grid grid-cols-1 gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)]">
+        <div>
+          <h4 class="m-0 mb-3 text-sm font-semibold text-slate-900">选择要绘制的图表</h4>
+          <div class="grid grid-cols-2 gap-2">
+            <label v-for="option in chartOptions" :key="option" class="flex cursor-not-allowed items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-[13px] text-slate-400">
+              <input type="checkbox" checked disabled class="h-4 w-4" />
+              <span>{{ option }}</span>
+            </label>
+          </div>
         </div>
-        <div class="grid grid-cols-2 gap-2">
-          <label v-for="option in metricOptions" :key="option" class="flex cursor-not-allowed items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-[13px] text-slate-400">
-            <input type="checkbox" checked disabled class="h-4 w-4" />
-            <span>{{ option }}</span>
-          </label>
+
+        <div class="h-px bg-slate-200 lg:h-auto lg:w-px" />
+
+        <div>
+          <h4 class="m-0 mb-3 text-sm font-semibold text-slate-900">选择要计算的数学指标</h4>
+          <div class="grid grid-cols-2 gap-2">
+            <label v-for="option in metricOptions" :key="option" class="flex cursor-not-allowed items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-[13px] text-slate-400">
+              <input type="checkbox" checked disabled class="h-4 w-4" />
+              <span>{{ option }}</span>
+            </label>
+          </div>
         </div>
       </div>
     </section>
