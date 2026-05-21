@@ -33,7 +33,7 @@ function handleCancerSubtypeChange() {
       <div class="md:absolute md:left-5 md:top-1/2 md:-translate-y-1/2">
         <h3 class="m-0 text-base font-semibold text-slate-900">1. 数据上传</h3>
       </div>
-      <div class="flex w-full max-w-sm items-center gap-3">
+      <div class="flex items-center gap-3">
         <label class="whitespace-nowrap text-xs font-medium text-slate-700"><h4 class="m-0 text-sm font-semibold text-slate-900">对应癌症亚型：</h4></label>
         <select
           v-model="selectedCancerSubtype"
