@@ -16,7 +16,7 @@ const { analysisStatus, runAnalysisFlow, runParameterSearchFlow } = useAnalysisA
       :disabled="isLoading"
       class="min-w-[220px] cursor-pointer rounded-lg border-none bg-primary px-10 py-3.5 text-base font-semibold text-white shadow-sm transition-all hover:bg-primary-hover hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
     >
-      <span class="flex items-center gap-2">
+      <span class="flex items-center justify-center gap-2">
         <span v-if="isLoading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
         {{ isLoading ? (analysisStatus || '正在运行分析...') : '运行分析' }}
       </span>
