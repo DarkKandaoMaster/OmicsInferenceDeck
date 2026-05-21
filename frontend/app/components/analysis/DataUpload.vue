@@ -58,14 +58,17 @@ function handleCancerSubtypeChange() {
           <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px] transition-all hover:border-primary" :class="omicsIsRowSample ? 'border-primary bg-indigo-50 text-primary' : 'border-slate-200 text-slate-700'">
             <input v-model="omicsIsRowSample" type="checkbox" class="hidden" @change="handleFormatChange" />
             <span>行代表特征</span>
+            <span v-if="omicsIsRowSample" class="ml-auto inline-block h-2 w-2 shrink-0 rounded-full bg-primary" />
           </label>
           <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px] transition-all hover:border-primary" :class="omicsHasHeader ? 'border-primary bg-indigo-50 text-primary' : 'border-slate-200 text-slate-700'">
             <input v-model="omicsHasHeader" type="checkbox" class="hidden" @change="handleFormatChange" />
             <span>包含表头行</span>
+            <span v-if="omicsHasHeader" class="ml-auto inline-block h-2 w-2 shrink-0 rounded-full bg-primary" />
           </label>
           <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px] transition-all hover:border-primary" :class="omicsHasIndex ? 'border-primary bg-indigo-50 text-primary' : 'border-slate-200 text-slate-700'">
             <input v-model="omicsHasIndex" type="checkbox" class="hidden" @change="handleFormatChange" />
             <span>包含索引列</span>
+            <span v-if="omicsHasIndex" class="ml-auto inline-block h-2 w-2 shrink-0 rounded-full bg-primary" />
           </label>
         </div>
 
@@ -107,14 +110,17 @@ function handleCancerSubtypeChange() {
           <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px] transition-all hover:border-primary" :class="expressionMatrixIsRowSample ? 'border-primary bg-indigo-50 text-primary' : 'border-slate-200 text-slate-700'">
             <input v-model="expressionMatrixIsRowSample" type="checkbox" class="hidden" @change="handleExpressionMatrixFormatChange" />
             <span>行代表基因</span>
+            <span v-if="expressionMatrixIsRowSample" class="ml-auto inline-block h-2 w-2 shrink-0 rounded-full bg-primary" />
           </label>
           <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px] transition-all hover:border-primary" :class="expressionMatrixHasHeader ? 'border-primary bg-indigo-50 text-primary' : 'border-slate-200 text-slate-700'">
             <input v-model="expressionMatrixHasHeader" type="checkbox" class="hidden" @change="handleExpressionMatrixFormatChange" />
             <span>包含表头行</span>
+            <span v-if="expressionMatrixHasHeader" class="ml-auto inline-block h-2 w-2 shrink-0 rounded-full bg-primary" />
           </label>
           <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px] transition-all hover:border-primary" :class="expressionMatrixHasIndex ? 'border-primary bg-indigo-50 text-primary' : 'border-slate-200 text-slate-700'">
             <input v-model="expressionMatrixHasIndex" type="checkbox" class="hidden" @change="handleExpressionMatrixFormatChange" />
             <span>包含索引列</span>
+            <span v-if="expressionMatrixHasIndex" class="ml-auto inline-block h-2 w-2 shrink-0 rounded-full bg-primary" />
           </label>
         </div>
 
@@ -152,14 +158,17 @@ function handleCancerSubtypeChange() {
           <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px] transition-all hover:border-primary" :class="clinicalIsRowSample ? 'border-primary bg-indigo-50 text-primary' : 'border-slate-200 text-slate-700'">
             <input v-model="clinicalIsRowSample" type="checkbox" class="hidden" @change="handleClinicalFormatChange" />
             <span>行代表特征</span>
+            <span v-if="clinicalIsRowSample" class="ml-auto inline-block h-2 w-2 shrink-0 rounded-full bg-primary" />
           </label>
           <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px] transition-all hover:border-primary" :class="clinicalHasHeader ? 'border-primary bg-indigo-50 text-primary' : 'border-slate-200 text-slate-700'">
             <input v-model="clinicalHasHeader" type="checkbox" class="hidden" @change="handleClinicalFormatChange" />
             <span>包含表头行</span>
+            <span v-if="clinicalHasHeader" class="ml-auto inline-block h-2 w-2 shrink-0 rounded-full bg-primary" />
           </label>
           <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px] transition-all hover:border-primary" :class="clinicalHasIndex ? 'border-primary bg-indigo-50 text-primary' : 'border-slate-200 text-slate-700'">
             <input v-model="clinicalHasIndex" type="checkbox" class="hidden" @change="handleClinicalFormatChange" />
             <span>包含索引列</span>
+            <span v-if="clinicalHasIndex" class="ml-auto inline-block h-2 w-2 shrink-0 rounded-full bg-primary" />
           </label>
         </div>
 
