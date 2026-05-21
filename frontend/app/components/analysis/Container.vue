@@ -56,7 +56,7 @@ watch(isCustomEvalMode, (enabled) => {
 
     <section class="mx-auto w-full max-w-4xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
       <div class="border-b border-slate-200 bg-slate-50 px-5 py-4">
-        <h3 class="m-0 text-base font-semibold text-slate-900">3. 结果内容</h3>
+        <h3 class="m-0 text-base font-semibold text-slate-900">3. 结果展示</h3>
         <p class="mt-1 text-xs text-slate-500">图表和数学指标暂不支持单独选择，点击运行后会生成全部可用内容。</p>
       </div>
 
