@@ -57,7 +57,7 @@ function handleCancerSubtypeChange() {
         <div class="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3 xl:grid-cols-1">
           <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px] transition-all hover:border-primary" :class="omicsIsRowSample ? 'border-primary bg-indigo-50 text-primary' : 'border-slate-200 text-slate-700'">
             <input v-model="omicsIsRowSample" type="checkbox" class="hidden" @change="handleFormatChange" />
-            <span>行代表特征</span>
+            <span>行代表特征，列代表病人</span>
             <span v-if="omicsIsRowSample" class="ml-auto inline-block h-2 w-2 shrink-0 rounded-full bg-primary" />
           </label>
           <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px] transition-all hover:border-primary" :class="omicsHasHeader ? 'border-primary bg-indigo-50 text-primary' : 'border-slate-200 text-slate-700'">
@@ -109,7 +109,7 @@ function handleCancerSubtypeChange() {
         <div class="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3 xl:grid-cols-1">
           <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px] transition-all hover:border-primary" :class="expressionMatrixIsRowSample ? 'border-primary bg-indigo-50 text-primary' : 'border-slate-200 text-slate-700'">
             <input v-model="expressionMatrixIsRowSample" type="checkbox" class="hidden" @change="handleExpressionMatrixFormatChange" />
-            <span>行代表基因</span>
+            <span>行代表基因，列代表病人</span>
             <span v-if="expressionMatrixIsRowSample" class="ml-auto inline-block h-2 w-2 shrink-0 rounded-full bg-primary" />
           </label>
           <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px] transition-all hover:border-primary" :class="expressionMatrixHasHeader ? 'border-primary bg-indigo-50 text-primary' : 'border-slate-200 text-slate-700'">
@@ -157,7 +157,7 @@ function handleCancerSubtypeChange() {
         <div class="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3 xl:grid-cols-1">
           <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px] transition-all hover:border-primary" :class="clinicalIsRowSample ? 'border-primary bg-indigo-50 text-primary' : 'border-slate-200 text-slate-700'">
             <input v-model="clinicalIsRowSample" type="checkbox" class="hidden" @change="handleClinicalFormatChange" />
-            <span>行代表特征</span>
+            <span>行代表特征，列代表病人</span>
             <span v-if="clinicalIsRowSample" class="ml-auto inline-block h-2 w-2 shrink-0 rounded-full bg-primary" />
           </label>
           <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px] transition-all hover:border-primary" :class="clinicalHasHeader ? 'border-primary bg-indigo-50 text-primary' : 'border-slate-200 text-slate-700'">
