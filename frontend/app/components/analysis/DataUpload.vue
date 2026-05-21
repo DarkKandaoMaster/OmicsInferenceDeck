@@ -42,7 +42,7 @@ function handleCancerSubtypeChange() {
           @change="handleCancerSubtypeChange"
         >
           <option v-for="option in cancerSubtypeOptions" :key="option.type" :value="option.type">
-            {{ option.type }} (K={{ option.clusters }})
+            {{ option.type }}
           </option>
         </select>
       </div>
