@@ -29,10 +29,9 @@ function handleCancerSubtypeChange() {
 
 <template>
   <section class="mx-auto w-full max-w-6xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-    <div class="flex flex-col gap-4 border-b border-slate-200 bg-slate-50 px-5 py-4 md:flex-row md:items-center md:justify-between">
-      <div>
+    <div class="relative flex flex-col gap-4 border-b border-slate-200 bg-slate-50 px-5 py-4 md:flex-row md:items-center md:justify-center">
+      <div class="md:absolute md:left-5 md:top-1/2 md:-translate-y-1/2">
         <h3 class="m-0 text-base font-semibold text-slate-900">1. 数据上传</h3>
-        <p class="mt-1 text-xs text-slate-500">组学数据必填；mRNA表达矩阵和临床数据可选，用于后续差异、富集和临床评估。</p>
       </div>
       <div class="flex w-full max-w-sm items-center gap-3">
         <label class="whitespace-nowrap text-xs font-medium text-slate-700"><h4 class="m-0 text-sm font-semibold text-slate-900">对应癌症亚型：</h4></label>
@@ -81,7 +80,7 @@ function handleCancerSubtypeChange() {
           <input id="omics-file" type="file" multiple class="absolute inset-0 h-full w-full cursor-pointer opacity-0" @change="handleFileChange" />
           <label for="omics-file" class="flex min-h-[104px] flex-col items-center justify-center px-4 py-5 pointer-events-none">
             <span class="text-sm font-semibold text-slate-900">选择或拖入组学文件</span>
-            <small class="mt-1 text-xs leading-relaxed text-slate-500">支持多选，运行时自动对齐病人交集。</small>
+            <small class="mt-1 text-xs leading-relaxed text-slate-500">必填。支持多选，运行时自动对齐病人交集。</small>
           </label>
         </div>
 
@@ -133,7 +132,7 @@ function handleCancerSubtypeChange() {
           <input id="expression-matrix-file" type="file" class="absolute inset-0 h-full w-full cursor-pointer opacity-0" @change="handleExpressionMatrixFileChange" />
           <label for="expression-matrix-file" class="flex min-h-[104px] flex-col items-center justify-center px-4 py-5 pointer-events-none">
             <span class="text-sm font-semibold text-slate-900">选择mRNA表达矩阵</span>
-            <small class="mt-1 text-xs leading-relaxed text-slate-500">用于差异表达和 GO/KEGG 富集分析。</small>
+            <small class="mt-1 text-xs leading-relaxed text-slate-500">可选。用于差异表达和 GO/KEGG 富集分析。</small>
           </label>
         </div>
 
@@ -181,7 +180,7 @@ function handleCancerSubtypeChange() {
           <input id="clinical-file" type="file" class="absolute inset-0 h-full w-full cursor-pointer opacity-0" @change="handleClinicalFileChange" />
           <label for="clinical-file" class="flex min-h-[104px] flex-col items-center justify-center px-4 py-5 pointer-events-none">
             <span class="text-sm font-semibold text-slate-900">选择临床文件</span>
-            <small class="mt-1 text-xs leading-relaxed text-slate-500">建议包含 OS 和 OS.time 字段。</small>
+            <small class="mt-1 text-xs leading-relaxed text-slate-500">可选。建议包含 OS 和 OS.time 字段。</small>
           </label>
         </div>
 
