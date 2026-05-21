@@ -87,7 +87,7 @@ TCGA-03,1,0.58,0.21,...</pre>
           >
             <span class="text-sm font-medium">{{ algo }}</span>
             <input v-model="selectedAlgorithm" type="checkbox" :value="algo" class="sr-only" />
-            <span class="text-sm font-semibold">{{ selectedAlgorithm.includes(algo) ? '已选' : '' }}</span>
+            <span v-if="selectedAlgorithm.includes(algo)" class="ml-auto inline-block h-2 w-2 shrink-0 rounded-full bg-primary" />
           </label>
         </div>
       </div>
