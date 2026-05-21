@@ -29,22 +29,21 @@ function handleCancerSubtypeChange() {
 
 <template>
   <section class="mx-auto w-full max-w-6xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-    <div class="relative flex flex-col gap-4 border-b border-slate-200 bg-slate-50 px-5 py-4 md:flex-row md:items-center md:justify-center">
-      <div class="md:absolute md:left-5 md:top-1/2 md:-translate-y-1/2">
-        <h3 class="m-0 text-base font-semibold text-slate-900">1. 数据上传</h3>
-      </div>
-      <div class="flex items-center gap-3">
-        <label class="whitespace-nowrap text-xs font-medium text-slate-700"><h4 class="m-0 text-sm font-semibold text-slate-900">对应癌症亚型：</h4></label>
-        <select
-          v-model="selectedCancerSubtype"
-          class="w-40 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-          @change="handleCancerSubtypeChange"
-        >
-          <option v-for="option in cancerSubtypeOptions" :key="option.type" :value="option.type">
-            {{ option.type }}
-          </option>
-        </select>
-      </div>
+    <div class="border-b border-slate-200 bg-slate-50 px-5 py-4">
+      <h3 class="m-0 text-base font-semibold text-slate-900">1. 数据上传</h3>
+    </div>
+
+    <div class="flex items-center gap-3 px-5 pt-5">
+      <h4 class="m-0 text-sm font-semibold text-slate-900">对应癌症亚型：</h4>
+      <select
+        v-model="selectedCancerSubtype"
+        class="w-40 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+        @change="handleCancerSubtypeChange"
+      >
+        <option v-for="option in cancerSubtypeOptions" :key="option.type" :value="option.type">
+          {{ option.type }}
+        </option>
+      </select>
     </div>
 
     <div class="grid gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)_1px_minmax(0,1fr)]">
