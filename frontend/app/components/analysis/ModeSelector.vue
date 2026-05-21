@@ -25,12 +25,12 @@ const isCustomEvalMode = defineModel<boolean>('isCustomEvalMode', { required: tr
     </section>
 
     <section class="mx-auto grid w-full max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2">
-      <label class="flex min-h-[74px] cursor-default items-center justify-between rounded-lg border border-primary bg-indigo-50 px-5 py-4 text-primary shadow-sm">
+      <label class="flex min-h-[74px] cursor-default items-center justify-between rounded-lg border border-primary bg-white px-5 py-4 text-primary shadow-sm">
         <span class="text-sm font-semibold">我想测试无监督学习</span>
         <span class="h-4 w-4 rounded-full border border-primary bg-primary" />
       </label>
 
-      <label class="flex min-h-[74px] cursor-not-allowed items-center justify-between rounded-lg border border-slate-200 bg-slate-100 px-5 py-4 text-slate-400">
+      <label class="flex min-h-[74px] cursor-not-allowed items-center justify-between rounded-lg border border-slate-200 bg-white px-5 py-4 text-slate-400 shadow-sm">
         <input type="radio" disabled class="sr-only" />
         <span class="text-sm font-semibold">我想测试监督学习（暂未开放）</span>
         <span class="h-4 w-4 rounded-full border border-slate-300" />
