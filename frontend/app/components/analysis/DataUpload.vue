@@ -48,8 +48,8 @@ function handleCancerSubtypeChange() {
       </div>
     </div>
 
-    <div class="grid gap-4 p-5 xl:grid-cols-3">
-      <div class="rounded-lg border border-slate-200 bg-white p-4">
+    <div class="grid gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)_1px_minmax(0,1fr)]">
+      <div>
         <div class="mb-3 flex items-center justify-between gap-3">
           <h4 class="m-0 text-sm font-semibold text-slate-900">组学数据</h4>
           <span class="rounded bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700">必填</span>
@@ -97,7 +97,9 @@ function handleCancerSubtypeChange() {
         </div>
       </div>
 
-      <div class="rounded-lg border border-slate-200 bg-white p-4">
+      <div class="h-px bg-slate-200 xl:h-auto xl:w-px" />
+
+      <div>
         <div class="mb-3 flex items-center justify-between gap-3">
           <h4 class="m-0 text-sm font-semibold text-slate-900">mRNA 表达矩阵</h4>
           <span class="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">选填</span>
@@ -141,7 +143,9 @@ function handleCancerSubtypeChange() {
         </div>
       </div>
 
-      <div class="rounded-lg border border-slate-200 bg-white p-4">
+      <div class="h-px bg-slate-200 xl:h-auto xl:w-px" />
+
+      <div>
         <div class="mb-3 flex items-center justify-between gap-3">
           <h4 class="m-0 text-sm font-semibold text-slate-900">临床数据</h4>
           <span class="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">选填</span>
