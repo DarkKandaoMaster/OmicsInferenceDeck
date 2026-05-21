@@ -56,8 +56,8 @@ watch(isCustomEvalMode, (enabled) => {
 
     <section class="mx-auto w-full max-w-4xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
       <div class="border-b border-slate-200 bg-slate-50 px-5 py-4">
-        <h3 class="m-0 text-base font-semibold text-slate-900">3. 结果展示</h3>
-        <p class="mt-1 text-xs text-slate-500">图表和数学指标暂不支持单独选择，点击运行后会生成全部可用内容。</p>
+        <h3 class="m-0 text-base font-semibold text-slate-900">3. 选择想展示的结果</h3>
+        <p class="mt-1 text-xs text-slate-500">这样需要等待的时间可以少一点。</p>
       </div>
 
       <div class="grid grid-cols-1 gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)]">

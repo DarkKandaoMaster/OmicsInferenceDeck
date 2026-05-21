@@ -32,7 +32,7 @@ function handleCancerSubtypeChange() {
     <div class="flex flex-col gap-4 border-b border-slate-200 bg-slate-50 px-5 py-4 md:flex-row md:items-center md:justify-between">
       <div>
         <h3 class="m-0 text-base font-semibold text-slate-900">1. 数据上传</h3>
-        <p class="mt-1 text-xs text-slate-500">组学数据必填；mRNA 表达矩阵和临床数据可选，用于后续差异、富集和临床评估。</p>
+        <p class="mt-1 text-xs text-slate-500">组学数据必填；mRNA表达矩阵和临床数据可选，用于后续差异、富集和临床评估。</p>
       </div>
       <div class="flex w-full max-w-sm items-center gap-3">
         <label class="whitespace-nowrap text-xs font-medium text-slate-700">癌症亚型</label>
@@ -132,7 +132,7 @@ function handleCancerSubtypeChange() {
         <div class="relative rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 text-center transition-all hover:border-primary hover:bg-indigo-50">
           <input id="expression-matrix-file" type="file" class="absolute inset-0 h-full w-full cursor-pointer opacity-0" @change="handleExpressionMatrixFileChange" />
           <label for="expression-matrix-file" class="flex min-h-[104px] flex-col items-center justify-center px-4 py-5 pointer-events-none">
-            <span class="text-sm font-semibold text-slate-900">选择 mRNA 表达矩阵</span>
+            <span class="text-sm font-semibold text-slate-900">选择mRNA表达矩阵</span>
             <small class="mt-1 text-xs leading-relaxed text-slate-500">用于差异表达和 GO/KEGG 富集分析。</small>
           </label>
         </div>
