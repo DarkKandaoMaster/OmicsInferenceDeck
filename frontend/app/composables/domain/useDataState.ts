@@ -18,7 +18,7 @@ const isExpressionMatrixUploaded = ref(false)
 const expressionMatrixUploadStatus = ref('')
 
 // =================== 自定义评估模式 ===================
-const isCustomEvalMode = ref(false)
+const isCustomEvalMode = ref(true)
 const customEvalFile = ref<File | null>(null)
 const customEvalUploadStatus = ref('')
 
