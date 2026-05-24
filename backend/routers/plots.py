@@ -145,14 +145,24 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
         database = _require_database(request)
         cluster_id = _require_cluster_id(request)
         path = plot_path(request.session_id, enrichment_file(database))
-        payload = run_r_plot_bytes("enrichment_bar.R", [path, cluster_id], file_format, session_dir(request.session_id))
+        payload = run_r_plot_bytes(
+            "enrichment_bar.R",
+            [path, cluster_id, database.upper()],
+            file_format,
+            session_dir(request.session_id),
+        )
         return payload, f"enrichment_{database.upper()}_bar_cluster_{cluster_id}"
 
     if plot_type == "enrichment_bubble":
         database = _require_database(request)
         mode = request.mode if request.mode in {"combined", "by_gene"} else "combined"
         path = plot_path(request.session_id, enrichment_file(database))
-        payload = run_r_plot_bytes("enrichment_bubble.R", [path, mode], file_format, session_dir(request.session_id))
+        payload = run_r_plot_bytes(
+            "enrichment_bubble.R",
+            [path, mode, database.upper()],
+            file_format,
+            session_dir(request.session_id),
+        )
         return payload, f"enrichment_{database.upper()}_bubble_{mode}"
 
     raise ValueError(f"Unsupported plot_type: {request.plot_type}")
@@ -180,7 +190,13 @@ async def differential_heatmap(request: SessionPlotRequest):
 async def enrichment_bar(request: EnrichmentBarRequest):
     try:
         path = plot_path(request.session_id, enrichment_file(request.database))
-        return {"status": "success", "svg": run_r_svg("enrichment_bar.R", [path, request.cluster_id])}
+        return {
+            "status": "success",
+            "svg": run_r_svg(
+                "enrichment_bar.R",
+                [path, request.cluster_id, request.database.upper()],
+            ),
+        }
     except Exception as e:
         return {"status": "success", "svg": empty_svg(f"Enrichment bar plot failed: {e}", "Enrichment Bar")}
 
@@ -190,7 +206,13 @@ async def enrichment_bubble(request: EnrichmentBubbleRequest):
     try:
         mode = request.mode if request.mode in {"combined", "by_gene"} else "combined"
         path = plot_path(request.session_id, enrichment_file(request.database))
-        return {"status": "success", "svg": run_r_svg("enrichment_bubble.R", [path, mode])}
+        return {
+            "status": "success",
+            "svg": run_r_svg(
+                "enrichment_bubble.R",
+                [path, mode, request.database.upper()],
+            ),
+        }
     except Exception as e:
         return {"status": "success", "svg": empty_svg(f"Enrichment bubble plot failed: {e}", "Enrichment Bubble")}
 

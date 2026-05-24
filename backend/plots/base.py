@@ -45,6 +45,18 @@ PALETTE = [
     "#FC8D62",
 ]
 
+SURVIVAL_PALETTE = [
+    "#E41A1C",
+    "#377EB8",
+    "#4DAF4A",
+    "#984EA3",
+    "#FF7F00",
+]
+
+REFERENCE_FONT_FAMILY = "Times New Roman"
+REFERENCE_FONT_SIZE = 16
+REFERENCE_TICK_FONT_SIZE = 16
+
 CANAKO_TSNE_RANDOM_STATE = 3407
 
 SURFACE_COLORS = [
@@ -75,19 +87,31 @@ def enrichment_file(database: str) -> str:
 def configure_matplotlib() -> None:
     plt.rcParams.update(
         {
-            "font.family": "Times New Roman",
+            "font.family": REFERENCE_FONT_FAMILY,
             "font.weight": "bold",
-            "font.size": 16,
+            "font.size": REFERENCE_FONT_SIZE,
             "axes.labelweight": "bold",
             "axes.titleweight": "bold",
+            "axes.titlesize": REFERENCE_FONT_SIZE,
+            "axes.labelsize": REFERENCE_FONT_SIZE,
             "axes.linewidth": 1.1,
-            "xtick.labelsize": 16,
-            "ytick.labelsize": 16,
-            "legend.fontsize": 16,
-            "legend.title_fontsize": 16,
+            "figure.titlesize": REFERENCE_FONT_SIZE,
+            "figure.titleweight": "bold",
+            "xtick.labelsize": REFERENCE_TICK_FONT_SIZE,
+            "ytick.labelsize": REFERENCE_TICK_FONT_SIZE,
+            "legend.fontsize": REFERENCE_FONT_SIZE,
+            "legend.title_fontsize": REFERENCE_FONT_SIZE,
             "svg.fonttype": "none",
         }
     )
+
+
+def reference_font_dict(size: int | None = None, weight: str = "bold") -> dict[str, Any]:
+    return {
+        "family": REFERENCE_FONT_FAMILY,
+        "weight": weight,
+        "size": size if size is not None else REFERENCE_FONT_SIZE,
+    }
 
 
 def normalize_plot_format(file_format: str) -> str:
