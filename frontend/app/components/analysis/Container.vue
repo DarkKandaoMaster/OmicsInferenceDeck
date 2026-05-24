@@ -31,9 +31,9 @@ watch(isCustomEvalMode, (enabled) => {
 
       <div class="grid grid-cols-1 gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)]">
         <div>
-          <h4 class="m-0 mb-3 text-sm font-semibold text-slate-900">选择要绘制的图表</h4>
+          <h4 class="m-0 mb-3 text-sm font-semibold text-slate-900">选择要计算的数学指标</h4>
           <div class="grid grid-cols-2 gap-2">
-            <label v-for="option in chartOptions" :key="option" class="flex cursor-not-allowed items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-[13px] text-slate-400">
+            <label v-for="option in metricOptions" :key="option" class="flex cursor-not-allowed items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-[13px] text-slate-400">
               <input type="checkbox" checked disabled class="h-4 w-4" />
               <span>{{ option }}</span>
             </label>
@@ -43,9 +43,9 @@ watch(isCustomEvalMode, (enabled) => {
         <div class="h-px bg-slate-200 lg:h-auto lg:w-px" />
 
         <div>
-          <h4 class="m-0 mb-3 text-sm font-semibold text-slate-900">选择要计算的数学指标</h4>
+          <h4 class="m-0 mb-3 text-sm font-semibold text-slate-900">选择要绘制的图表</h4>
           <div class="grid grid-cols-2 gap-2">
-            <label v-for="option in metricOptions" :key="option" class="flex cursor-not-allowed items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-[13px] text-slate-400">
+            <label v-for="option in chartOptions" :key="option" class="flex cursor-not-allowed items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-[13px] text-slate-400">
               <input type="checkbox" checked disabled class="h-4 w-4" />
               <span>{{ option }}</span>
             </label>
