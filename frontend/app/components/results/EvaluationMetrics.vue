@@ -9,7 +9,7 @@ const metrics = computed(() => backendResponse.value?.data?.metrics)
 <template>
   <div v-if="metrics" class="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
     <div class="px-6 py-4 border-b border-slate-200">
-      <h3 class="m-0 text-lg font-semibold">聚类效果评估</h3>
+      <h3 class="m-0 text-lg font-semibold">聚类内部质量指标</h3>
     </div>
     <div class="p-6">
       <div class="grid grid-cols-3 gap-5 max-[900px]:grid-cols-2 max-[560px]:grid-cols-1">

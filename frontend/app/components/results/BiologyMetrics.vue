@@ -22,7 +22,7 @@ function formatPValue(value: unknown) {
 <template>
   <div v-if="biologyMetrics" class="result-card mt-8">
     <div class="result-card-header">
-      <div class="result-card-title">生物学机制指标评估</div>
+      <div class="result-card-title">生物学相关性指标</div>
     </div>
 
     <div v-if="biologyMetrics.error" class="p-5 text-sm text-red-700">
