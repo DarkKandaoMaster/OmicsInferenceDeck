@@ -7,8 +7,8 @@ const { isCustomEvalMode } = useDataState()
 const { errorMessage } = useUIState()
 const { isTestMode } = useAlgorithmState()
 
-const chartOptions = ['聚类散点图', '生存曲线', '参数曲面', '差异火山图', '差异热图', '富集图']
-const metricOptions = ['AWA', '聚类一致性', '临床关联', '生物学相关性', '生存 P-value']
+const metricOptions = ['聚类内部质量指标', '临床关联指标', '生物学相关性指标', '综合得分']
+const chartOptions = ['Cluster Scatter', 'Differential Volcano', 'Differential Heatmap', 'Enrichment Bar Plot', 'Enrichment Bubble Plot', 'Survival Curve']
 
 watch(isCustomEvalMode, (enabled) => {
   if (enabled) isTestMode.value = false

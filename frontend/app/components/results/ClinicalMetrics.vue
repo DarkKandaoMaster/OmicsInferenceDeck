@@ -23,7 +23,7 @@ function formatType(value: string) {
 <template>
   <div v-if="clinicalMetrics" class="result-card mt-8">
     <div class="result-card-header">
-      <div class="result-card-title">临床指标评估（LRT / ECP）</div>
+      <div class="result-card-title">临床关联指标</div>
     </div>
 
     <div v-if="clinicalMetrics.error" class="p-5 text-sm text-red-700">

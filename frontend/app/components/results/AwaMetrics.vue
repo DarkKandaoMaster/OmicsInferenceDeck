@@ -26,7 +26,7 @@ function formatNumber(value: unknown, digits = 2) {
 <template>
   <div v-if="awaMetrics" class="result-card mt-8">
     <div class="result-card-header">
-      <div class="result-card-title">综合指标评估（AWA / 3D-AWA）</div>
+      <div class="result-card-title">综合得分</div>
     </div>
 
     <div v-if="awaMetrics.error" class="p-5 text-sm text-red-700">
