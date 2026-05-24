@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { useAnalysisActions } from '~/composables/domain/useAnalysisActions'
+import { useResultSelection } from '~/composables/domain/useResultSelection'
 
 const { backendResponse } = useAnalysisActions()
+const { enabledMetrics } = useResultSelection()
 
 const awaMetrics = computed(() => backendResponse.value?.data?.awa_metrics)
 const components = computed(() => awaMetrics.value?.components || {})
@@ -24,7 +26,7 @@ function formatNumber(value: unknown, digits = 2) {
 </script>
 
 <template>
-  <div v-if="awaMetrics" class="result-card mt-8">
+  <div v-if="enabledMetrics.awa && awaMetrics" class="result-card mt-8">
     <div class="result-card-header">
       <div class="result-card-title">综合得分</div>
     </div>

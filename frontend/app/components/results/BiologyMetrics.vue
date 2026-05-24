@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { useAnalysisActions } from '~/composables/domain/useAnalysisActions'
+import { useResultSelection } from '~/composables/domain/useResultSelection'
 
 const { backendResponse } = useAnalysisActions()
+const { enabledMetrics } = useResultSelection()
 
 const biologyMetrics = computed(() => backendResponse.value?.data?.biology_metrics)
 
@@ -20,7 +22,7 @@ function formatPValue(value: unknown) {
 </script>
 
 <template>
-  <div v-if="biologyMetrics" class="result-card mt-8">
+  <div v-if="enabledMetrics.biology && biologyMetrics" class="result-card mt-8">
     <div class="result-card-header">
       <div class="result-card-title">生物学相关性指标</div>
     </div>

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { useAnalysisActions } from '~/composables/domain/useAnalysisActions'
+import { useResultSelection } from '~/composables/domain/useResultSelection'
 
 const { backendResponse } = useAnalysisActions()
+const { enabledMetrics } = useResultSelection()
 
 const clinicalMetrics = computed(() => backendResponse.value?.data?.clinical_metrics)
 const lrt = computed(() => clinicalMetrics.value?.lrt || {})
@@ -21,7 +23,7 @@ function formatType(value: string) {
 </script>
 
 <template>
-  <div v-if="clinicalMetrics" class="result-card mt-8">
+  <div v-if="enabledMetrics.clinical && clinicalMetrics" class="result-card mt-8">
     <div class="result-card-header">
       <div class="result-card-title">临床关联指标</div>
     </div>

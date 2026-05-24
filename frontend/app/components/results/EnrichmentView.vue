@@ -2,6 +2,7 @@
 import { useSession } from '~/composables/core/useSession'
 import { useDifferential } from '~/composables/domain/useDifferential'
 import { useEnrichment } from '~/composables/domain/useEnrichment'
+import { useResultSelection } from '~/composables/domain/useResultSelection'
 import { renderEnrichmentBar, renderEnrichmentBubble } from '~/utils/api'
 
 const {
@@ -11,6 +12,7 @@ const {
 } = useEnrichment()
 const { diffResult } = useDifferential()
 const { sessionId } = useSession()
+const { enabledCharts } = useResultSelection()
 
 const activeDatabase = computed(() => enrichmentResult.value?.database || enrichmentType.value || 'GO')
 const barDownloadParams = computed(() => ({
@@ -60,7 +62,7 @@ async function handleBubbleModeChange() {
   </div>
 
   <template v-if="diffResult && enrichmentResult">
-    <div class="result-card">
+    <div v-if="enabledCharts.enrichBar" class="result-card">
       <div class="result-card-header">
         <div class="result-card-title">Enrichment Bar Plot</div>
         <div class="flex items-center gap-3">
@@ -77,10 +79,14 @@ async function handleBubbleModeChange() {
       <div class="svg-chart" v-html="enrichmentResult.bar_svg" />
     </div>
 
-    <div class="result-card">
+    <div v-if="enabledCharts.enrichBubble" class="result-card">
       <div class="result-card-header">
         <div class="result-card-title">Enrichment Bubble Plot</div>
         <div class="flex items-center gap-4 text-[13px] text-slate-700">
+          <select v-if="!enabledCharts.enrichBar" :value="activeDatabase" @change="handleEnrichmentTypeChange" :disabled="isEnrichmentLoading" class="chart-select">
+            <option value="GO">GO</option>
+            <option value="KEGG">KEGG</option>
+          </select>
           <label class="flex items-center gap-1.5">
             <input type="radio" v-model="bubbleChartMode" value="combined" @change="handleBubbleModeChange" />
             Cluster
