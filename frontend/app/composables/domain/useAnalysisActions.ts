@@ -6,9 +6,11 @@ import { useAlgorithmState } from '~/composables/domain/useAlgorithmState'
 import { useDifferential } from '~/composables/domain/useDifferential'
 import { useEnrichment } from '~/composables/domain/useEnrichment'
 import { useSurvival } from '~/composables/domain/useSurvival'
+import { useResultSelection } from '~/composables/domain/useResultSelection'
 
 const backendResponse = ref<any>(null)
 const analysisStatus = ref('')
+const clusteringDone = ref(false)
 
 export function useAnalysisActions() {
   const { sessionId } = useSession()
@@ -41,79 +43,101 @@ export function useAnalysisActions() {
     psParam1,
     psParam2,
   } = useAlgorithmState()
+  const { enabledMetrics, enabledCharts, runDifferential, runEnrichment } = useResultSelection()
+
+  function ensureBackendResponseShape() {
+    if (!backendResponse.value) {
+      backendResponse.value = { data: {} }
+    } else if (!backendResponse.value.data) {
+      backendResponse.value = { ...backendResponse.value, data: {} }
+    }
+  }
+
+  function mergeIntoBackendResponse(patch: Record<string, any>, topLevel?: Record<string, any>) {
+    ensureBackendResponseShape()
+    backendResponse.value = {
+      ...backendResponse.value,
+      ...(topLevel || {}),
+      data: {
+        ...backendResponse.value.data,
+        ...patch,
+      },
+    }
+  }
 
   async function runDownstreamAnalyses() {
     const { runDifferentialAnalysis, diffResult } = useDifferential()
     const { runEnrichmentAnalysis, enrichmentResult } = useEnrichment()
     const { runSurvivalAnalysis } = useSurvival()
 
-    analysisStatus.value = '正在运行差异表达分析...'
-    await runDifferentialAnalysis({ silent: true })
-
-    if (diffResult.value?.clusters) {
-      analysisStatus.value = '正在运行功能富集分析...'
-      await runEnrichmentAnalysis('GO', { silent: true })
-
-      analysisStatus.value = '正在计算生物学机制指标...'
-      let biologyMetrics: any = null
-      if (enrichmentResult.value?.status === 'success') {
-        try {
-          const biologyMetricsRes = await computeBiologyMetrics({
-            session_id: sessionId.value,
-            database: enrichmentResult.value.database || 'GO',
-          })
-          biologyMetrics = biologyMetricsRes.data?.data?.biology_metrics || null
-        } catch (error: any) {
-          biologyMetrics = {
-            error: error.response?.data?.detail || '生物学机制指标计算失败',
-          }
-        }
-      }
-
-      analysisStatus.value = '正在计算 AWA / 3D-AWA 指标...'
-      let awaMetrics: any = null
-      if (biologyMetrics && !biologyMetrics.error) {
-        try {
-          const awaMetricsRes = await computeAwaMetrics({
-            session_id: sessionId.value,
-            database: enrichmentResult.value.database || 'GO',
-            metrics: backendResponse.value?.data?.metrics || {},
-            clinical_metrics: backendResponse.value?.data?.clinical_metrics || {},
-            biology_metrics: biologyMetrics,
-          })
-          awaMetrics = awaMetricsRes.data?.data?.awa_metrics || null
-        } catch (error: any) {
-          awaMetrics = {
-            error: error.response?.data?.detail || 'AWA / 3D-AWA 指标计算失败',
-          }
-        }
-      }
-
-      backendResponse.value = {
-        ...backendResponse.value,
-        data: {
-          ...(backendResponse.value?.data || {}),
-          biology_metrics: biologyMetrics,
-          awa_metrics: awaMetrics,
-        },
-      }
+    if (runDifferential.value) {
+      analysisStatus.value = '正在运行差异表达分析...'
+      await runDifferentialAnalysis({ silent: true })
     }
 
-    if (clinicalFile.value) {
+    if (runEnrichment.value && diffResult.value?.clusters) {
+      analysisStatus.value = '正在运行功能富集分析...'
+      await runEnrichmentAnalysis('GO', { silent: true })
+    }
+
+    if (enabledMetrics.biology) {
+      analysisStatus.value = '正在计算生物学机制指标...'
+      let biologyMetrics: any = null
+      try {
+        const biologyMetricsRes = await computeBiologyMetrics({
+          session_id: sessionId.value,
+          database: enrichmentResult.value?.database || 'GO',
+        })
+        biologyMetrics = biologyMetricsRes.data?.data?.biology_metrics || null
+      } catch (error: any) {
+        biologyMetrics = {
+          error: error.response?.data?.detail || '生物学机制指标计算失败',
+        }
+      }
+      mergeIntoBackendResponse({ biology_metrics: biologyMetrics })
+    }
+
+    if (enabledMetrics.awa) {
+      analysisStatus.value = '正在计算 AWA / 3D-AWA 指标...'
+      let awaMetrics: any = null
+      try {
+        const awaMetricsRes = await computeAwaMetrics({
+          session_id: sessionId.value,
+          database: enrichmentResult.value?.database || 'GO',
+          metrics: backendResponse.value?.data?.metrics || {},
+          clinical_metrics: backendResponse.value?.data?.clinical_metrics || {},
+          biology_metrics: backendResponse.value?.data?.biology_metrics || {},
+        })
+        awaMetrics = awaMetricsRes.data?.data?.awa_metrics || null
+      } catch (error: any) {
+        awaMetrics = {
+          error: error.response?.data?.detail || 'AWA / 3D-AWA 指标计算失败',
+        }
+      }
+      mergeIntoBackendResponse({ awa_metrics: awaMetrics })
+    }
+
+    if (clinicalFile.value && enabledCharts.survival) {
       analysisStatus.value = '正在计算生存曲线...'
       await runSurvivalAnalysis({ silent: true })
     }
   }
 
   async function loadMetricsAndScatter() {
-    analysisStatus.value = '正在计算聚类评估指标...'
-    const metricsRes = await computeMetrics({
-      session_id: sessionId.value,
-    })
+    backendResponse.value = { data: {} }
 
-    let clinicalMetrics: any = null
-    if (clinicalFile.value) {
+    if (enabledMetrics.cluster) {
+      analysisStatus.value = '正在计算聚类评估指标...'
+      const metricsRes = await computeMetrics({
+        session_id: sessionId.value,
+      })
+      const { data: nestedData = {}, ...topLevel } = metricsRes.data || {}
+      mergeIntoBackendResponse(nestedData, topLevel)
+    }
+
+    if (clinicalFile.value && enabledMetrics.clinical) {
       analysisStatus.value = '正在计算临床评估指标...'
+      let clinicalMetrics: any = null
       try {
         const clinicalMetricsRes = await computeClinicalMetrics({
           session_id: sessionId.value,
@@ -124,25 +148,23 @@ export function useAnalysisActions() {
           error: error.response?.data?.detail || '临床评价指标计算失败',
         }
       }
+      mergeIntoBackendResponse({ clinical_metrics: clinicalMetrics })
     }
 
-    analysisStatus.value = '正在绘制聚类散点图...'
-    const plotRes = await renderClusterScatter({
-      session_id: sessionId.value,
-      reduction: currentReduction.value,
-      random_state: randomSeed.value,
-    })
-
-    backendResponse.value = {
-      ...metricsRes.data,
-      data: {
-        ...metricsRes.data.data,
-        clinical_metrics: clinicalMetrics,
+    if (enabledCharts.clusterScatter) {
+      analysisStatus.value = '正在绘制聚类散点图...'
+      const plotRes = await renderClusterScatter({
+        session_id: sessionId.value,
+        reduction: currentReduction.value,
+        random_state: randomSeed.value,
+      })
+      mergeIntoBackendResponse({
         reduction: currentReduction.value,
         plots: {
+          ...(backendResponse.value?.data?.plots || {}),
           cluster_scatter: plotRes.data.svg,
         },
-      },
+      })
     }
   }
 
@@ -153,6 +175,7 @@ export function useAnalysisActions() {
       isLoading.value = true
       clearError()
       backendResponse.value = null
+      clusteringDone.value = false
       analysisStatus.value = '正在评估聚类结果...'
 
       try {
@@ -165,6 +188,7 @@ export function useAnalysisActions() {
         formData.append('session_id', sessionId.value)
 
         await evaluateCustom(formData)
+        clusteringDone.value = true
         await loadMetricsAndScatter()
         await runDownstreamAnalyses()
       } catch (error: any) {
@@ -182,6 +206,7 @@ export function useAnalysisActions() {
     isLoading.value = true
     clearError()
     backendResponse.value = null
+    clusteringDone.value = false
     analysisStatus.value = '正在上传数据...'
 
     try {
@@ -199,6 +224,7 @@ export function useAnalysisActions() {
         max_iter: maxIter.value,
         n_neighbors: nNeighbors.value,
       })
+      clusteringDone.value = true
 
       await loadMetricsAndScatter()
       await runDownstreamAnalyses()
@@ -221,17 +247,13 @@ export function useAnalysisActions() {
         reduction: currentReduction.value,
         random_state: randomSeed.value,
       })
-      backendResponse.value = {
-        ...backendResponse.value,
-        data: {
-          ...backendResponse.value?.data,
-          reduction: currentReduction.value,
-          plots: {
-            ...(backendResponse.value?.data?.plots || {}),
-            cluster_scatter: res.data.svg,
-          },
+      mergeIntoBackendResponse({
+        reduction: currentReduction.value,
+        plots: {
+          ...(backendResponse.value?.data?.plots || {}),
+          cluster_scatter: res.data.svg,
         },
-      }
+      })
     } catch (error: any) {
       setError(error.response?.data?.detail || '降维切换失败。')
     } finally {
@@ -318,6 +340,7 @@ export function useAnalysisActions() {
   return {
     backendResponse,
     analysisStatus,
+    clusteringDone,
     runAnalysisFlow,
     switchReduction,
     runParameterSearchFlow,

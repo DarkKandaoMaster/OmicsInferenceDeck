@@ -3,11 +3,13 @@ import { useUIState } from '~/composables/core/useUIState'
 import { useSession } from '~/composables/core/useSession'
 import { useAlgorithmState } from '~/composables/domain/useAlgorithmState'
 import { useAnalysisActions } from '~/composables/domain/useAnalysisActions'
+import { useResultSelection } from '~/composables/domain/useResultSelection'
 
 const { isLoading } = useUIState()
 const { currentReduction, randomSeed } = useAlgorithmState()
 const { backendResponse, switchReduction } = useAnalysisActions()
 const { sessionId } = useSession()
+const { enabledCharts } = useResultSelection()
 
 const clusterSvg = computed(() => backendResponse.value?.data?.plots?.cluster_scatter || '')
 const downloadParams = computed(() => ({
@@ -18,7 +20,7 @@ const downloadParams = computed(() => ({
 </script>
 
 <template>
-  <div v-if="clusterSvg" class="result-card">
+  <div v-if="enabledCharts.clusterScatter && clusterSvg" class="result-card">
     <div class="result-card-header">
       <div class="result-card-title">Cluster Scatter</div>
       <div class="flex items-center gap-3">

@@ -10,7 +10,7 @@ const survivalErrorMessage = ref('')
 export function useSurvival() {
   const { sessionId } = useSession()
   const { clinicalFile, isClinicalUploaded, doUploadClinical } = useDataState()
-  const { backendResponse } = useAnalysisActions()
+  const { clusteringDone } = useAnalysisActions()
 
   async function runSurvivalAnalysis(options: { silent?: boolean } = {}) {
     if (!clinicalFile.value) {
@@ -19,7 +19,7 @@ export function useSurvival() {
       if (!options.silent) alert('请先选择临床数据。')
       return
     }
-    if (!backendResponse.value || !backendResponse.value.data.metrics) {
+    if (!clusteringDone.value) {
       if (!options.silent) alert('请先运行聚类分析。')
       return
     }
