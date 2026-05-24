@@ -26,6 +26,7 @@ open_plot_device <- function(width, height) {
   } else {
     stop("Unsupported output format")
   }
+  par(family = FONT_FAMILY)
 }
 
 render_output <- function(draw_expr, width, height) {

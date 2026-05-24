@@ -3,7 +3,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from lifelines import KaplanMeierFitter
 
-from .base import PALETTE, configure_matplotlib, empty_figure, figure_to_svg
+from .base import (
+    SURVIVAL_PALETTE,
+    configure_matplotlib,
+    empty_figure,
+    figure_to_svg,
+    reference_font_dict,
+)
 
 
 def build_figure(survival_data_path: str, p_value: float | None = None) -> plt.Figure:
@@ -14,12 +20,17 @@ def build_figure(survival_data_path: str, p_value: float | None = None) -> plt.F
     configure_matplotlib()
     fig, ax = plt.subplots(figsize=(9, 6))
     kmf = KaplanMeierFitter()
+    label_font = reference_font_dict()
 
-    for index, cluster_id in enumerate(sorted(df["Cluster"].unique())):
+    for cluster_id in sorted(df["Cluster"].unique()):
         subset = df[df["Cluster"] == cluster_id]
         if subset.empty:
             continue
-        color = PALETTE[index % len(PALETTE)]
+        try:
+            color_index = int(cluster_id) % len(SURVIVAL_PALETTE)
+        except (TypeError, ValueError):
+            color_index = 0
+        color = SURVIVAL_PALETTE[color_index]
         kmf.fit(subset["OS.time"], event_observed=subset["OS"], label=f"Cluster {cluster_id}")
         kmf.plot(ax=ax, ci_show=False, color=color, linewidth=2.5, show_censors=False)
 
@@ -39,16 +50,16 @@ def build_figure(survival_data_path: str, p_value: float | None = None) -> plt.F
     if p_value is not None and np.isfinite(p_value):
         ax.text(
             0.05,
-            0.06,
+            0.05,
             f"P-value: {p_value:.2e}",
             transform=ax.transAxes,
-            ha="left",
-            va="bottom",
+            horizontalalignment="left",
+            verticalalignment="bottom",
             bbox={"facecolor": "white", "edgecolor": "#D6D6D6", "boxstyle": "round,pad=0.5", "alpha": 0.9},
         )
 
-    ax.set_xlabel("Time (days)")
-    ax.set_ylabel("Survival Probability")
+    ax.set_xlabel("Time (days)", fontproperties=label_font)
+    ax.set_ylabel("Survival Probability", fontproperties=label_font)
     legend = ax.legend(
         title="Clusters",
         loc="upper right",
@@ -58,9 +69,9 @@ def build_figure(survival_data_path: str, p_value: float | None = None) -> plt.F
         edgecolor="black",
         bbox_to_anchor=(1, 1),
     )
-    legend.get_title().set_fontweight("bold")
+    plt.setp(legend.get_title(), fontproperties=label_font)
     for text in legend.get_texts():
-        text.set_fontweight("bold")
+        text.set_fontproperties(label_font)
     fig.tight_layout()
     return fig
 

@@ -8,14 +8,15 @@ suppressPackageStartupMessages({
 })
 
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) < 2) {
-  stop("Usage: Rscript enrichment_bubble.R <enrichment.parquet> <mode>")
+if (length(args) < 3) {
+  stop("Usage: Rscript enrichment_bubble.R <enrichment.parquet> <mode> <database>")
 }
 
 data_path <- args[[1]]
 mode <- args[[2]]
-output_format <- if (length(args) >= 3) tolower(args[[3]]) else ""
-output_path <- if (length(args) >= 4) args[[4]] else ""
+database <- toupper(args[[3]])
+output_format <- if (length(args) >= 4) tolower(args[[4]]) else ""
+output_path <- if (length(args) >= 5) args[[5]] else ""
 is_download <- output_format %in% c("png", "svg", "pdf") && nzchar(output_path)
 FONT_FAMILY <- "serif"
 
@@ -83,13 +84,25 @@ if (mode == "by_gene") {
     geom_point(aes(size = Gene_Count, color = neg_adjusted_p), alpha = 0.8) +
     scale_color_gradient(low = "green", high = "red") +
     geom_text(aes(label = Gene_Count), hjust = -0.7, size = 5.6, color = "black", family = FONT_FAMILY) +
-    labs(title = "Pathway Enrichment by Gene Count", x = "Gene Number", y = "Pathways", color = expression(p.adjust), size = "Count") +
+    labs(
+      title = paste0(database, " Enrichment - Pathway by Gene Count"),
+      x = "Gene Number",
+      y = "Pathways",
+      color = expression(p.adjust),
+      size = "Count"
+    ) +
     theme_bw(base_family = FONT_FAMILY, base_size = 16)
 } else {
   p <- ggplot(df, aes(x = cluster, y = TermShort)) +
     geom_point(aes(size = Gene_Count, color = neg_adjusted_p), alpha = 0.8) +
     scale_color_gradient(low = "blue", high = "red") +
-    labs(title = "Pathway Enrichment - All Clusters", x = "Cluster", y = "Pathways", color = expression(p.adjust), size = "Gene Count") +
+    labs(
+      title = paste0(database, " Pathway Enrichment - All Clusters"),
+      x = "Cluster",
+      y = "Pathways",
+      color = expression(p.adjust),
+      size = "Gene Count"
+    ) +
     theme_bw(base_family = FONT_FAMILY, base_size = 16)
 }
 
