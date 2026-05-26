@@ -3,9 +3,11 @@ import { useAnalysisActions } from '~/composables/domain/useAnalysisActions'
 import { useResultSelection } from '~/composables/domain/useResultSelection'
 
 const { backendResponse } = useAnalysisActions()
-const { enabledMetrics } = useResultSelection()
+const { enabledMetrics, selectedBiologyDb } = useResultSelection()
 
-const awaMetrics = computed(() => backendResponse.value?.data?.awa_metrics)
+const awaMetrics = computed(
+  () => backendResponse.value?.data?.awa_metrics_by_db?.[selectedBiologyDb.value],
+)
 const components = computed(() => awaMetrics.value?.components || {})
 
 const componentRows = computed(() => [

@@ -3,9 +3,11 @@ import { useAnalysisActions } from '~/composables/domain/useAnalysisActions'
 import { useResultSelection } from '~/composables/domain/useResultSelection'
 
 const { backendResponse } = useAnalysisActions()
-const { enabledMetrics } = useResultSelection()
+const { enabledMetrics, selectedBiologyDb } = useResultSelection()
 
-const biologyMetrics = computed(() => backendResponse.value?.data?.biology_metrics)
+const biologyMetrics = computed(
+  () => backendResponse.value?.data?.biology_metrics_by_db?.[selectedBiologyDb.value],
+)
 
 function formatNumber(value: unknown, digits = 2) {
   const numberValue = Number(value)
@@ -23,8 +25,15 @@ function formatPValue(value: unknown) {
 
 <template>
   <div v-if="enabledMetrics.biology && biologyMetrics" class="result-card mt-8">
-    <div class="result-card-header">
+    <div class="result-card-header flex items-center justify-between">
       <div class="result-card-title">生物学相关性指标</div>
+      <select
+        v-model="selectedBiologyDb"
+        class="ml-auto rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 focus:border-slate-400 focus:outline-none"
+      >
+        <option value="GO">GO</option>
+        <option value="KEGG">KEGG</option>
+      </select>
     </div>
 
     <div v-if="biologyMetrics.error" class="p-5 text-sm text-red-700">

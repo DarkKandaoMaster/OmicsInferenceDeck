@@ -48,6 +48,8 @@ const enabledCharts = reactive<Record<ChartKey, boolean>>({
   survival: true,
 })
 
+const selectedBiologyDb = ref<'GO' | 'KEGG'>('GO')
+
 const runDifferential = computed(
   () => enabledCharts.diffVolcano || enabledCharts.diffHeatmap,
 )
@@ -63,6 +65,7 @@ export function useResultSelection() {
   return {
     enabledMetrics,
     enabledCharts,
+    selectedBiologyDb,
     runDifferential,
     runEnrichment,
     metricOptions,

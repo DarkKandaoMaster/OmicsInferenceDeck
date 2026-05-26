@@ -20,8 +20,8 @@ const hasAnyMetricsVisible = computed(() => {
   if (!data) return false
   if (enabledMetrics.cluster && data.metrics) return true
   if (enabledMetrics.clinical && data.clinical_metrics) return true
-  if (enabledMetrics.biology && data.biology_metrics) return true
-  if (enabledMetrics.awa && data.awa_metrics) return true
+  if (enabledMetrics.biology && data.biology_metrics_by_db) return true
+  if (enabledMetrics.awa && data.awa_metrics_by_db) return true
   return false
 })
 

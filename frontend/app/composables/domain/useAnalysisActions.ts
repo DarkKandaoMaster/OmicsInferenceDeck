@@ -80,41 +80,57 @@ export function useAnalysisActions() {
       await runEnrichmentAnalysis({ silent: true })
     }
 
+    const databases: Array<'GO' | 'KEGG'> = ['GO', 'KEGG']
+
     if (enabledMetrics.biology) {
       analysisStatus.value = '正在计算生物学机制指标...'
-      let biologyMetrics: any = null
-      try {
-        const biologyMetricsRes = await computeBiologyMetrics({
-          session_id: sessionId.value,
-          database: 'GO',
-        })
-        biologyMetrics = biologyMetricsRes.data?.data?.biology_metrics || null
-      } catch (error: any) {
-        biologyMetrics = {
-          error: error.response?.data?.detail || '生物学机制指标计算失败',
+      const results = await Promise.allSettled(
+        databases.map(db =>
+          computeBiologyMetrics({ session_id: sessionId.value, database: db }),
+        ),
+      )
+      const biologyMetricsByDb: Record<string, any> = {}
+      databases.forEach((db, idx) => {
+        const r = results[idx]!
+        if (r.status === 'fulfilled') {
+          biologyMetricsByDb[db] = r.value.data?.data?.biology_metrics || null
+        } else {
+          const err: any = r.reason
+          biologyMetricsByDb[db] = {
+            error: err?.response?.data?.detail || '生物学机制指标计算失败',
+          }
         }
-      }
-      mergeIntoBackendResponse({ biology_metrics: biologyMetrics })
+      })
+      mergeIntoBackendResponse({ biology_metrics_by_db: biologyMetricsByDb })
     }
 
     if (enabledMetrics.awa) {
       analysisStatus.value = '正在计算 AWA / 3D-AWA 指标...'
-      let awaMetrics: any = null
-      try {
-        const awaMetricsRes = await computeAwaMetrics({
-          session_id: sessionId.value,
-          database: 'GO',
-          metrics: backendResponse.value?.data?.metrics || {},
-          clinical_metrics: backendResponse.value?.data?.clinical_metrics || {},
-          biology_metrics: backendResponse.value?.data?.biology_metrics || {},
-        })
-        awaMetrics = awaMetricsRes.data?.data?.awa_metrics || null
-      } catch (error: any) {
-        awaMetrics = {
-          error: error.response?.data?.detail || 'AWA / 3D-AWA 指标计算失败',
+      const biologyByDb = backendResponse.value?.data?.biology_metrics_by_db || {}
+      const results = await Promise.allSettled(
+        databases.map(db =>
+          computeAwaMetrics({
+            session_id: sessionId.value,
+            database: db,
+            metrics: backendResponse.value?.data?.metrics || {},
+            clinical_metrics: backendResponse.value?.data?.clinical_metrics || {},
+            biology_metrics: biologyByDb[db] || {},
+          }),
+        ),
+      )
+      const awaMetricsByDb: Record<string, any> = {}
+      databases.forEach((db, idx) => {
+        const r = results[idx]!
+        if (r.status === 'fulfilled') {
+          awaMetricsByDb[db] = r.value.data?.data?.awa_metrics || null
+        } else {
+          const err: any = r.reason
+          awaMetricsByDb[db] = {
+            error: err?.response?.data?.detail || 'AWA / 3D-AWA 指标计算失败',
+          }
         }
-      }
-      mergeIntoBackendResponse({ awa_metrics: awaMetrics })
+      })
+      mergeIntoBackendResponse({ awa_metrics_by_db: awaMetricsByDb })
     }
 
     if (clinicalFile.value && enabledCharts.survival) {
