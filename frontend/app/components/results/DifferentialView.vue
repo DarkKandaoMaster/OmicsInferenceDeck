@@ -35,7 +35,7 @@ async function handleVolcanoClusterChange() {
 
 async function handleOmicsTypeChange() {
   await runDifferentialAnalysis({ silent: true })
-  if (diffResult.value?.clusters) await runEnrichmentAnalysis('GO', { silent: true })
+  if (diffResult.value?.clusters) await runEnrichmentAnalysis({ silent: true })
 }
 </script>
 

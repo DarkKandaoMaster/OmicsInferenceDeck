@@ -5,100 +5,116 @@ import { useEnrichment } from '~/composables/domain/useEnrichment'
 import { useResultSelection } from '~/composables/domain/useResultSelection'
 import { renderEnrichmentBar, renderEnrichmentBubble } from '~/utils/api'
 
+type Database = 'GO' | 'KEGG'
+
 const {
-  enrichmentResult, isEnrichmentLoading, enrichmentType,
+  enrichmentResults, isEnrichmentLoading,
   selectedEnrichmentCluster, bubbleChartMode, enrichmentErrorMessage,
-  runEnrichmentAnalysis,
 } = useEnrichment()
 const { diffResult } = useDifferential()
 const { sessionId } = useSession()
 const { enabledCharts } = useResultSelection()
 
-const activeDatabase = computed(() => enrichmentResult.value?.database || enrichmentType.value || 'GO')
-const barDownloadParams = computed(() => ({
-  session_id: sessionId.value,
-  database: activeDatabase.value,
-  cluster_id: selectedEnrichmentCluster.value,
-}))
-const bubbleDownloadParams = computed(() => ({
-  session_id: sessionId.value,
-  database: activeDatabase.value,
-  mode: bubbleChartMode.value,
-}))
+const DATABASES: Database[] = ['GO', 'KEGG']
 
-async function handleEnrichmentTypeChange(event: Event) {
-  const value = (event.target as HTMLSelectElement).value
-  await runEnrichmentAnalysis(value, { silent: true })
+const clusterOptions = computed<number[]>(() => {
+  const go = enrichmentResults.value.GO?.clusters || []
+  const kegg = enrichmentResults.value.KEGG?.clusters || []
+  const set = new Set<number>([...go, ...kegg])
+  return Array.from(set).sort((a, b) => a - b)
+})
+
+const hasAnyResult = computed(() =>
+  !!(enrichmentResults.value.GO || enrichmentResults.value.KEGG),
+)
+
+function barDownloadParams(db: Database) {
+  return {
+    session_id: sessionId.value,
+    database: db,
+    cluster_id: selectedEnrichmentCluster.value,
+  }
+}
+function bubbleDownloadParams(db: Database) {
+  return {
+    session_id: sessionId.value,
+    database: db,
+    mode: bubbleChartMode.value,
+  }
+}
+
+async function refreshBar(db: Database) {
+  if (!enrichmentResults.value[db]) return
+  const res = await renderEnrichmentBar({
+    session_id: sessionId.value,
+    database: db,
+    cluster_id: selectedEnrichmentCluster.value,
+  })
+  enrichmentResults.value[db] = { ...enrichmentResults.value[db]!, bar_svg: res.data.svg }
+}
+
+async function refreshBubble(db: Database) {
+  if (!enrichmentResults.value[db]) return
+  const res = await renderEnrichmentBubble({
+    session_id: sessionId.value,
+    database: db,
+    mode: bubbleChartMode.value,
+  })
+  enrichmentResults.value[db] = { ...enrichmentResults.value[db]!, bubble_svg: res.data.svg }
 }
 
 async function handleClusterChange() {
-  if (!enrichmentResult.value) return
-  const res = await renderEnrichmentBar({
-    session_id: sessionId.value,
-    database: activeDatabase.value,
-    cluster_id: selectedEnrichmentCluster.value,
-  })
-  enrichmentResult.value = { ...enrichmentResult.value, bar_svg: res.data.svg }
+  await Promise.all(DATABASES.map(refreshBar))
 }
 
 async function handleBubbleModeChange() {
-  if (!enrichmentResult.value) return
-  const res = await renderEnrichmentBubble({
-    session_id: sessionId.value,
-    database: activeDatabase.value,
-    mode: bubbleChartMode.value,
-  })
-  enrichmentResult.value = { ...enrichmentResult.value, bubble_svg: res.data.svg }
+  await Promise.all(DATABASES.map(refreshBubble))
 }
 </script>
 
 <template>
   <div v-if="diffResult && isEnrichmentLoading" class="result-card col-span-2">
-    <div class="p-5 text-sm text-slate-600">Querying {{ enrichmentType || 'GO' }} enrichment results...</div>
+    <div class="p-5 text-sm text-slate-600">Querying GO + KEGG enrichment results...</div>
   </div>
 
-  <div v-if="diffResult && enrichmentErrorMessage" class="result-card col-span-2">
+  <div v-if="diffResult && enrichmentErrorMessage && !hasAnyResult" class="result-card col-span-2">
     <div class="p-5 text-sm text-red-700">{{ enrichmentErrorMessage }}</div>
   </div>
 
-  <template v-if="diffResult && enrichmentResult">
-    <div v-if="enabledCharts.enrichBar" class="result-card">
-      <div class="result-card-header">
-        <div class="result-card-title">Enrichment Bar Plot</div>
-        <div class="flex items-center gap-3">
-          <select :value="activeDatabase" @change="handleEnrichmentTypeChange" :disabled="isEnrichmentLoading" class="chart-select">
-            <option value="GO">GO</option>
-            <option value="KEGG">KEGG</option>
-          </select>
-          <select v-model.number="selectedEnrichmentCluster" @change="handleClusterChange" class="chart-select">
-            <option v-for="cid in enrichmentResult.clusters" :key="cid" :value="cid">Cluster {{ cid }}</option>
-          </select>
-          <ResultsPlotDownloadButton plot-type="enrichment_bar" :params="barDownloadParams" filename-prefix="enrichment_bar" :disabled="isEnrichmentLoading" />
+  <template v-if="diffResult && hasAnyResult">
+    <template v-for="db in DATABASES" :key="db">
+      <template v-if="enrichmentResults[db]">
+        <div v-if="enabledCharts.enrichBar" class="result-card">
+          <div class="result-card-header">
+            <div class="result-card-title">Enrichment Bar Plot ({{ db }})</div>
+            <div class="flex items-center gap-3">
+              <select v-model.number="selectedEnrichmentCluster" @change="handleClusterChange" class="chart-select">
+                <option v-for="cid in clusterOptions" :key="cid" :value="cid">Cluster {{ cid }}</option>
+              </select>
+              <ResultsPlotDownloadButton plot-type="enrichment_bar" :params="barDownloadParams(db)" :filename-prefix="`enrichment_bar_${db}`" :disabled="isEnrichmentLoading" />
+            </div>
+          </div>
+          <div class="svg-chart" v-html="enrichmentResults[db]!.bar_svg" />
         </div>
-      </div>
-      <div class="svg-chart" v-html="enrichmentResult.bar_svg" />
-    </div>
 
-    <div v-if="enabledCharts.enrichBubble" class="result-card">
-      <div class="result-card-header">
-        <div class="result-card-title">Enrichment Bubble Plot</div>
-        <div class="flex items-center gap-4 text-[13px] text-slate-700">
-          <select v-if="!enabledCharts.enrichBar" :value="activeDatabase" @change="handleEnrichmentTypeChange" :disabled="isEnrichmentLoading" class="chart-select">
-            <option value="GO">GO</option>
-            <option value="KEGG">KEGG</option>
-          </select>
-          <label class="flex items-center gap-1.5">
-            <input type="radio" v-model="bubbleChartMode" value="combined" @change="handleBubbleModeChange" />
-            Cluster
-          </label>
-          <label class="flex items-center gap-1.5">
-            <input type="radio" v-model="bubbleChartMode" value="by_gene" @change="handleBubbleModeChange" />
-            Gene count
-          </label>
-          <ResultsPlotDownloadButton plot-type="enrichment_bubble" :params="bubbleDownloadParams" filename-prefix="enrichment_bubble" :disabled="isEnrichmentLoading" />
+        <div v-if="enabledCharts.enrichBubble" class="result-card">
+          <div class="result-card-header">
+            <div class="result-card-title">Enrichment Bubble Plot ({{ db }})</div>
+            <div class="flex items-center gap-4 text-[13px] text-slate-700">
+              <label class="flex items-center gap-1.5">
+                <input type="radio" v-model="bubbleChartMode" value="combined" @change="handleBubbleModeChange" />
+                Cluster
+              </label>
+              <label class="flex items-center gap-1.5">
+                <input type="radio" v-model="bubbleChartMode" value="by_gene" @change="handleBubbleModeChange" />
+                Gene count
+              </label>
+              <ResultsPlotDownloadButton plot-type="enrichment_bubble" :params="bubbleDownloadParams(db)" :filename-prefix="`enrichment_bubble_${db}`" :disabled="isEnrichmentLoading" />
+            </div>
+          </div>
+          <div class="svg-chart" v-html="enrichmentResults[db]!.bubble_svg" />
         </div>
-      </div>
-      <div class="svg-chart" v-html="enrichmentResult.bubble_svg" />
-    </div>
+      </template>
+    </template>
   </template>
 </template>
