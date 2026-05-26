@@ -23,7 +23,7 @@ const kValue = ref(5)
 const maxIter = ref(300)
 const nNeighbors = ref(10)
 const randomSeed = ref(42)
-const currentReduction = ref('PCA')
+const currentReduction = ref('t-SNE')
 
 const isTestMode = ref(false)
 const testNClusters = ref('2,3,4,5')
