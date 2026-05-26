@@ -1,4 +1,4 @@
-import { computeAwaMetrics, computeBiologyMetrics, computeClinicalMetrics, computeMetrics, evaluateCustom, renderClusterScatter, runAlgorithm, runParameterSearch } from '~/utils/api'
+import { computeAwaMetrics, computeBiologyMetrics, computeClinicalMetrics, computeMetrics, evaluateCustom, renderClusterScatter, renderInputClusterScatter, runAlgorithm, runParameterSearch } from '~/utils/api'
 import { useSession } from '~/composables/core/useSession'
 import { useUIState } from '~/composables/core/useUIState'
 import { useDataState } from '~/composables/domain/useDataState'
@@ -166,6 +166,25 @@ export function useAnalysisActions() {
         },
       })
     }
+
+    if (enabledCharts.inputClusterScatter) {
+      analysisStatus.value = '正在绘制聚类前散点图...'
+      try {
+        const inputRes = await renderInputClusterScatter({
+          session_id: sessionId.value,
+          reduction: currentReduction.value,
+          random_state: randomSeed.value,
+        })
+        mergeIntoBackendResponse({
+          plots: {
+            ...(backendResponse.value?.data?.plots || {}),
+            input_cluster_scatter: inputRes.data.svg,
+          },
+        })
+      } catch (_error) {
+        // 失败不阻塞主流程
+      }
+    }
   }
 
   async function runAnalysisFlow() {
@@ -254,6 +273,24 @@ export function useAnalysisActions() {
           cluster_scatter: res.data.svg,
         },
       })
+
+      if (enabledCharts.inputClusterScatter) {
+        try {
+          const inputRes = await renderInputClusterScatter({
+            session_id: sessionId.value,
+            reduction: currentReduction.value,
+            random_state: randomSeed.value,
+          })
+          mergeIntoBackendResponse({
+            plots: {
+              ...(backendResponse.value?.data?.plots || {}),
+              input_cluster_scatter: inputRes.data.svg,
+            },
+          })
+        } catch (_error) {
+          // 失败不阻塞主流程
+        }
+      }
     } catch (error: any) {
       setError(error.response?.data?.detail || '降维切换失败。')
     } finally {

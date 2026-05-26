@@ -29,6 +29,8 @@ from plots.base import (
     session_dir,
 )
 from plots.cluster_scatter import build_figure as build_cluster_scatter_figure
+from plots.input_cluster_scatter import build_figure as build_input_cluster_scatter_figure
+from routers.upload import OMICS_DATA_FILE
 from plots.differential_volcano import build_figure as build_volcano_figure
 from plots.differential_volcano import render_svg as render_volcano_svg
 from plots.parameter_surface import build_figure as build_parameter_figure
@@ -115,6 +117,17 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
         path = plot_path(request.session_id, CLUSTER_RESULT_FILE)
         fig = build_cluster_scatter_figure(str(path), request.reduction, _seed_or_none(request.random_state))
         return figure_to_bytes(fig, file_format), f"cluster_scatter_{request.reduction}"
+
+    if plot_type == "input_cluster_scatter":
+        omics_path = plot_path(request.session_id, OMICS_DATA_FILE)
+        cluster_path = plot_path(request.session_id, CLUSTER_RESULT_FILE)
+        fig = build_input_cluster_scatter_figure(
+            str(omics_path),
+            str(cluster_path),
+            request.reduction,
+            _seed_or_none(request.random_state),
+        )
+        return figure_to_bytes(fig, file_format), f"input_cluster_scatter_{request.reduction}"
 
     if plot_type == "differential_volcano":
         cluster_id = _require_cluster_id(request)
