@@ -12,11 +12,11 @@ const diffErrorMessage = ref('')
 export function useDifferential() {
   const { sessionId } = useSession()
   const { omicsFileConfigs, differentialOmicsTypes, expressionMatrixType, isExpressionMatrixUploaded } = useDataState()
-  const { backendResponse } = useAnalysisActions()
+  const { clusteringDone } = useAnalysisActions()
 
   async function runDifferentialAnalysis(options: { silent?: boolean } = {}) {
     const hasDifferentialInput = omicsFileConfigs.value.length > 0 || isExpressionMatrixUploaded.value
-    if (!hasDifferentialInput || !backendResponse.value?.data?.metrics) {
+    if (!hasDifferentialInput || !clusteringDone.value) {
       if (!options.silent) alert('请先完成算法分析，得到聚类结果。')
       return
     }

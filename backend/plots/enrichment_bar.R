@@ -8,14 +8,15 @@ suppressPackageStartupMessages({
 })
 
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) < 2) {
-  stop("Usage: Rscript enrichment_bar.R <enrichment.parquet> <cluster_id>")
+if (length(args) < 3) {
+  stop("Usage: Rscript enrichment_bar.R <enrichment.parquet> <cluster_id> <database>")
 }
 
 data_path <- args[[1]]
 cluster_id <- args[[2]]
-output_format <- if (length(args) >= 3) tolower(args[[3]]) else ""
-output_path <- if (length(args) >= 4) args[[4]] else ""
+database <- toupper(args[[3]])
+output_format <- if (length(args) >= 4) tolower(args[[4]]) else ""
+output_path <- if (length(args) >= 5) args[[5]] else ""
 is_download <- output_format %in% c("png", "svg", "pdf") && nzchar(output_path)
 FONT_FAMILY <- "serif"
 
@@ -83,12 +84,16 @@ df <- df %>%
 palette <- c(BP = "#66C3A5", CC = "#8DA1CB", MF = "#FD8D62", KEGG = "#3498DB", Enrichment = "#3498DB")
 
 p <- ggplot(df, aes(x = TermShort, y = Gene_Count, fill = Category)) +
-  geom_col(width = 0.62) +
+  geom_col(width = 0.6) +
   geom_text(aes(label = Gene_Count), hjust = -0.2, size = 4.5, family = FONT_FAMILY) +
   coord_flip() +
   scale_fill_manual(values = palette, drop = FALSE) +
   scale_y_continuous(limits = c(0, max(df$Gene_Count) + 1)) +
-  labs(title = paste0("Enrichment - Cluster ", cluster_id), x = "Terms", y = "Gene Number") +
+  labs(
+    title = paste0(database, " Enrichment - Cluster ", cluster_id),
+    x = "Terms",
+    y = "Gene Number"
+  ) +
   theme_bw(base_family = FONT_FAMILY, base_size = 16) +
   theme(
     text = element_text(family = FONT_FAMILY, size = 16),
@@ -96,7 +101,7 @@ p <- ggplot(df, aes(x = TermShort, y = Gene_Count, fill = Category)) +
     axis.text.x = element_text(family = FONT_FAMILY, size = 16),
     axis.text.y = element_text(family = FONT_FAMILY, size = 14, hjust = 1, lineheight = 0.8, margin = margin(r = 8)),
     plot.title = element_text(family = FONT_FAMILY, size = 16, face = "bold", hjust = 0.5),
-    legend.title = element_blank(),
+    legend.title = element_text(family = FONT_FAMILY, size = 16, face = "bold"),
     legend.text = element_text(family = FONT_FAMILY, size = 16),
     legend.position = "right",
     plot.margin = margin(5, 5, 5, 5, "mm"),

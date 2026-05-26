@@ -1,66 +1,76 @@
 <script setup lang="ts">
 import { useDataState } from '~/composables/domain/useDataState'
 import { useUIState } from '~/composables/core/useUIState'
+import { useAlgorithmState } from '~/composables/domain/useAlgorithmState'
+import { useResultSelection } from '~/composables/domain/useResultSelection'
 
-const { isCustomEvalMode, customEvalUploadStatus, handleCustomEvalFileChange } = useDataState()
+const { isCustomEvalMode } = useDataState()
 const { errorMessage } = useUIState()
+const { isTestMode } = useAlgorithmState()
+const { enabledMetrics, enabledCharts, metricOptions, chartOptions } = useResultSelection()
+
+watch(isCustomEvalMode, (enabled) => {
+  if (enabled) isTestMode.value = false
+})
 </script>
 
 <template>
-  <div>
-    <div class="mb-4 flex justify-end">
-      <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200 shadow-sm hover:border-primary transition-all"><!-- 这个样式之后记得改一下 -->
-        <input type="checkbox" v-model="isCustomEvalMode" class="w-4 h-4 text-primary focus:ring-primary rounded border-gray-300" />
-        <span class="text-sm font-semibold text-slate-700">我想测试自己的算法 (自定义模式)</span>
-      </label>
-    </div>
+  <div class="mx-auto flex max-w-7xl flex-col gap-6">
+    <AnalysisModeSelector v-model:is-custom-eval-mode="isCustomEvalMode" />
 
-    <!-- 配置区 -->
-    <div class="grid grid-cols-3 gap-6 mb-8 items-start">
-      <!-- 第1栏：数据上传 -->
-      <AnalysisDataUpload />
+    <AnalysisDataUpload />
 
-      <!-- 第2+3栏：算法选择 + 参数配置（非自定义模式） -->
-      <AnalysisAlgorithmSelect v-if="!isCustomEvalMode" class="col-span-2" />
+    <AnalysisAlgorithmSelect />
 
-      <!-- 自定义模式：结果数据上传卡 -->
-      <div v-else class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-        <div class="bg-slate-50 px-5 py-4 border-b border-slate-200 flex items-center gap-2.5">
-          <span>📥</span>
-          <h3 class="m-0 text-base font-semibold text-slate-900">2. 结果数据上传</h3>
-        </div>
-        <div class="p-5">
-          <h4 class="m-0 mb-3 text-sm flex items-center gap-2">📊 聚类结果与特征矩阵 <span class="text-[11px] px-1.5 py-0.5 rounded bg-red-100 text-red-700">必填</span></h4>
-          <p class="text-[13px] text-slate-500 mb-3 leading-relaxed">
-            请把你上传的组学数据作为输入，用你自己的算法，生成一个CSV/Excel文件：<br>
-            1.从左到右分别是<br>
-            <strong>病人名称</strong>（索引列）、<br>
-            <strong>聚类结果</strong>（第2列）、<br>
-            <strong>融合后的特征矩阵</strong>（第3列及之后）。<br>
-            2.行代表病人，列代表特征。有表头行、索引列。
-          </p>
-          <div class="relative border-2 border-dashed border-slate-200 rounded-lg bg-slate-100 hover:border-primary hover:bg-indigo-50 transition-all text-center">
-            <input type="file" @change="handleCustomEvalFileChange($event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".csv, .xlsx, .xls" />
-            <div class="flex flex-col p-5 pointer-events-none">
-              <span class="text-sm font-medium text-slate-900">点击选择结果数据文件</span>
-            </div>
+    <section class="mx-auto w-full max-w-4xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+      <div class="border-b border-slate-200 bg-slate-50 px-5 py-4">
+        <h3 class="m-0 text-base font-semibold text-slate-900">3. 选择想展示的结果</h3>
+        <p class="mt-1 text-xs text-slate-500">取消勾选后将跳过对应的后端计算，节省运行时间。</p>
+      </div>
+
+      <div class="grid grid-cols-1 gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)]">
+        <div>
+          <h4 class="m-0 mb-3 text-sm font-semibold text-slate-900">选择要计算的数学指标</h4>
+          <div class="grid grid-cols-2 gap-2">
+            <label
+              v-for="option in metricOptions"
+              :key="option.key"
+              class="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-700 transition hover:bg-slate-50"
+            >
+              <input v-model="enabledMetrics[option.key]" type="checkbox" class="h-4 w-4" />
+              <span>{{ option.label }}</span>
+            </label>
           </div>
-          <div v-show="customEvalUploadStatus" class="mt-2 text-xs p-2 rounded-lg bg-green-50 text-green-800 border border-green-200">
-            {{ customEvalUploadStatus }}
+        </div>
+
+        <div class="h-px bg-slate-200 lg:h-auto lg:w-px" />
+
+        <div>
+          <h4 class="m-0 mb-3 text-sm font-semibold text-slate-900">选择要绘制的图表</h4>
+          <div class="grid grid-cols-2 gap-2">
+            <label
+              v-for="option in chartOptions"
+              :key="option.key"
+              class="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-700 transition hover:bg-slate-50"
+            >
+              <input v-model="enabledCharts[option.key]" type="checkbox" class="h-4 w-4" />
+              <span>{{ option.label }}</span>
+            </label>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 运行按钮 -->
+      <div class="border-t border-slate-100 bg-slate-50/50 px-5 py-3 text-[12px] leading-relaxed text-slate-500">
+        依赖关系：综合得分 依赖 聚类内部质量指标 / 临床关联指标 / 生物学相关性指标；生物学相关性指标 依赖 Enrichment 图；Enrichment 图 依赖 Differential 图。如取消上游而保留下游，对应计算可能因缺少前置数据而失败。
+      </div>
+    </section>
+
     <AnalysisActions />
 
-    <!-- 全局错误 -->
-    <div v-if="errorMessage" class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl mb-8 flex items-center gap-3 font-medium">
-      <span>❌</span> {{ errorMessage }}
+    <div v-if="errorMessage" class="mx-auto mb-2 flex w-full max-w-5xl items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-4 font-medium text-red-700">
+      <span>{{ errorMessage }}</span>
     </div>
 
-    <!-- 结果区域 -->
     <ResultsContainer />
   </div>
 </template>

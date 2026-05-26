@@ -7,10 +7,12 @@ from scipy.interpolate import griddata
 from .base import SURFACE_COLORS, configure_matplotlib, empty_figure, figure_to_svg, set_2d_plot_box
 
 
-def _maybe_log_axis(values: np.ndarray) -> tuple[np.ndarray, bool]:
+def _maybe_log_axis(values: np.ndarray, force: bool = False) -> tuple[np.ndarray, bool]:
     finite = values[np.isfinite(values)]
     if finite.size == 0 or np.any(finite <= 0):
         return values, False
+    if force:
+        return np.log10(values), True
     if float(np.max(finite) / np.min(finite)) < 100:
         return values, False
     return np.log10(values), True
@@ -72,9 +74,9 @@ def build_figure(results_path: str, x_param: str, y_param: str | None = None) ->
         grouped = df.groupby(x_param, as_index=False)["score"].max().sort_values(x_param)
         fig, ax = plt.subplots(figsize=(8, 6))
         ax.plot(grouped[x_param], grouped["score"], color="#2E86DE", linewidth=2.6, marker="o", markersize=6)
-        ax.set_xlabel(x_param)
-        ax.set_ylabel("-Log10(P-value)")
-        ax.set_title("Parameter Sensitivity")
+        ax.set_xlabel(x_param, fontweight="bold")
+        ax.set_ylabel("$-\\log_{10}(p)$", fontweight="bold")
+        ax.set_title(f"Parameter Sensitivity ({x_param})", fontweight="bold")
         set_2d_plot_box(ax)
         ax.grid(True, linestyle="--", alpha=0.28)
         fig.tight_layout()
@@ -92,8 +94,8 @@ def build_figure(results_path: str, x_param: str, y_param: str | None = None) ->
     ax = fig.add_subplot(111, projection="3d")
     cmap = LinearSegmentedColormap.from_list("custom_teal_purple", SURFACE_COLORS, N=256)
 
-    x_plot, x_is_log = _maybe_log_axis(x)
-    y_plot, y_is_log = _maybe_log_axis(y)
+    x_plot, x_is_log = _maybe_log_axis(x, force=True)
+    y_plot, y_is_log = _maybe_log_axis(y, force=True)
     z_min = float(np.nanmin(z)) if not np.all(np.isnan(z)) else 0.0
     z_max = float(np.nanmax(z)) if not np.all(np.isnan(z)) else 1.0
     if z_min == z_max:
@@ -129,9 +131,9 @@ def build_figure(results_path: str, x_param: str, y_param: str | None = None) ->
     else:
         ax.scatter(x_plot, y_plot, z, color="#666666", s=50, depthshade=False)
 
-    ax.set_xlabel(x_param, labelpad=10)
-    ax.set_ylabel(y_param, labelpad=10)
-    ax.set_zlabel("$-\\log_{10}(p)$", fontsize=12, labelpad=20)
+    ax.set_xlabel(x_param, fontsize=16, labelpad=10, fontweight="bold")
+    ax.set_ylabel(y_param, fontsize=16, labelpad=10, fontweight="bold")
+    ax.set_zlabel("$-\\log_{10}(p)$", fontsize=12, labelpad=20, fontweight="bold")
     ax.zaxis.set_rotate_label(True)
     ax.set_box_aspect([1, 1, 0.8])
     ax.view_init(elev=30, azim=60)
@@ -141,8 +143,19 @@ def build_figure(results_path: str, x_param: str, y_param: str | None = None) ->
     if y_is_log:
         _format_log_ticks(ax, "y", y_plot)
     ax.tick_params(axis="z", which="major", labelsize=14, pad=8)
+    ax.zaxis.set_major_formatter(plt.ScalarFormatter(useMathText=True))
     z_ceil = float(np.ceil(np.nanmax(z))) if np.nanmax(z) > 0 else 1.0
     ax.set_zlim(0, z_ceil)
+    ax.set_zticklabels(
+        [f"{tick:.1f}" for tick in ax.get_zticks()],
+        fontsize=14,
+        fontweight="bold",
+    )
+    ax.set_title(
+        f"Parameter Sensitivity ({x_param} vs {y_param})",
+        fontsize=16,
+        fontweight="bold",
+    )
     plt.subplots_adjust(left=0.25, right=0.9, bottom=0.1, top=0.9)
     fig.tight_layout(rect=[0.25, 0, 0.95, 0.95])
     return fig

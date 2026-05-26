@@ -9,7 +9,14 @@ from sklearn.manifold import TSNE
 import umap
 import seaborn as sns
 
-from .base import CANAKO_TSNE_RANDOM_STATE, PALETTE, configure_matplotlib, empty_figure, figure_to_svg
+from .base import (
+    CANAKO_TSNE_RANDOM_STATE,
+    PALETTE,
+    configure_matplotlib,
+    empty_figure,
+    figure_to_svg,
+    reference_font_dict,
+)
 
 
 def _scatter_palette(n_colors: int):
@@ -73,28 +80,47 @@ def build_figure(cluster_result_path: str, reduction: str = "PCA", random_state:
     configure_matplotlib()
     fig, ax = plt.subplots(figsize=(12, 10))
     unique_labels = sorted(pd.Series(labels).dropna().unique())
-    palette = _scatter_palette(len(unique_labels))
+    palette = _scatter_palette(max(len(unique_labels), 1))
+    label_font = reference_font_dict()
+    tick_font = reference_font_dict()
 
-    for index, label in enumerate(unique_labels):
+    for label in unique_labels:
         mask = labels == label
+        try:
+            color_index = int(label) % len(palette)
+        except (TypeError, ValueError):
+            color_index = unique_labels.index(label) % len(palette)
         ax.scatter(
             coords[mask, 0],
             coords[mask, 1],
             label=f"Cluster {label}",
             s=50,
-            color=palette[index],
+            color=palette[color_index],
             alpha=0.7,
-            linewidths=0,
         )
 
     axis_prefix = {"PCA": "PC", "t-SNE": "t-SNE", "UMAP": "UMAP"}.get(reduction, "Dim")
     if reduction == "t-SNE":
-        ax.set_xlabel("t-SNE dimension 1")
-        ax.set_ylabel("t-SNE dimension 2")
+        ax.set_xlabel("t-SNE dimension 1", fontproperties=label_font)
+        ax.set_ylabel("t-SNE dimension 2", fontproperties=label_font)
     else:
-        ax.set_xlabel(f"{axis_prefix} 1")
-        ax.set_ylabel(f"{axis_prefix} 2")
-    ax.set_title(f"Sample Clustering ({reduction})")
+        ax.set_xlabel(f"{axis_prefix} 1", fontproperties=label_font)
+        ax.set_ylabel(f"{axis_prefix} 2", fontproperties=label_font)
+
+    plt.setp(
+        ax.get_xticklabels(),
+        fontname=tick_font["family"],
+        fontsize=tick_font["size"],
+        fontweight=tick_font["weight"],
+    )
+    plt.setp(
+        ax.get_yticklabels(),
+        fontname=tick_font["family"],
+        fontsize=tick_font["size"],
+        fontweight=tick_font["weight"],
+    )
+
+    ax.set_title(f"{reduction} Clustering", fontdict=label_font)
     ax.grid(False)
     legend = ax.legend(
         title="Clusters",
@@ -105,9 +131,9 @@ def build_figure(cluster_result_path: str, reduction: str = "PCA", random_state:
         edgecolor="black",
         bbox_to_anchor=(1, 1),
     )
-    legend.get_title().set_fontweight("bold")
+    plt.setp(legend.get_title(), fontproperties=label_font)
     for text in legend.get_texts():
-        text.set_fontweight("bold")
+        text.set_fontproperties(label_font)
     fig.tight_layout()
     return fig
 

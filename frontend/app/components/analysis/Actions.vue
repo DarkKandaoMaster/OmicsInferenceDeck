@@ -9,16 +9,16 @@ const { analysisStatus, runAnalysisFlow, runParameterSearchFlow } = useAnalysisA
 </script>
 
 <template>
-  <div class="flex justify-center my-10">
+  <div class="mx-auto flex w-full max-w-5xl justify-center py-4">
     <button
       v-if="!isTestMode"
       @click="runAnalysisFlow"
       :disabled="isLoading"
-      class="border-none rounded-[30px] text-base font-semibold px-10 py-4 cursor-pointer transition-all shadow-md text-white bg-gradient-to-r from-primary to-secondary hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0"
+      class="min-w-[220px] cursor-pointer rounded-lg border-none bg-primary px-10 py-3.5 text-base font-semibold text-white shadow-sm transition-all hover:bg-primary-hover hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
     >
-      <span class="flex items-center gap-2">
+      <span class="flex items-center justify-center gap-2">
         <span v-if="isLoading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-        {{ isLoading ? (analysisStatus || 'Running analysis...') : 'Run Analysis' }}
+        {{ isLoading ? (analysisStatus || '正在运行分析...') : '运行分析' }}
       </span>
     </button>
 
@@ -26,11 +26,11 @@ const { analysisStatus, runAnalysisFlow, runParameterSearchFlow } = useAnalysisA
       v-else
       @click="runParameterSearchFlow"
       :disabled="isPsLoading"
-      class="border-none rounded-[30px] text-base font-semibold px-10 py-4 cursor-pointer transition-all shadow-md text-white bg-gradient-to-r from-red-500 to-amber-500 hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0"
+      class="min-w-[220px] cursor-pointer rounded-lg border-none bg-amber-600 px-10 py-3.5 text-base font-semibold text-white shadow-sm transition-all hover:bg-amber-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
     >
       <span class="flex items-center gap-2">
         <span v-if="isPsLoading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-        {{ isPsLoading ? 'Searching...' : 'Run Parameter Search' }}
+        {{ isPsLoading ? '正在搜索...' : '运行参数敏感性分析' }}
       </span>
     </button>
   </div>

@@ -29,6 +29,8 @@ from plots.base import (
     session_dir,
 )
 from plots.cluster_scatter import build_figure as build_cluster_scatter_figure
+from plots.input_cluster_scatter import build_figure as build_input_cluster_scatter_figure
+from routers.upload import OMICS_DATA_FILE
 from plots.differential_volcano import build_figure as build_volcano_figure
 from plots.differential_volcano import render_svg as render_volcano_svg
 from plots.parameter_surface import build_figure as build_parameter_figure
@@ -116,6 +118,17 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
         fig = build_cluster_scatter_figure(str(path), request.reduction, _seed_or_none(request.random_state))
         return figure_to_bytes(fig, file_format), f"cluster_scatter_{request.reduction}"
 
+    if plot_type == "input_cluster_scatter":
+        omics_path = plot_path(request.session_id, OMICS_DATA_FILE)
+        cluster_path = plot_path(request.session_id, CLUSTER_RESULT_FILE)
+        fig = build_input_cluster_scatter_figure(
+            str(omics_path),
+            str(cluster_path),
+            request.reduction,
+            _seed_or_none(request.random_state),
+        )
+        return figure_to_bytes(fig, file_format), f"input_cluster_scatter_{request.reduction}"
+
     if plot_type == "differential_volcano":
         cluster_id = _require_cluster_id(request)
         path = plot_path(request.session_id, DIFFERENTIAL_VOLCANO_FILE)
@@ -145,14 +158,24 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
         database = _require_database(request)
         cluster_id = _require_cluster_id(request)
         path = plot_path(request.session_id, enrichment_file(database))
-        payload = run_r_plot_bytes("enrichment_bar.R", [path, cluster_id], file_format, session_dir(request.session_id))
+        payload = run_r_plot_bytes(
+            "enrichment_bar.R",
+            [path, cluster_id, database.upper()],
+            file_format,
+            session_dir(request.session_id),
+        )
         return payload, f"enrichment_{database.upper()}_bar_cluster_{cluster_id}"
 
     if plot_type == "enrichment_bubble":
         database = _require_database(request)
         mode = request.mode if request.mode in {"combined", "by_gene"} else "combined"
         path = plot_path(request.session_id, enrichment_file(database))
-        payload = run_r_plot_bytes("enrichment_bubble.R", [path, mode], file_format, session_dir(request.session_id))
+        payload = run_r_plot_bytes(
+            "enrichment_bubble.R",
+            [path, mode, database.upper()],
+            file_format,
+            session_dir(request.session_id),
+        )
         return payload, f"enrichment_{database.upper()}_bubble_{mode}"
 
     raise ValueError(f"Unsupported plot_type: {request.plot_type}")
@@ -180,7 +203,13 @@ async def differential_heatmap(request: SessionPlotRequest):
 async def enrichment_bar(request: EnrichmentBarRequest):
     try:
         path = plot_path(request.session_id, enrichment_file(request.database))
-        return {"status": "success", "svg": run_r_svg("enrichment_bar.R", [path, request.cluster_id])}
+        return {
+            "status": "success",
+            "svg": run_r_svg(
+                "enrichment_bar.R",
+                [path, request.cluster_id, request.database.upper()],
+            ),
+        }
     except Exception as e:
         return {"status": "success", "svg": empty_svg(f"Enrichment bar plot failed: {e}", "Enrichment Bar")}
 
@@ -190,7 +219,13 @@ async def enrichment_bubble(request: EnrichmentBubbleRequest):
     try:
         mode = request.mode if request.mode in {"combined", "by_gene"} else "combined"
         path = plot_path(request.session_id, enrichment_file(request.database))
-        return {"status": "success", "svg": run_r_svg("enrichment_bubble.R", [path, mode])}
+        return {
+            "status": "success",
+            "svg": run_r_svg(
+                "enrichment_bubble.R",
+                [path, mode, request.database.upper()],
+            ),
+        }
     except Exception as e:
         return {"status": "success", "svg": empty_svg(f"Enrichment bubble plot failed: {e}", "Enrichment Bubble")}
 

@@ -3,6 +3,7 @@ import { useSession } from '~/composables/core/useSession'
 import { useDataState } from '~/composables/domain/useDataState'
 import { useDifferential } from '~/composables/domain/useDifferential'
 import { useEnrichment } from '~/composables/domain/useEnrichment'
+import { useResultSelection } from '~/composables/domain/useResultSelection'
 import { renderDifferentialVolcano } from '~/utils/api'
 
 const {
@@ -13,6 +14,7 @@ const {
 const { differentialOmicsTypes } = useDataState()
 const { sessionId } = useSession()
 const { runEnrichmentAnalysis } = useEnrichment()
+const { enabledCharts } = useResultSelection()
 
 const volcanoDownloadParams = computed(() => ({
   session_id: sessionId.value,
@@ -47,7 +49,7 @@ async function handleOmicsTypeChange() {
   </div>
 
   <template v-if="diffResult">
-    <div class="result-card">
+    <div v-if="enabledCharts.diffVolcano" class="result-card">
       <div class="result-card-header">
         <div class="result-card-title">Differential Volcano</div>
         <div class="flex items-center gap-3">
@@ -64,10 +66,16 @@ async function handleOmicsTypeChange() {
       <div class="svg-chart" v-html="diffResult.volcano_svg" />
     </div>
 
-    <div class="result-card">
+    <div v-if="enabledCharts.diffHeatmap" class="result-card">
       <div class="result-card-header">
         <div class="result-card-title">Differential Heatmap</div>
-        <ResultsPlotDownloadButton plot-type="differential_heatmap" :params="heatmapDownloadParams" filename-prefix="differential_heatmap" />
+        <div class="flex items-center gap-3">
+          <select v-if="!enabledCharts.diffVolcano" v-model="selectedDiffOmicsType" @change="handleOmicsTypeChange" class="chart-select">
+            <option value="" disabled>Select omics layer</option>
+            <option v-for="type in differentialOmicsTypes" :key="type" :value="type">{{ type }}</option>
+          </select>
+          <ResultsPlotDownloadButton plot-type="differential_heatmap" :params="heatmapDownloadParams" filename-prefix="differential_heatmap" />
+        </div>
       </div>
       <div class="svg-chart" v-html="diffResult.heatmap_svg" />
     </div>

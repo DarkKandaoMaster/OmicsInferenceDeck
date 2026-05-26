@@ -1,11 +1,45 @@
 <script setup lang="ts">
 import { useAlgorithmState } from '~/composables/domain/useAlgorithmState'
 import { useAnalysisActions } from '~/composables/domain/useAnalysisActions'
+import { useDifferential } from '~/composables/domain/useDifferential'
+import { useEnrichment } from '~/composables/domain/useEnrichment'
+import { useSurvival } from '~/composables/domain/useSurvival'
+import { useResultSelection } from '~/composables/domain/useResultSelection'
 
 const { isTestMode, psResult } = useAlgorithmState()
 const { backendResponse } = useAnalysisActions()
+const { diffResult } = useDifferential()
+const { enrichmentResult } = useEnrichment()
+const { survivalResult, isSurvivalLoading, survivalErrorMessage } = useSurvival()
+const { enabledMetrics, enabledCharts } = useResultSelection()
 
 const resultsAreaRef = ref<HTMLElement | null>(null)
+
+const hasAnyMetricsVisible = computed(() => {
+  const data = backendResponse.value?.data
+  if (!data) return false
+  if (enabledMetrics.cluster && data.metrics) return true
+  if (enabledMetrics.clinical && data.clinical_metrics) return true
+  if (enabledMetrics.biology && data.biology_metrics) return true
+  if (enabledMetrics.awa && data.awa_metrics) return true
+  return false
+})
+
+const hasAnyChartsVisible = computed(() => {
+  const data = backendResponse.value?.data
+  if (!data) return false
+  if (enabledCharts.inputClusterScatter && data.plots?.input_cluster_scatter) return true
+  if (enabledCharts.clusterScatter && data.plots?.cluster_scatter) return true
+  if ((enabledCharts.diffVolcano || enabledCharts.diffHeatmap) && diffResult.value) return true
+  if ((enabledCharts.enrichBar || enabledCharts.enrichBubble) && diffResult.value && enrichmentResult.value) return true
+  if (enabledCharts.survival && (isSurvivalLoading.value || survivalErrorMessage.value || survivalResult.value)) return true
+  return false
+})
+
+const hasAnyVisibleResult = computed(() => {
+  if (isTestMode.value) return !!psResult.value
+  return hasAnyMetricsVisible.value || hasAnyChartsVisible.value
+})
 
 watch(backendResponse, async (val) => {
   if (val) {
@@ -23,7 +57,7 @@ watch(psResult, async (val) => {
 </script>
 
 <template>
-  <div v-if="backendResponse || psResult" ref="resultsAreaRef" class="animate-[fadeIn_0.4s_ease-out_forwards]">
+  <div v-if="hasAnyVisibleResult" ref="resultsAreaRef" class="animate-[fadeIn_0.4s_ease-out_forwards]">
     <div v-if="isTestMode && psResult" class="results-grid">
       <ResultsParameterView />
     </div>
@@ -33,7 +67,8 @@ watch(psResult, async (val) => {
       <ResultsClinicalMetrics />
       <ResultsBiologyMetrics />
       <ResultsAwaMetrics />
-      <div class="results-grid mt-8">
+      <div v-if="hasAnyChartsVisible" class="results-grid mt-8">
+        <ResultsInputClusteringView />
         <ResultsClusteringView />
         <ResultsDifferentialView />
         <ResultsEnrichmentView />
