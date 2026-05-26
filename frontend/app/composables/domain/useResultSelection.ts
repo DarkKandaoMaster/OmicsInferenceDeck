@@ -4,8 +4,10 @@ export type ChartKey =
   | 'clusterScatter'
   | 'diffVolcano'
   | 'diffHeatmap'
-  | 'enrichBar'
-  | 'enrichBubble'
+  | 'enrichBarGO'
+  | 'enrichBarKEGG'
+  | 'enrichBubbleGO'
+  | 'enrichBubbleKEGG'
   | 'survival'
 
 export const metricOptions: { key: MetricKey; label: string }[] = [
@@ -20,8 +22,10 @@ export const chartOptions: { key: ChartKey; label: string }[] = [
   { key: 'clusterScatter', label: 'Cluster Scatter' },
   { key: 'diffVolcano', label: 'Differential Volcano' },
   { key: 'diffHeatmap', label: 'Differential Heatmap' },
-  { key: 'enrichBar', label: 'Enrichment Bar Plot' },
-  { key: 'enrichBubble', label: 'Enrichment Bubble Plot' },
+  { key: 'enrichBarGO', label: 'Enrichment Bar Plot (GO)' },
+  { key: 'enrichBarKEGG', label: 'Enrichment Bar Plot (KEGG)' },
+  { key: 'enrichBubbleGO', label: 'Enrichment Bubble Plot (GO)' },
+  { key: 'enrichBubbleKEGG', label: 'Enrichment Bubble Plot (KEGG)' },
   { key: 'survival', label: 'Survival Curve' },
 ]
 
@@ -37,8 +41,10 @@ const enabledCharts = reactive<Record<ChartKey, boolean>>({
   clusterScatter: true,
   diffVolcano: true,
   diffHeatmap: true,
-  enrichBar: true,
-  enrichBubble: true,
+  enrichBarGO: true,
+  enrichBarKEGG: true,
+  enrichBubbleGO: true,
+  enrichBubbleKEGG: true,
   survival: true,
 })
 
@@ -46,7 +52,11 @@ const runDifferential = computed(
   () => enabledCharts.diffVolcano || enabledCharts.diffHeatmap,
 )
 const runEnrichment = computed(
-  () => enabledCharts.enrichBar || enabledCharts.enrichBubble,
+  () =>
+    enabledCharts.enrichBarGO ||
+    enabledCharts.enrichBarKEGG ||
+    enabledCharts.enrichBubbleGO ||
+    enabledCharts.enrichBubbleKEGG,
 )
 
 export function useResultSelection() {

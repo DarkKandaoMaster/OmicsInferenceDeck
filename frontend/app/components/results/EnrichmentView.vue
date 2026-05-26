@@ -84,7 +84,7 @@ async function handleBubbleModeChange() {
   <template v-if="diffResult && hasAnyResult">
     <template v-for="db in DATABASES" :key="db">
       <template v-if="enrichmentResults[db]">
-        <div v-if="enabledCharts.enrichBar" class="result-card">
+        <div v-if="db === 'GO' ? enabledCharts.enrichBarGO : enabledCharts.enrichBarKEGG" class="result-card">
           <div class="result-card-header">
             <div class="result-card-title">Enrichment Bar Plot ({{ db }})</div>
             <div class="flex items-center gap-3">
@@ -97,7 +97,7 @@ async function handleBubbleModeChange() {
           <div class="svg-chart" v-html="enrichmentResults[db]!.bar_svg" />
         </div>
 
-        <div v-if="enabledCharts.enrichBubble" class="result-card">
+        <div v-if="db === 'GO' ? enabledCharts.enrichBubbleGO : enabledCharts.enrichBubbleKEGG" class="result-card">
           <div class="result-card-header">
             <div class="result-card-title">Enrichment Bubble Plot ({{ db }})</div>
             <div class="flex items-center gap-4 text-[13px] text-slate-700">
