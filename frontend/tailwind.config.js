@@ -1,4 +1,4 @@
-/** @type {import('tailwindcss').Config} */
+/** @type {import('tailwindcss').Config}1 */
 export default {
   content: [
     './app/**/*.{vue,ts,js,jsx,tsx}',
