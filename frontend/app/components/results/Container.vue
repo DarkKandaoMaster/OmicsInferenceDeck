@@ -31,7 +31,7 @@ const hasAnyChartsVisible = computed(() => {
   if (enabledCharts.inputClusterScatter && data.plots?.input_cluster_scatter) return true
   if (enabledCharts.clusterScatter && data.plots?.cluster_scatter) return true
   if ((enabledCharts.diffVolcano || enabledCharts.diffHeatmap) && diffResult.value) return true
-  if ((enabledCharts.enrichBar || enabledCharts.enrichBubble) && diffResult.value && enrichmentResult.value) return true
+  if ((enabledCharts.enrichBarGO || enabledCharts.enrichBarKEGG || enabledCharts.enrichBubbleGO || enabledCharts.enrichBubbleKEGG) && diffResult.value && enrichmentResult.value) return true
   if (enabledCharts.survival && (isSurvivalLoading.value || survivalErrorMessage.value || survivalResult.value)) return true
   return false
 })
