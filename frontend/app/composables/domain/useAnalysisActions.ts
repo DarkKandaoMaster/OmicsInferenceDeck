@@ -67,7 +67,7 @@ export function useAnalysisActions() {
 
   async function runDownstreamAnalyses() {
     const { runDifferentialAnalysis, diffResult } = useDifferential()
-    const { runEnrichmentAnalysis, enrichmentResult } = useEnrichment()
+    const { runEnrichmentAnalysis } = useEnrichment()
     const { runSurvivalAnalysis } = useSurvival()
 
     if (runDifferential.value) {
@@ -77,7 +77,7 @@ export function useAnalysisActions() {
 
     if (runEnrichment.value && diffResult.value?.clusters) {
       analysisStatus.value = '正在运行功能富集分析...'
-      await runEnrichmentAnalysis('GO', { silent: true })
+      await runEnrichmentAnalysis({ silent: true })
     }
 
     if (enabledMetrics.biology) {
@@ -86,7 +86,7 @@ export function useAnalysisActions() {
       try {
         const biologyMetricsRes = await computeBiologyMetrics({
           session_id: sessionId.value,
-          database: enrichmentResult.value?.database || 'GO',
+          database: 'GO',
         })
         biologyMetrics = biologyMetricsRes.data?.data?.biology_metrics || null
       } catch (error: any) {
@@ -103,7 +103,7 @@ export function useAnalysisActions() {
       try {
         const awaMetricsRes = await computeAwaMetrics({
           session_id: sessionId.value,
-          database: enrichmentResult.value?.database || 'GO',
+          database: 'GO',
           metrics: backendResponse.value?.data?.metrics || {},
           clinical_metrics: backendResponse.value?.data?.clinical_metrics || {},
           biology_metrics: backendResponse.value?.data?.biology_metrics || {},

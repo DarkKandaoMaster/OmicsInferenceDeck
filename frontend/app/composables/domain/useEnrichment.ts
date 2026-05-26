@@ -2,52 +2,88 @@ import { runEnrichment } from '~/utils/api'
 import { useSession } from '~/composables/core/useSession'
 import { useDifferential } from '~/composables/domain/useDifferential'
 
-const enrichmentResult = ref<any>(null)
+type Database = 'GO' | 'KEGG'
+
+type EnrichmentSlot = {
+  database: string
+  clusters: number[]
+  selected_cluster: number
+  bar_svg: string
+  bubble_svg: string
+  n_terms: number
+  [key: string]: any
+}
+
+const DATABASES: Database[] = ['GO', 'KEGG']
+
+const enrichmentResults = ref<Record<Database, EnrichmentSlot | null>>({ GO: null, KEGG: null })
 const isEnrichmentLoading = ref(false)
-const enrichmentType = ref('')
 const selectedEnrichmentCluster = ref(0)
 const bubbleChartMode = ref<'combined' | 'by_gene'>('combined')
 const enrichmentErrorMessage = ref('')
+
+const enrichmentResult = computed<EnrichmentSlot | null>(() =>
+  enrichmentResults.value.GO || enrichmentResults.value.KEGG,
+)
 
 export function useEnrichment() {
   const { sessionId } = useSession()
   const { diffResult } = useDifferential()
 
-  async function runEnrichmentAnalysis(type: string, options: { silent?: boolean } = {}) {
+  async function runEnrichmentAnalysis(options: { silent?: boolean } = {}) {
     if (!diffResult.value || !diffResult.value.clusters) {
       if (!options.silent) alert('请先运行差异分析。')
       return
     }
 
     isEnrichmentLoading.value = true
-    enrichmentType.value = type
-    enrichmentResult.value = null
+    enrichmentResults.value = { GO: null, KEGG: null }
     enrichmentErrorMessage.value = ''
 
     try {
-      const res = await runEnrichment({
-        session_id: sessionId.value,
-        database: type,
+      const settled = await Promise.allSettled(
+        DATABASES.map(db => runEnrichment({ session_id: sessionId.value, database: db })),
+      )
+
+      const errors: string[] = []
+      let firstSelected: number | null = null
+
+      settled.forEach((result, idx) => {
+        const db = DATABASES[idx]!
+        if (result.status === 'fulfilled') {
+          const data = result.value.data
+          if (data.status === 'success') {
+            enrichmentResults.value[db] = data
+            if (firstSelected === null) {
+              const clusters = data.clusters || []
+              if (clusters.length > 0) firstSelected = data.selected_cluster ?? clusters[0]
+            }
+          } else {
+            errors.push(`${db}: ${data.message}`)
+          }
+        } else {
+          const err = result.reason
+          errors.push(`${db}: ${err?.response?.data?.detail || err?.message || 'request failed'}`)
+        }
       })
 
-      if (res.data.status === 'success') {
-        enrichmentResult.value = res.data
-        const clusters = res.data.clusters || []
-        if (clusters.length > 0) selectedEnrichmentCluster.value = res.data.selected_cluster ?? clusters[0]!
-      } else {
-        enrichmentErrorMessage.value = res.data.message
-        if (!options.silent) alert(res.data.message)
+      if (firstSelected !== null) selectedEnrichmentCluster.value = firstSelected
+
+      const anySuccess = enrichmentResults.value.GO || enrichmentResults.value.KEGG
+      if (!anySuccess) {
+        const msg = '富集分析失败: ' + errors.join('; ')
+        enrichmentErrorMessage.value = msg
+        if (!options.silent) alert(msg)
+      } else if (errors.length > 0) {
+        enrichmentErrorMessage.value = errors.join('; ')
       }
-    } catch (error: any) {
-      enrichmentErrorMessage.value = '富集分析失败: ' + (error.response?.data?.detail || error.message)
-      if (!options.silent) alert(enrichmentErrorMessage.value)
     } finally {
       isEnrichmentLoading.value = false
     }
   }
 
   return {
-    enrichmentResult, isEnrichmentLoading, enrichmentType, enrichmentErrorMessage,
+    enrichmentResult, enrichmentResults, isEnrichmentLoading, enrichmentErrorMessage,
     selectedEnrichmentCluster, bubbleChartMode,
     runEnrichmentAnalysis,
   }
