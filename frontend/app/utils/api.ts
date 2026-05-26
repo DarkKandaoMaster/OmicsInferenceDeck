@@ -78,6 +78,15 @@ export function renderClusterScatter(params: {
   return http.post('/plots/cluster_scatter', params)
 }
 
+/** 绘制聚类前的输入空间散点图 */
+export function renderInputClusterScatter(params: {
+  session_id: string
+  reduction: string
+  random_state: number
+}) {
+  return http.post('/plots/input_cluster_scatter', params)
+}
+
 /** 自定义评估：解析结果文件 */
 export function evaluateCustom(formData: FormData) {
   return http.post('/evaluate_custom', formData, {

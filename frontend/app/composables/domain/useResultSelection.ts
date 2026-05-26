@@ -1,5 +1,6 @@
 export type MetricKey = 'cluster' | 'clinical' | 'biology' | 'awa'
 export type ChartKey =
+  | 'inputClusterScatter'
   | 'clusterScatter'
   | 'diffVolcano'
   | 'diffHeatmap'
@@ -15,6 +16,7 @@ export const metricOptions: { key: MetricKey; label: string }[] = [
 ]
 
 export const chartOptions: { key: ChartKey; label: string }[] = [
+  { key: 'inputClusterScatter', label: 'Input Cluster Scatter' },
   { key: 'clusterScatter', label: 'Cluster Scatter' },
   { key: 'diffVolcano', label: 'Differential Volcano' },
   { key: 'diffHeatmap', label: 'Differential Heatmap' },
@@ -31,6 +33,7 @@ const enabledMetrics = reactive<Record<MetricKey, boolean>>({
 })
 
 const enabledCharts = reactive<Record<ChartKey, boolean>>({
+  inputClusterScatter: true,
   clusterScatter: true,
   diffVolcano: true,
   diffHeatmap: true,

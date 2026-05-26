@@ -28,6 +28,7 @@ const hasAnyMetricsVisible = computed(() => {
 const hasAnyChartsVisible = computed(() => {
   const data = backendResponse.value?.data
   if (!data) return false
+  if (enabledCharts.inputClusterScatter && data.plots?.input_cluster_scatter) return true
   if (enabledCharts.clusterScatter && data.plots?.cluster_scatter) return true
   if ((enabledCharts.diffVolcano || enabledCharts.diffHeatmap) && diffResult.value) return true
   if ((enabledCharts.enrichBar || enabledCharts.enrichBubble) && diffResult.value && enrichmentResult.value) return true
@@ -67,6 +68,7 @@ watch(psResult, async (val) => {
       <ResultsBiologyMetrics />
       <ResultsAwaMetrics />
       <div v-if="hasAnyChartsVisible" class="results-grid mt-8">
+        <ResultsInputClusteringView />
         <ResultsClusteringView />
         <ResultsDifferentialView />
         <ResultsEnrichmentView />
