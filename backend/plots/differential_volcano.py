@@ -98,9 +98,7 @@ def build_figure(
     if "comparison" in df.columns and not df["comparison"].dropna().empty:
         comparison = str(df["comparison"].dropna().iloc[0])
     ax.set_title(f"Cluster {cluster_id}: {comparison}")
-    for spine_name in ("top", "right"):
-        ax.spines[spine_name].set_visible(False)
-    for spine_name in ("left", "bottom"):
+    for spine_name in ("left", "bottom", "top", "right"):
         ax.spines[spine_name].set_color("#2B2F36")
     set_2d_plot_box(ax)
     legend = ax.legend(
