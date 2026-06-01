@@ -109,6 +109,7 @@ export function runEnrichment(params: {
   session_id?: string
   cluster_genes?: Record<string, string[]>
   database: string
+  dataset?: string
 }) {
   return http.post('/enrichment_analysis', params)
 }
@@ -143,6 +144,7 @@ export function renderEnrichmentBar(params: {
   session_id: string
   database: string
   cluster_id: number
+  dataset?: string
 }) {
   return http.post('/plots/enrichment_bar', params)
 }
@@ -183,6 +185,7 @@ export type DownloadPlotParams = {
   mode?: 'combined' | 'by_gene'
   x_param?: string
   y_param?: string
+  dataset?: string
 }
 
 export function downloadPlot(params: DownloadPlotParams) {

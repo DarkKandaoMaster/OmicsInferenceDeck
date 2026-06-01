@@ -1,6 +1,7 @@
 import { runEnrichment } from '~/utils/api'
 import { useSession } from '~/composables/core/useSession'
 import { useDifferential } from '~/composables/domain/useDifferential'
+import { useAlgorithmState } from '~/composables/domain/useAlgorithmState'
 
 type Database = 'GO' | 'KEGG'
 
@@ -29,6 +30,7 @@ const enrichmentResult = computed<EnrichmentSlot | null>(() =>
 export function useEnrichment() {
   const { sessionId } = useSession()
   const { diffResult } = useDifferential()
+  const { selectedCancerSubtype } = useAlgorithmState()
 
   async function runEnrichmentAnalysis(options: { silent?: boolean } = {}) {
     if (!diffResult.value || !diffResult.value.clusters) {
@@ -42,7 +44,7 @@ export function useEnrichment() {
 
     try {
       const settled = await Promise.allSettled(
-        DATABASES.map(db => runEnrichment({ session_id: sessionId.value, database: db })),
+        DATABASES.map(db => runEnrichment({ session_id: sessionId.value, database: db, dataset: selectedCancerSubtype.value })),
       )
 
       const errors: string[] = []

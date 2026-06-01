@@ -32,6 +32,7 @@ class EnrichmentRequest(BaseModel):
     database: str
     session_id: str | None = None
     cluster_genes: dict[str, list[str]] | None = None
+    dataset: str | None = None
 
 
 RESULT_COLUMNS = [
@@ -141,8 +142,9 @@ async def run_enrichment_analysis(request: EnrichmentRequest):
 
         if request.session_id:
             render_path = plot_path(request.session_id, enrichment_file(database))
+            dataset = request.dataset or ""
             try:
-                bar_svg = run_r_svg("enrichment_bar.R", [render_path, selected_cluster, database])
+                bar_svg = run_r_svg("enrichment_bar.R", [render_path, selected_cluster, database, dataset])
             except Exception as exc:
                 bar_svg = empty_svg(f"Enrichment bar plot failed: {exc}", "Enrichment Bar")
             try:
