@@ -4,13 +4,13 @@ import { useDifferential } from '~/composables/domain/useDifferential'
 import { useEnrichment } from '~/composables/domain/useEnrichment'
 import { useResultSelection } from '~/composables/domain/useResultSelection'
 import { useAlgorithmState } from '~/composables/domain/useAlgorithmState'
-import { renderEnrichmentBar, renderEnrichmentBubble } from '~/utils/api'
+import { renderEnrichmentBar } from '~/utils/api'
 
 type Database = 'GO' | 'KEGG'
 
 const {
   enrichmentResults, isEnrichmentLoading,
-  selectedEnrichmentCluster, bubbleChartMode, enrichmentErrorMessage,
+  selectedEnrichmentCluster, enrichmentErrorMessage,
 } = useEnrichment()
 const { diffResult } = useDifferential()
 const { sessionId } = useSession()
@@ -38,11 +38,18 @@ function barDownloadParams(db: Database) {
     dataset: selectedCancerSubtype.value,
   }
 }
-function bubbleDownloadParams(db: Database) {
+function bubbleClusterDownloadParams(db: Database) {
   return {
     session_id: sessionId.value,
     database: db,
-    mode: bubbleChartMode.value,
+    mode: 'combined' as const,
+  }
+}
+function bubbleGeneDownloadParams(db: Database) {
+  return {
+    session_id: sessionId.value,
+    database: db,
+    mode: 'by_gene' as const,
   }
 }
 
@@ -57,22 +64,8 @@ async function refreshBar(db: Database) {
   enrichmentResults.value[db] = { ...enrichmentResults.value[db]!, bar_svg: res.data.svg }
 }
 
-async function refreshBubble(db: Database) {
-  if (!enrichmentResults.value[db]) return
-  const res = await renderEnrichmentBubble({
-    session_id: sessionId.value,
-    database: db,
-    mode: bubbleChartMode.value,
-  })
-  enrichmentResults.value[db] = { ...enrichmentResults.value[db]!, bubble_svg: res.data.svg }
-}
-
 async function handleClusterChange() {
   await Promise.all(DATABASES.map(refreshBar))
-}
-
-async function handleBubbleModeChange() {
-  await Promise.all(DATABASES.map(refreshBubble))
 }
 </script>
 
@@ -103,20 +96,18 @@ async function handleBubbleModeChange() {
 
         <div v-if="db === 'GO' ? enabledCharts.enrichBubbleGO : enabledCharts.enrichBubbleKEGG" class="result-card">
           <div class="result-card-header">
-            <div class="result-card-title">Enrichment Bubble Plot ({{ db }})</div>
-            <div class="flex items-center gap-4 text-[13px] text-slate-700">
-              <label class="flex items-center gap-1.5">
-                <input type="radio" v-model="bubbleChartMode" value="combined" @change="handleBubbleModeChange" />
-                Cluster
-              </label>
-              <label class="flex items-center gap-1.5">
-                <input type="radio" v-model="bubbleChartMode" value="by_gene" @change="handleBubbleModeChange" />
-                Gene count
-              </label>
-              <ResultsPlotDownloadButton plot-type="enrichment_bubble" :params="bubbleDownloadParams(db)" :filename-prefix="`enrichment_bubble_${db}`" :disabled="isEnrichmentLoading" />
-            </div>
+            <div class="result-card-title">Enrichment Bubble Plot - Cluster ({{ db }})</div>
+            <ResultsPlotDownloadButton plot-type="enrichment_bubble" :params="bubbleClusterDownloadParams(db)" :filename-prefix="`enrichment_bubble_cluster_${db}`" :disabled="isEnrichmentLoading" />
           </div>
-          <div class="svg-chart" v-html="enrichmentResults[db]!.bubble_svg" />
+          <div class="svg-chart" v-html="enrichmentResults[db]!.bubble_cluster_svg" />
+        </div>
+
+        <div v-if="db === 'GO' ? enabledCharts.enrichBubbleGO : enabledCharts.enrichBubbleKEGG" class="result-card">
+          <div class="result-card-header">
+            <div class="result-card-title">Enrichment Bubble Plot - Gene Count ({{ db }})</div>
+            <ResultsPlotDownloadButton plot-type="enrichment_bubble" :params="bubbleGeneDownloadParams(db)" :filename-prefix="`enrichment_bubble_gene_${db}`" :disabled="isEnrichmentLoading" />
+          </div>
+          <div class="svg-chart" v-html="enrichmentResults[db]!.bubble_gene_svg" />
         </div>
       </template>
     </template>

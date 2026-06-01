@@ -10,7 +10,8 @@ type EnrichmentSlot = {
   clusters: number[]
   selected_cluster: number
   bar_svg: string
-  bubble_svg: string
+  bubble_cluster_svg: string
+  bubble_gene_svg: string
   n_terms: number
   [key: string]: any
 }
@@ -20,7 +21,6 @@ const DATABASES: Database[] = ['GO', 'KEGG']
 const enrichmentResults = ref<Record<Database, EnrichmentSlot | null>>({ GO: null, KEGG: null })
 const isEnrichmentLoading = ref(false)
 const selectedEnrichmentCluster = ref(0)
-const bubbleChartMode = ref<'combined' | 'by_gene'>('combined')
 const enrichmentErrorMessage = ref('')
 
 const enrichmentResult = computed<EnrichmentSlot | null>(() =>
@@ -86,7 +86,7 @@ export function useEnrichment() {
 
   return {
     enrichmentResult, enrichmentResults, isEnrichmentLoading, enrichmentErrorMessage,
-    selectedEnrichmentCluster, bubbleChartMode,
+    selectedEnrichmentCluster,
     runEnrichmentAnalysis,
   }
 }
