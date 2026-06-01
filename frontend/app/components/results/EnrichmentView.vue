@@ -95,42 +95,56 @@ async function handleGeneCountChange() {
   </div>
 
   <template v-if="diffResult && hasAnyResult">
-    <template v-for="db in DATABASES" :key="db">
-      <template v-if="enrichmentResults[db]">
-        <div v-if="db === 'GO' ? enabledCharts.enrichBarGO : enabledCharts.enrichBarKEGG" class="result-card">
-          <div class="result-card-header">
-            <div class="result-card-title">Enrichment Bar Plot ({{ db }})</div>
-            <div class="flex items-center gap-3">
-              <select v-model.number="selectedEnrichmentCluster" @change="handleClusterChange" class="chart-select">
-                <option v-for="cid in clusterOptions" :key="cid" :value="cid">Cluster {{ cid }}</option>
-              </select>
-              <ResultsPlotDownloadButton plot-type="enrichment_bar" :params="barDownloadParams(db)" :filename-prefix="`enrichment_bar_${db}`" :disabled="isEnrichmentLoading" />
-            </div>
+    <!-- 1. 柱状图：GO、KEGG -->
+    <template v-for="db in DATABASES" :key="`bar-${db}`">
+      <div
+        v-if="enrichmentResults[db] && (db === 'GO' ? enabledCharts.enrichBarGO : enabledCharts.enrichBarKEGG)"
+        class="result-card"
+      >
+        <div class="result-card-header">
+          <div class="result-card-title">Enrichment Bar Plot ({{ db }})</div>
+          <div class="flex items-center gap-3">
+            <select v-model.number="selectedEnrichmentCluster" @change="handleClusterChange" class="chart-select">
+              <option v-for="cid in clusterOptions" :key="cid" :value="cid">Cluster {{ cid }}</option>
+            </select>
+            <ResultsPlotDownloadButton plot-type="enrichment_bar" :params="barDownloadParams(db)" :filename-prefix="`enrichment_bar_${db}`" :disabled="isEnrichmentLoading" />
           </div>
-          <div class="svg-chart" v-html="enrichmentResults[db]!.bar_svg" />
         </div>
+        <div class="svg-chart" v-html="enrichmentResults[db]!.bar_svg" />
+      </div>
+    </template>
 
-        <div v-if="db === 'GO' ? enabledCharts.enrichBubbleGO : enabledCharts.enrichBubbleKEGG" class="result-card">
-          <div class="result-card-header">
-            <div class="result-card-title">Enrichment Bubble Plot - Cluster ({{ db }})</div>
-            <ResultsPlotDownloadButton plot-type="enrichment_bubble" :params="bubbleClusterDownloadParams(db)" :filename-prefix="`enrichment_bubble_cluster_${db}`" :disabled="isEnrichmentLoading" />
-          </div>
-          <div class="svg-chart" v-html="enrichmentResults[db]!.bubble_cluster_svg" />
+    <!-- 2. 气泡图-Cluster：GO、KEGG -->
+    <template v-for="db in DATABASES" :key="`bubble-cluster-${db}`">
+      <div
+        v-if="enrichmentResults[db] && (db === 'GO' ? enabledCharts.enrichBubbleGO : enabledCharts.enrichBubbleKEGG)"
+        class="result-card"
+      >
+        <div class="result-card-header">
+          <div class="result-card-title">Enrichment Bubble Plot - Cluster ({{ db }})</div>
+          <ResultsPlotDownloadButton plot-type="enrichment_bubble" :params="bubbleClusterDownloadParams(db)" :filename-prefix="`enrichment_bubble_cluster_${db}`" :disabled="isEnrichmentLoading" />
         </div>
+        <div class="svg-chart" v-html="enrichmentResults[db]!.bubble_cluster_svg" />
+      </div>
+    </template>
 
-        <div v-if="db === 'GO' ? enabledCharts.enrichBubbleGO : enabledCharts.enrichBubbleKEGG" class="result-card">
-          <div class="result-card-header">
-            <div class="result-card-title">Enrichment Bubble Plot - Gene Count ({{ db }})</div>
-            <div class="flex items-center gap-3">
-              <select v-model.number="selectedGeneCountCluster" @change="handleGeneCountChange" class="chart-select">
-                <option v-for="cid in clusterOptions" :key="cid" :value="cid">Cluster {{ cid }}</option>
-              </select>
-              <ResultsPlotDownloadButton plot-type="enrichment_bubble" :params="bubbleGeneDownloadParams(db)" :filename-prefix="`enrichment_bubble_gene_${db}`" :disabled="isEnrichmentLoading" />
-            </div>
+    <!-- 3. 气泡图-Gene Count：GO、KEGG -->
+    <template v-for="db in DATABASES" :key="`bubble-gene-${db}`">
+      <div
+        v-if="enrichmentResults[db] && (db === 'GO' ? enabledCharts.enrichBubbleGO : enabledCharts.enrichBubbleKEGG)"
+        class="result-card"
+      >
+        <div class="result-card-header">
+          <div class="result-card-title">Enrichment Bubble Plot - Gene Count ({{ db }})</div>
+          <div class="flex items-center gap-3">
+            <select v-model.number="selectedGeneCountCluster" @change="handleGeneCountChange" class="chart-select">
+              <option v-for="cid in clusterOptions" :key="cid" :value="cid">Cluster {{ cid }}</option>
+            </select>
+            <ResultsPlotDownloadButton plot-type="enrichment_bubble" :params="bubbleGeneDownloadParams(db)" :filename-prefix="`enrichment_bubble_gene_${db}`" :disabled="isEnrichmentLoading" />
           </div>
-          <div class="svg-chart" v-html="enrichmentResults[db]!.bubble_gene_svg" />
         </div>
-      </template>
+        <div class="svg-chart" v-html="enrichmentResults[db]!.bubble_gene_svg" />
+      </div>
     </template>
   </template>
 </template>
