@@ -55,6 +55,7 @@ class EnrichmentBarRequest(BaseModel):
     session_id: str
     database: str
     cluster_id: int
+    dataset: str | None = None
 
 
 class EnrichmentBubbleRequest(BaseModel):
@@ -80,6 +81,7 @@ class PlotDownloadRequest(BaseModel):
     mode: str = "combined"
     x_param: str | None = None
     y_param: str | None = None
+    dataset: str | None = None
 
 
 def _seed_or_none(random_state: int) -> int | None:
@@ -160,7 +162,7 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
         path = plot_path(request.session_id, enrichment_file(database))
         payload = run_r_plot_bytes(
             "enrichment_bar.R",
-            [path, cluster_id, database.upper()],
+            [path, cluster_id, database.upper(), request.dataset or ""],
             file_format,
             session_dir(request.session_id),
         )
@@ -207,7 +209,7 @@ async def enrichment_bar(request: EnrichmentBarRequest):
             "status": "success",
             "svg": run_r_svg(
                 "enrichment_bar.R",
-                [path, request.cluster_id, request.database.upper()],
+                [path, request.cluster_id, request.database.upper(), request.dataset or ""],
             ),
         }
     except Exception as e:

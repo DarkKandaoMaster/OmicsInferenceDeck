@@ -3,6 +3,7 @@ import { useSession } from '~/composables/core/useSession'
 import { useDifferential } from '~/composables/domain/useDifferential'
 import { useEnrichment } from '~/composables/domain/useEnrichment'
 import { useResultSelection } from '~/composables/domain/useResultSelection'
+import { useAlgorithmState } from '~/composables/domain/useAlgorithmState'
 import { renderEnrichmentBar, renderEnrichmentBubble } from '~/utils/api'
 
 type Database = 'GO' | 'KEGG'
@@ -14,6 +15,7 @@ const {
 const { diffResult } = useDifferential()
 const { sessionId } = useSession()
 const { enabledCharts } = useResultSelection()
+const { selectedCancerSubtype } = useAlgorithmState()
 
 const DATABASES: Database[] = ['GO', 'KEGG']
 
@@ -33,6 +35,7 @@ function barDownloadParams(db: Database) {
     session_id: sessionId.value,
     database: db,
     cluster_id: selectedEnrichmentCluster.value,
+    dataset: selectedCancerSubtype.value,
   }
 }
 function bubbleDownloadParams(db: Database) {
@@ -49,6 +52,7 @@ async function refreshBar(db: Database) {
     session_id: sessionId.value,
     database: db,
     cluster_id: selectedEnrichmentCluster.value,
+    dataset: selectedCancerSubtype.value,
   })
   enrichmentResults.value[db] = { ...enrichmentResults.value[db]!, bar_svg: res.data.svg }
 }
