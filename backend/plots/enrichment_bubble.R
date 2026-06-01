@@ -15,8 +15,9 @@ if (length(args) < 3) {
 data_path <- args[[1]]
 mode <- args[[2]]
 database <- toupper(args[[3]])
-output_format <- if (length(args) >= 4) tolower(args[[4]]) else ""
-output_path <- if (length(args) >= 5) args[[5]] else ""
+cluster_arg <- if (length(args) >= 4) as.character(args[[4]]) else "0"
+output_format <- if (length(args) >= 5) tolower(args[[5]]) else ""
+output_path <- if (length(args) >= 6) args[[6]] else ""
 is_download <- output_format %in% c("png", "svg", "pdf") && nzchar(output_path)
 FONT_FAMILY <- "serif"
 
@@ -66,10 +67,18 @@ df <- df %>%
     TermShort = vapply(strsplit(str_remove(Term, " \\(GO.*$"), " "), function(words) paste(head(words, 6), collapse = " "), character(1)),
     TermShort = str_wrap(TermShort, width = 40)
   ) %>%
-  arrange(Adjusted_P) %>%
-  group_by(cluster) %>%
-  slice_head(n = 5) %>%
-  ungroup()
+  arrange(Adjusted_P)
+
+if (mode == "by_gene") {
+  df <- df %>%
+    filter(cluster == cluster_arg) %>%
+    slice_head(n = 5)
+} else {
+  df <- df %>%
+    group_by(cluster) %>%
+    slice_head(n = 5) %>%
+    ungroup()
+}
 
 if (nrow(df) == 0) {
   render_output(draw_blank("No significant enrichment result available."), width = 8, height = 6)
@@ -85,7 +94,7 @@ if (mode == "by_gene") {
     scale_color_gradient(low = "green", high = "red") +
     geom_text(aes(label = Gene_Count), hjust = -0.7, size = 5.6, color = "black", family = FONT_FAMILY) +
     labs(
-      title = paste0(database, " Enrichment - Pathway by Gene Count"),
+      title = paste0(database, " Enrichment - Cluster ", cluster_arg, " by Gene Count"),
       x = "Gene Number",
       y = "Pathways",
       color = expression(p.adjust),

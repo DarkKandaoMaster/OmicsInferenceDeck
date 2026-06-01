@@ -4,13 +4,13 @@ import { useDifferential } from '~/composables/domain/useDifferential'
 import { useEnrichment } from '~/composables/domain/useEnrichment'
 import { useResultSelection } from '~/composables/domain/useResultSelection'
 import { useAlgorithmState } from '~/composables/domain/useAlgorithmState'
-import { renderEnrichmentBar } from '~/utils/api'
+import { renderEnrichmentBar, renderEnrichmentBubble } from '~/utils/api'
 
 type Database = 'GO' | 'KEGG'
 
 const {
   enrichmentResults, isEnrichmentLoading,
-  selectedEnrichmentCluster, enrichmentErrorMessage,
+  selectedEnrichmentCluster, selectedGeneCountCluster, enrichmentErrorMessage,
 } = useEnrichment()
 const { diffResult } = useDifferential()
 const { sessionId } = useSession()
@@ -50,6 +50,7 @@ function bubbleGeneDownloadParams(db: Database) {
     session_id: sessionId.value,
     database: db,
     mode: 'by_gene' as const,
+    cluster_id: selectedGeneCountCluster.value,
   }
 }
 
@@ -66,6 +67,21 @@ async function refreshBar(db: Database) {
 
 async function handleClusterChange() {
   await Promise.all(DATABASES.map(refreshBar))
+}
+
+async function refreshBubbleGene(db: Database) {
+  if (!enrichmentResults.value[db]) return
+  const res = await renderEnrichmentBubble({
+    session_id: sessionId.value,
+    database: db,
+    mode: 'by_gene',
+    cluster_id: selectedGeneCountCluster.value,
+  })
+  enrichmentResults.value[db] = { ...enrichmentResults.value[db]!, bubble_gene_svg: res.data.svg }
+}
+
+async function handleGeneCountChange() {
+  await Promise.all(DATABASES.map(refreshBubbleGene))
 }
 </script>
 
@@ -105,7 +121,12 @@ async function handleClusterChange() {
         <div v-if="db === 'GO' ? enabledCharts.enrichBubbleGO : enabledCharts.enrichBubbleKEGG" class="result-card">
           <div class="result-card-header">
             <div class="result-card-title">Enrichment Bubble Plot - Gene Count ({{ db }})</div>
-            <ResultsPlotDownloadButton plot-type="enrichment_bubble" :params="bubbleGeneDownloadParams(db)" :filename-prefix="`enrichment_bubble_gene_${db}`" :disabled="isEnrichmentLoading" />
+            <div class="flex items-center gap-3">
+              <select v-model.number="selectedGeneCountCluster" @change="handleGeneCountChange" class="chart-select">
+                <option v-for="cid in clusterOptions" :key="cid" :value="cid">Cluster {{ cid }}</option>
+              </select>
+              <ResultsPlotDownloadButton plot-type="enrichment_bubble" :params="bubbleGeneDownloadParams(db)" :filename-prefix="`enrichment_bubble_gene_${db}`" :disabled="isEnrichmentLoading" />
+            </div>
           </div>
           <div class="svg-chart" v-html="enrichmentResults[db]!.bubble_gene_svg" />
         </div>
