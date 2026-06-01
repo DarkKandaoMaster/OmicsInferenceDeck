@@ -62,6 +62,7 @@ class EnrichmentBubbleRequest(BaseModel):
     session_id: str
     database: str
     mode: str = "combined"
+    cluster_id: int | None = None
 
 
 class ParameterPlotRequest(BaseModel):
@@ -171,14 +172,18 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
     if plot_type == "enrichment_bubble":
         database = _require_database(request)
         mode = request.mode if request.mode in {"combined", "by_gene"} else "combined"
+        cluster_id = request.cluster_id if request.cluster_id is not None else 0
         path = plot_path(request.session_id, enrichment_file(database))
         payload = run_r_plot_bytes(
             "enrichment_bubble.R",
-            [path, mode, database.upper()],
+            [path, mode, database.upper(), cluster_id],
             file_format,
             session_dir(request.session_id),
         )
-        return payload, f"enrichment_{database.upper()}_bubble_{mode}"
+        stem = f"enrichment_{database.upper()}_bubble_{mode}"
+        if mode == "by_gene":
+            stem = f"{stem}_cluster_{cluster_id}"
+        return payload, stem
 
     raise ValueError(f"Unsupported plot_type: {request.plot_type}")
 
@@ -220,12 +225,13 @@ async def enrichment_bar(request: EnrichmentBarRequest):
 async def enrichment_bubble(request: EnrichmentBubbleRequest):
     try:
         mode = request.mode if request.mode in {"combined", "by_gene"} else "combined"
+        cluster_id = request.cluster_id if request.cluster_id is not None else 0
         path = plot_path(request.session_id, enrichment_file(request.database))
         return {
             "status": "success",
             "svg": run_r_svg(
                 "enrichment_bubble.R",
-                [path, mode, request.database.upper()],
+                [path, mode, request.database.upper(), cluster_id],
             ),
         }
     except Exception as e:

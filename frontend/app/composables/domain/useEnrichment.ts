@@ -21,6 +21,7 @@ const DATABASES: Database[] = ['GO', 'KEGG']
 const enrichmentResults = ref<Record<Database, EnrichmentSlot | null>>({ GO: null, KEGG: null })
 const isEnrichmentLoading = ref(false)
 const selectedEnrichmentCluster = ref(0)
+const selectedGeneCountCluster = ref(0)
 const enrichmentErrorMessage = ref('')
 
 const enrichmentResult = computed<EnrichmentSlot | null>(() =>
@@ -70,6 +71,7 @@ export function useEnrichment() {
       })
 
       if (firstSelected !== null) selectedEnrichmentCluster.value = firstSelected
+      selectedGeneCountCluster.value = 0
 
       const anySuccess = enrichmentResults.value.GO || enrichmentResults.value.KEGG
       if (!anySuccess) {
@@ -86,7 +88,7 @@ export function useEnrichment() {
 
   return {
     enrichmentResult, enrichmentResults, isEnrichmentLoading, enrichmentErrorMessage,
-    selectedEnrichmentCluster,
+    selectedEnrichmentCluster, selectedGeneCountCluster,
     runEnrichmentAnalysis,
   }
 }

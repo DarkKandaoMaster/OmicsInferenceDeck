@@ -148,11 +148,11 @@ async def run_enrichment_analysis(request: EnrichmentRequest):
             except Exception as exc:
                 bar_svg = empty_svg(f"Enrichment bar plot failed: {exc}", "Enrichment Bar")
             try:
-                bubble_cluster_svg = run_r_svg("enrichment_bubble.R", [render_path, "combined", database])
+                bubble_cluster_svg = run_r_svg("enrichment_bubble.R", [render_path, "combined", database, 0])
             except Exception as exc:
                 bubble_cluster_svg = empty_svg(f"Enrichment bubble plot failed: {exc}", "Enrichment Bubble - Cluster")
             try:
-                bubble_gene_svg = run_r_svg("enrichment_bubble.R", [render_path, "by_gene", database])
+                bubble_gene_svg = run_r_svg("enrichment_bubble.R", [render_path, "by_gene", database, selected_cluster])
             except Exception as exc:
                 bubble_gene_svg = empty_svg(f"Enrichment bubble plot failed: {exc}", "Enrichment Bubble - Gene Count")
         else:

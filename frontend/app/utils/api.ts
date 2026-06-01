@@ -149,6 +149,15 @@ export function renderEnrichmentBar(params: {
   return http.post('/plots/enrichment_bar', params)
 }
 
+export function renderEnrichmentBubble(params: {
+  session_id: string
+  database: string
+  mode: 'combined' | 'by_gene'
+  cluster_id?: number
+}) {
+  return http.post('/plots/enrichment_bubble', params)
+}
+
 export function renderParameterSurface(params: {
   session_id: string
   x_param: string
