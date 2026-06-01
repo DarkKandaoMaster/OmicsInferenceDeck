@@ -55,8 +55,6 @@ def _coords(embeddings: np.ndarray, reduction: str, random_state: int | None) ->
         return coords
 
     if reduction == "t-SNE":
-        if n_samples < 4:
-            return _coords(embeddings, "PCA", random_state)
         return TSNE(**_tsne_kwargs(n_samples)).fit_transform(embeddings)
 
     if umap is None:
@@ -120,7 +118,7 @@ def build_figure(cluster_result_path: str, reduction: str = "PCA", random_state:
         fontweight=tick_font["weight"],
     )
 
-    ax.set_title(f"{reduction} Clustering", fontdict=label_font)
+    ax.set_title(f"Prediction {reduction}", fontdict=label_font)
     ax.grid(False)
     legend = ax.legend(
         title="Clusters",
