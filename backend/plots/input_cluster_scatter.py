@@ -127,7 +127,7 @@ def build_figure(
         fontweight=tick_font["weight"],
     )
 
-    ax.set_title(PLOT_TITLE, fontdict=label_font)
+    ax.set_title(f"Input Data {reduction}", fontdict=label_font)
     ax.grid(False)
     legend = ax.legend(
         title="Clusters",
