@@ -148,12 +148,17 @@ async def run_enrichment_analysis(request: EnrichmentRequest):
             except Exception as exc:
                 bar_svg = empty_svg(f"Enrichment bar plot failed: {exc}", "Enrichment Bar")
             try:
-                bubble_svg = run_r_svg("enrichment_bubble.R", [render_path, "combined", database])
+                bubble_cluster_svg = run_r_svg("enrichment_bubble.R", [render_path, "combined", database])
             except Exception as exc:
-                bubble_svg = empty_svg(f"Enrichment bubble plot failed: {exc}", "Enrichment Bubble")
+                bubble_cluster_svg = empty_svg(f"Enrichment bubble plot failed: {exc}", "Enrichment Bubble - Cluster")
+            try:
+                bubble_gene_svg = run_r_svg("enrichment_bubble.R", [render_path, "by_gene", database])
+            except Exception as exc:
+                bubble_gene_svg = empty_svg(f"Enrichment bubble plot failed: {exc}", "Enrichment Bubble - Gene Count")
         else:
             bar_svg = empty_svg("Run session-based enrichment to render SVG.", "Enrichment Bar")
-            bubble_svg = empty_svg("Run session-based enrichment to render SVG.", "Enrichment Bubble")
+            bubble_cluster_svg = empty_svg("Run session-based enrichment to render SVG.", "Enrichment Bubble - Cluster")
+            bubble_gene_svg = empty_svg("Run session-based enrichment to render SVG.", "Enrichment Bubble - Gene Count")
 
         return {
             "status": "success",
@@ -161,7 +166,8 @@ async def run_enrichment_analysis(request: EnrichmentRequest):
             "clusters": clusters,
             "selected_cluster": selected_cluster,
             "bar_svg": bar_svg,
-            "bubble_svg": bubble_svg,
+            "bubble_cluster_svg": bubble_cluster_svg,
+            "bubble_gene_svg": bubble_gene_svg,
             "n_terms": int(payload.get("n_terms", 0)),
         }
     except Exception as e:
