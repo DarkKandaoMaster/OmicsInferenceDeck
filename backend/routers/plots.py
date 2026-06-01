@@ -116,7 +116,7 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
     if plot_type == "cluster_scatter":
         path = plot_path(request.session_id, CLUSTER_RESULT_FILE)
         fig = build_cluster_scatter_figure(str(path), request.reduction, _seed_or_none(request.random_state))
-        return figure_to_bytes(fig, file_format), f"cluster_scatter_{request.reduction}"
+        return figure_to_bytes(fig, file_format, dpi=600), f"cluster_scatter_{request.reduction}"
 
     if plot_type == "input_cluster_scatter":
         omics_path = plot_path(request.session_id, OMICS_DATA_FILE)
@@ -127,13 +127,13 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
             request.reduction,
             _seed_or_none(request.random_state),
         )
-        return figure_to_bytes(fig, file_format), f"input_cluster_scatter_{request.reduction}"
+        return figure_to_bytes(fig, file_format, dpi=600), f"input_cluster_scatter_{request.reduction}"
 
     if plot_type == "differential_volcano":
         cluster_id = _require_cluster_id(request)
         path = plot_path(request.session_id, DIFFERENTIAL_VOLCANO_FILE)
         fig = build_volcano_figure(str(path), cluster_id)
-        return figure_to_bytes(fig, file_format), f"differential_volcano_cluster_{cluster_id}"
+        return figure_to_bytes(fig, file_format, dpi=600), f"differential_volcano_cluster_{cluster_id}"
 
     if plot_type == "survival_curve":
         path = plot_path(request.session_id, SURVIVAL_DATA_FILE)
@@ -147,7 +147,7 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
         path = plot_path(request.session_id, PARAMETER_SEARCH_FILE)
         fig = build_parameter_figure(str(path), x_param, request.y_param)
         y_suffix = f"_{request.y_param}" if request.y_param else ""
-        return figure_to_bytes(fig, file_format), f"parameter_surface_{x_param}{y_suffix}"
+        return figure_to_bytes(fig, file_format, dpi=600), f"parameter_surface_{x_param}{y_suffix}"
 
     if plot_type == "differential_heatmap":
         path = plot_path(request.session_id, DIFFERENTIAL_HEATMAP_FILE)
