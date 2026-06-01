@@ -60,6 +60,7 @@ if (nrow(df) == 0) {
 df <- df %>%
   mutate(
     cluster = factor(cluster, levels = sort(unique(cluster))),
+    cluster_numeric = as.integer(as.character(cluster)),
     Gene_Count = as.numeric(Gene_Count),
     Adjusted_P = as.numeric(Adjusted_P),
     Adjusted_P = ifelse(is.na(Adjusted_P) | Adjusted_P <= 0, as.numeric(P_value), Adjusted_P),
@@ -71,12 +72,11 @@ df <- df %>%
 
 if (mode == "by_gene") {
   df <- df %>%
-    filter(cluster == cluster_arg) %>%
-    slice_head(n = 5)
+    filter(cluster == cluster_arg)
 } else {
   df <- df %>%
     group_by(cluster) %>%
-    slice_head(n = 5) %>%
+    slice_head(n = 3) %>%
     ungroup()
 }
 
@@ -85,16 +85,24 @@ if (nrow(df) == 0) {
   quit(save = "no", status = 0)
 }
 
-term_levels <- rev(unique(df$TermShort))
+if (mode == "by_gene") {
+  term_levels <- rev(unique(df$TermShort))
+} else {
+  pathway_priority <- df %>%
+    group_by(TermShort) %>%
+    summarise(highest_cluster = min(cluster_numeric), .groups = "drop") %>%
+    arrange(highest_cluster, TermShort)
+  term_levels <- pathway_priority$TermShort
+}
 df$TermShort <- factor(df$TermShort, levels = term_levels)
 
 if (mode == "by_gene") {
   p <- ggplot(df, aes(x = Gene_Count, y = TermShort)) +
-    geom_point(aes(size = Gene_Count, color = neg_adjusted_p), alpha = 0.8) +
+    geom_point(aes(size = Gene_Count, color = neg_adjusted_p)) +
     scale_color_gradient(low = "green", high = "red") +
     geom_text(aes(label = Gene_Count), hjust = -0.7, size = 5.6, color = "black", family = FONT_FAMILY) +
     labs(
-      title = paste0(database, " Enrichment - Cluster ", cluster_arg, " by Gene Count"),
+      title = paste0(database, " Enrichment - Cluster ", cluster_arg),
       x = "Gene Number",
       y = "Pathways",
       color = expression(p.adjust),
@@ -115,8 +123,11 @@ if (mode == "by_gene") {
     theme_bw(base_family = FONT_FAMILY, base_size = 16)
 }
 
+if (mode != "by_gene") {
+  p <- p + scale_size_continuous(range = c(3, 15))
+}
+
 p <- p +
-  scale_size_continuous(range = c(3, 15)) +
   theme(
     text = element_text(family = FONT_FAMILY, size = 16),
     axis.title = element_text(family = FONT_FAMILY, size = 16, face = "bold"),
