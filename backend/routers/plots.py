@@ -140,7 +140,7 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
         meta_path = plot_path(request.session_id, "survival_meta.json")
         p_value = read_json(meta_path).get("p_value") if meta_path.exists() else None
         fig = build_survival_figure(str(path), p_value)
-        return figure_to_bytes(fig, file_format), "survival_curve"
+        return figure_to_bytes(fig, file_format, dpi=600), "survival_curve"
 
     if plot_type == "parameter_surface":
         x_param = _require_x_param(request)
