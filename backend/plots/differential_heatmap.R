@@ -18,7 +18,7 @@ FONT_FAMILY <- "serif"
 
 open_plot_device <- function(width, height) {
   if (output_format == "png") {
-    grDevices::png(output_path, width = width, height = height, units = "in", res = 300, bg = "white")
+    grDevices::png(output_path, width = width, height = height, units = "in", res = 600, bg = "white")
   } else if (output_format == "svg") {
     svglite::svglite(output_path, width = width, height = height, bg = "white")
   } else if (output_format == "pdf") {
