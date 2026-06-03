@@ -7,7 +7,7 @@ import { useResultSelection } from '~/composables/domain/useResultSelection'
 import { renderDifferentialVolcano } from '~/utils/api'
 
 const {
-  diffResult, isDiffLoading, selectedVolcanoCluster,
+  diffResult, selectedVolcanoCluster,
   selectedDiffOmicsType,
   runDifferentialAnalysis,
 } = useDifferential()
@@ -40,10 +40,6 @@ async function handleOmicsTypeChange() {
 </script>
 
 <template>
-  <div v-if="isDiffLoading" class="result-card col-span-2">
-    <div class="p-5"><div class="h-48 animate-pulse rounded-lg bg-slate-100" /></div>
-  </div>
-
   <template v-if="diffResult">
     <div v-if="enabledCharts.diffVolcano" class="result-card">
       <div class="result-card-header">

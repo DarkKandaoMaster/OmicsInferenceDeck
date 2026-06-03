@@ -4,7 +4,7 @@ import { useSurvival } from '~/composables/domain/useSurvival'
 import { useResultSelection } from '~/composables/domain/useResultSelection'
 import { formatPValue } from '~/utils/formatters'
 
-const { survivalResult, isSurvivalLoading } = useSurvival()
+const { survivalResult } = useSurvival()
 const { sessionId } = useSession()
 const { enabledCharts } = useResultSelection()
 
@@ -15,11 +15,7 @@ const downloadParams = computed(() => ({
 
 <template>
   <template v-if="enabledCharts.survival">
-    <div v-if="isSurvivalLoading" class="result-card">
-      <div class="p-5"><div class="h-48 animate-pulse rounded-lg bg-slate-100" /></div>
-    </div>
-
-    <div v-else-if="survivalResult" class="result-card">
+    <div v-if="survivalResult" class="result-card">
       <div class="result-card-header">
         <div class="result-card-title">Survival Curve</div>
         <div class="flex items-center gap-3 text-sm text-slate-600">
