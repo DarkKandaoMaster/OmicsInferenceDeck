@@ -3,6 +3,9 @@ import { useUIState } from '~/composables/core/useUIState'
 import { useAlgorithmState } from '~/composables/domain/useAlgorithmState'
 import { useAnalysisActions } from '~/composables/domain/useAnalysisActions'
 import { useDataState } from '~/composables/domain/useDataState'
+import { useDifferential } from '~/composables/domain/useDifferential'
+import { useEnrichment } from '~/composables/domain/useEnrichment'
+import { useSurvival } from '~/composables/domain/useSurvival'
 
 const { isLoading } = useUIState()
 const { isTestMode, isPsLoading } = useAlgorithmState()
@@ -13,6 +16,9 @@ const {
   clinicalUploadStatus,
   customEvalUploadStatus,
 } = useDataState()
+const { isDiffLoading, diffErrorMessage } = useDifferential()
+const { isEnrichmentLoading, enrichmentErrorMessage } = useEnrichment()
+const { isSurvivalLoading, survivalErrorMessage } = useSurvival()
 </script>
 
 <template>
@@ -58,6 +64,31 @@ const {
 
       <div v-show="customEvalUploadStatus" class="rounded-lg border border-green-200 bg-green-50 p-2 text-xs text-green-800">
         {{ customEvalUploadStatus }}
+      </div>
+
+      <!-- 分析运行状态：差异表达 / 富集 / 生存 -->
+      <div v-if="isDiffLoading" class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-700">
+        <span class="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+        正在计算差异表达结果...
+      </div>
+      <div v-if="diffErrorMessage" class="whitespace-pre-wrap break-words rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+        {{ diffErrorMessage }}
+      </div>
+
+      <div v-if="isEnrichmentLoading" class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-700">
+        <span class="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+        正在查询 GO + KEGG 富集结果...
+      </div>
+      <div v-if="enrichmentErrorMessage" class="whitespace-pre-wrap break-words rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+        {{ enrichmentErrorMessage }}
+      </div>
+
+      <div v-if="isSurvivalLoading" class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-700">
+        <span class="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+        正在计算 Log-Rank P 值与 KM 生存曲线...
+      </div>
+      <div v-if="survivalErrorMessage" class="whitespace-pre-wrap break-words rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+        {{ survivalErrorMessage }}
       </div>
     </div>
   </div>

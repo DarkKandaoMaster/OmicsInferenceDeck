@@ -10,7 +10,7 @@ const { isTestMode, psResult } = useAlgorithmState()
 const { backendResponse } = useAnalysisActions()
 const { diffResult } = useDifferential()
 const { enrichmentResult } = useEnrichment()
-const { survivalResult, isSurvivalLoading, survivalErrorMessage } = useSurvival()
+const { survivalResult, isSurvivalLoading } = useSurvival()
 const { enabledMetrics, enabledCharts } = useResultSelection()
 
 const resultsAreaRef = ref<HTMLElement | null>(null)
@@ -32,7 +32,7 @@ const hasAnyChartsVisible = computed(() => {
   if (enabledCharts.clusterScatter && data.plots?.cluster_scatter) return true
   if ((enabledCharts.diffVolcano || enabledCharts.diffHeatmap) && diffResult.value) return true
   if ((enabledCharts.enrichBarGO || enabledCharts.enrichBarKEGG || enabledCharts.enrichBubbleGO || enabledCharts.enrichBubbleKEGG) && diffResult.value && enrichmentResult.value) return true
-  if (enabledCharts.survival && (isSurvivalLoading.value || survivalErrorMessage.value || survivalResult.value)) return true
+  if (enabledCharts.survival && (isSurvivalLoading.value || survivalResult.value)) return true
   return false
 })
 

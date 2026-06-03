@@ -10,7 +10,7 @@ type Database = 'GO' | 'KEGG'
 
 const {
   enrichmentResults, isEnrichmentLoading,
-  selectedEnrichmentCluster, selectedGeneCountCluster, enrichmentErrorMessage,
+  selectedEnrichmentCluster, selectedGeneCountCluster,
 } = useEnrichment()
 const { diffResult } = useDifferential()
 const { sessionId } = useSession()
@@ -87,11 +87,7 @@ async function handleGeneCountChange() {
 
 <template>
   <div v-if="diffResult && isEnrichmentLoading" class="result-card col-span-2">
-    <div class="p-5 text-sm text-slate-600">Querying GO + KEGG enrichment results...</div>
-  </div>
-
-  <div v-if="diffResult && enrichmentErrorMessage && !hasAnyResult" class="result-card col-span-2">
-    <div class="p-5 text-sm text-red-700">{{ enrichmentErrorMessage }}</div>
+    <div class="p-5"><div class="h-48 animate-pulse rounded-lg bg-slate-100" /></div>
   </div>
 
   <template v-if="diffResult && hasAnyResult">
