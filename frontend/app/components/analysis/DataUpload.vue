@@ -93,7 +93,7 @@ function handleCancerSubtypeChange() {
             <select v-model="config.type" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[13px] outline-none focus:border-primary" @change="handleFormatChange">
               <option v-for="type in omicsTypes" :key="type" :value="type">{{ type }}</option>
             </select>
-            <button type="button" aria-label="移除" title="移除" class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-red-300 hover:text-red-600" @click="removeOmicsFile(config.id)">
+            <button type="button" aria-label="移除" title="移除" class="flex h-7 w-7 items-center justify-center text-slate-500 hover:text-red-600" @click="removeOmicsFile(config.id)">
               <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </button>
           </div>
@@ -140,7 +140,7 @@ function handleCancerSubtypeChange() {
 
         <div v-if="expressionMatrixFile" class="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
           <span class="truncate text-[13px] text-slate-900" :title="expressionMatrixFile.name">{{ expressionMatrixFile.name }}</span>
-          <button type="button" aria-label="移除" title="移除" class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-red-300 hover:text-red-600" @click="clearExpressionMatrixFile()">
+          <button type="button" aria-label="移除" title="移除" class="flex h-7 w-7 items-center justify-center text-slate-500 hover:text-red-600" @click="clearExpressionMatrixFile()">
             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>
         </div>
@@ -186,7 +186,7 @@ function handleCancerSubtypeChange() {
 
         <div v-if="clinicalFile" class="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
           <span class="truncate text-[13px] text-slate-900" :title="clinicalFile.name">{{ clinicalFile.name }}</span>
-          <button type="button" aria-label="移除" title="移除" class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-red-300 hover:text-red-600" @click="clearClinicalFile()">
+          <button type="button" aria-label="移除" title="移除" class="flex h-7 w-7 items-center justify-center text-slate-500 hover:text-red-600" @click="clearClinicalFile()">
             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>
         </div>

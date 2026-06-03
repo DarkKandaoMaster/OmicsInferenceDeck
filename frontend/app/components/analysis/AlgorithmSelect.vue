@@ -48,7 +48,7 @@ const hasSelectedAlgorithm = computed(() => selectedAlgorithm.value.length > 0)
         </div>
         <div v-if="customEvalFile" class="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
           <span class="truncate text-[13px] text-slate-900" :title="customEvalFile.name">{{ customEvalFile.name }}</span>
-          <button type="button" aria-label="移除" title="移除" class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-red-300 hover:text-red-600" @click="clearCustomEvalFile()">
+          <button type="button" aria-label="移除" title="移除" class="flex h-7 w-7 items-center justify-center text-slate-500 hover:text-red-600" @click="clearCustomEvalFile()">
             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>
         </div>
