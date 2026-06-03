@@ -18,7 +18,7 @@ const {
 } = useDataState()
 const { isDiffLoading, diffErrorMessage } = useDifferential()
 const { isEnrichmentLoading, enrichmentErrorMessage } = useEnrichment()
-const { isSurvivalLoading, survivalErrorMessage } = useSurvival()
+const { isSurvivalLoading, survivalErrorMessage, survivalResult } = useSurvival()
 </script>
 
 <template>
@@ -89,6 +89,13 @@ const { isSurvivalLoading, survivalErrorMessage } = useSurvival()
       </div>
       <div v-if="survivalErrorMessage" class="whitespace-pre-wrap break-words rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">
         {{ survivalErrorMessage }}
+      </div>
+
+      <!-- 生存分析：被排除样本提示（始终显示） -->
+      <div class="whitespace-pre-wrap break-words rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-700">
+        {{ survivalResult?.lost_samples
+          ? `${survivalResult.lost_samples} clustered samples were excluded because clinical data was missing.`
+          : 'No clustered samples were excluded.' }}
       </div>
     </div>
   </div>
