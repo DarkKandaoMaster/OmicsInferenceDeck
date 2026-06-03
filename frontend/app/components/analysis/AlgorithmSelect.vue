@@ -15,7 +15,7 @@ const {
   nNeighbors,
 } = useAlgorithmState()
 
-const { isCustomEvalMode, customEvalFile, customEvalUploadStatus, handleCustomEvalFileChange, clearCustomEvalFile } = useDataState()
+const { isCustomEvalMode, customEvalFile, handleCustomEvalFileChange, clearCustomEvalFile } = useDataState()
 
 const algorithmsWithK = ['K-means', 'Spectral Clustering', 'NEMO', 'SNF', 'Hclust', 'PIntMF', 'MOSD', 'Parea']
 const algorithmsWithSeed = ['K-means', 'Spectral Clustering', 'Hclust', 'PIntMF', 'MOSD', 'Parea']
@@ -51,9 +51,6 @@ const hasSelectedAlgorithm = computed(() => selectedAlgorithm.value.length > 0)
           <button type="button" aria-label="移除" title="移除" class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-red-300 hover:text-red-600" @click="clearCustomEvalFile()">
             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>
-        </div>
-        <div v-show="customEvalUploadStatus" class="mt-3 rounded-lg border border-green-200 bg-green-50 p-2 text-xs text-green-800">
-          {{ customEvalUploadStatus }}
         </div>
       </div>
 
