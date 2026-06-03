@@ -220,7 +220,7 @@ export function useDataState() {
     }
   }
 
-  /** 移除单个组学文件 */
+  /* 移除单个组学文件 */
   function removeOmicsFile(id: string) {
     omicsFileConfigs.value = omicsFileConfigs.value.filter(c => c.id !== id)
     isOmicsUploaded.value = false
