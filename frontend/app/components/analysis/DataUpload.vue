@@ -11,9 +11,11 @@ const {
   expressionMatrixFile, expressionMatrixUploadStatus,
   expressionMatrixIsRowSample, expressionMatrixHasHeader, expressionMatrixHasIndex,
   expressionMatrixExampleText,
+  clinicalFile,
   handleFileChange, handleFormatChange,
   handleExpressionMatrixFileChange, handleExpressionMatrixFormatChange,
   handleClinicalFileChange, handleClinicalFormatChange,
+  clearExpressionMatrixFile, clearClinicalFile,
 } = useDataState()
 
 const {
@@ -137,9 +139,9 @@ function handleCancerSubtypeChange() {
           </label>
         </div>
 
-        <div v-if="expressionMatrixFile" class="mt-3 flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+        <div v-if="expressionMatrixFile" class="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
           <span class="truncate text-[13px] text-slate-900" :title="expressionMatrixFile.name">{{ expressionMatrixFile.name }}</span>
-          <span class="text-xs text-slate-500">mRNA</span>
+          <button type="button" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[13px] text-slate-500 hover:border-red-300 hover:text-red-600" @click="clearExpressionMatrixFile()">移除</button>
         </div>
 
         <div v-show="expressionMatrixUploadStatus" class="mt-3 whitespace-pre-wrap break-words rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-700">
@@ -183,6 +185,11 @@ function handleCancerSubtypeChange() {
             <span class="text-sm font-semibold text-slate-900">选择临床文件</span>
             <small class="mt-1 text-xs leading-relaxed text-slate-500">需要包含 OS 和 OS.time 字段。</small>
           </label>
+        </div>
+
+        <div v-if="clinicalFile" class="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+          <span class="truncate text-[13px] text-slate-900" :title="clinicalFile.name">{{ clinicalFile.name }}</span>
+          <button type="button" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[13px] text-slate-500 hover:border-red-300 hover:text-red-600" @click="clearClinicalFile()">移除</button>
         </div>
 
         <div v-show="clinicalUploadStatus" class="mt-3 whitespace-pre-wrap break-words rounded-lg p-2 text-xs" :class="clinicalUploadStatus.startsWith('❌') ? 'border border-red-200 bg-red-50 text-red-700' : clinicalUploadStatus.startsWith('✅') ? 'border border-green-200 bg-green-50 text-green-800' : 'border border-slate-200 bg-slate-50 text-slate-700'">

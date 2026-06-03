@@ -15,7 +15,7 @@ const {
   nNeighbors,
 } = useAlgorithmState()
 
-const { isCustomEvalMode, customEvalUploadStatus, handleCustomEvalFileChange } = useDataState()
+const { isCustomEvalMode, customEvalFile, customEvalUploadStatus, handleCustomEvalFileChange, clearCustomEvalFile } = useDataState()
 
 const algorithmsWithK = ['K-means', 'Spectral Clustering', 'NEMO', 'SNF', 'Hclust', 'PIntMF', 'MOSD', 'Parea']
 const algorithmsWithSeed = ['K-means', 'Spectral Clustering', 'Hclust', 'PIntMF', 'MOSD', 'Parea']
@@ -45,6 +45,10 @@ const hasSelectedAlgorithm = computed(() => selectedAlgorithm.value.length > 0)
             <span class="text-sm font-semibold text-slate-900">点击选择结果数据文件</span>
             <span class="mt-1 text-xs text-slate-500">CSV / XLSX / XLS</span>
           </div>
+        </div>
+        <div v-if="customEvalFile" class="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+          <span class="truncate text-[13px] text-slate-900" :title="customEvalFile.name">{{ customEvalFile.name }}</span>
+          <button type="button" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[13px] text-slate-500 hover:border-red-300 hover:text-red-600" @click="clearCustomEvalFile()">移除</button>
         </div>
         <div v-show="customEvalUploadStatus" class="mt-3 rounded-lg border border-green-200 bg-green-50 p-2 text-xs text-green-800">
           {{ customEvalUploadStatus }}

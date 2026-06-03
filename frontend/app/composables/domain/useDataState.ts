@@ -255,6 +255,26 @@ export function useDataState() {
     }
   }
 
+  /** 清除 mRNA 表达矩阵文件 */
+  function clearExpressionMatrixFile() {
+    expressionMatrixFile.value = null
+    expressionMatrixUploadStatus.value = ''
+    isExpressionMatrixUploaded.value = false
+  }
+
+  /** 清除临床文件 */
+  function clearClinicalFile() {
+    clinicalFile.value = null
+    clinicalUploadStatus.value = ''
+    isClinicalUploaded.value = false
+  }
+
+  /** 清除自定义评估文件 */
+  function clearCustomEvalFile() {
+    customEvalFile.value = null
+    customEvalUploadStatus.value = ''
+  }
+
   /** 处理自定义评估文件选择 */
   function handleCustomEvalFileChange(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0]
@@ -289,5 +309,6 @@ export function useDataState() {
     handleExpressionMatrixFileChange, handleExpressionMatrixFormatChange,
     handleClinicalFileChange, handleClinicalFormatChange,
     handleCustomEvalFileChange,
+    clearExpressionMatrixFile, clearClinicalFile, clearCustomEvalFile,
   }
 }
