@@ -7,6 +7,11 @@ suppressPackageStartupMessages({
   library(edgeR)
 })
 
+# 复刻学长 get_diff.R 第136行：按列位置（而非样本真实身份）贴 tumor/normal 标签。
+# 因 mRNA 矩阵列是肿瘤/正常交错排列，此写法会形成近似 tumor-vs-tumor 的对比，
+# 差异基因数远少于真实 tumor-vs-normal —— 这正是与学长数字对齐所需的行为。
+REPLICATE_SENIOR_POSITIONAL_GROUPING <- TRUE #常量开关（文件顶部，library 块之后）：REPLICATE_SENIOR_POSITIONAL_GROUPING <- TRUE,带注释说明这是为对齐学长数字而刻意复刻的“按位置分组”。
+
 json_escape <- function(value) {
   value <- as.character(value)
   value <- gsub("\\", "\\\\", value, fixed = TRUE)
@@ -242,9 +247,19 @@ tryCatch(
     for (cluster_id in clusters) {
       if (expression_mode) {
         idx <- df$Cluster == cluster_id & df$SampleType %in% c("tumor", "normal")
+        sub_types <- df$SampleType[idx]                     # 真实标签，仅用于计数
+        if (REPLICATE_SENIOR_POSITIONAL_GROUPING) {
+          n_tumor  <- sum(sub_types == "tumor")
+          n_normal <- sum(sub_types == "normal")
+          # 复刻 design <- c(rep("tumor", n_tumor), rep("normal", n_normal))，
+          # 按子集“原始列顺序”定位（列序已保留，等价于学长 filtered_mRNAdata）。
+          group_vec <- c(rep("tumor", n_tumor), rep("normal", n_normal))
+        } else {
+          group_vec <- sub_types
+        }
         cluster_result <- run_edger_contrast(
           expr_for_model[, idx, drop = FALSE],
-          df$SampleType[idx],
+          group_vec,
           cluster_id,
           "Tumor vs Normal"
         )
