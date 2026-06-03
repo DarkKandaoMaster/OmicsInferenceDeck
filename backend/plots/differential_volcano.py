@@ -84,7 +84,7 @@ def build_figure(
             force_text=(0.3, 0.5),
             # shrinkA/shrinkB keep the leader line from striking through the
             # label (and the dot) when adjustText falls back to ax.annotate.
-            arrowprops=dict(arrowstyle="-", color="#7A7F87", lw=0.6, alpha=0.8, shrinkA=4, shrinkB=2),
+            arrowprops=dict(arrowstyle="-", color="#7A7F87", lw=0.6, alpha=0.8),
         )
     elif texts:
         for t in texts:
