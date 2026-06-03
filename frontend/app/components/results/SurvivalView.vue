@@ -26,9 +26,6 @@ const downloadParams = computed(() => ({
           <ResultsPlotDownloadButton plot-type="survival_curve" :params="downloadParams" filename-prefix="survival_curve" />
         </div>
       </div>
-      <div v-if="survivalResult.lost_samples" class="mx-5 mt-4 bg-amber-50 border border-amber-200 text-amber-700 p-3 rounded-lg text-[13px]">
-        {{ survivalResult.lost_samples }} clustered samples were excluded because clinical data was missing.
-      </div>
       <div class="svg-chart" v-html="survivalResult.survival_svg" />
     </div>
   </template>
