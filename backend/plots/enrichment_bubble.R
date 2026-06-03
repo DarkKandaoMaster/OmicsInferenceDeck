@@ -66,8 +66,7 @@ df <- df %>%
     Adjusted_P = as.numeric(Adjusted_P),
     Adjusted_P = ifelse(is.na(Adjusted_P) | Adjusted_P <= 0, as.numeric(P_value), Adjusted_P),
     neg_adjusted_p = -1 * Adjusted_P,
-    TermShort = vapply(strsplit(str_remove(Term, " \\(GO.*$"), " "), function(words) paste(head(words, 6), collapse = " "), character(1)),
-    TermShort = str_wrap(TermShort, width = 40)
+    TermShort = str_remove(Term, " \\(GO.*$")
   ) %>%
   arrange(Adjusted_P)
 
@@ -143,7 +142,7 @@ p <- p +
     text = element_text(family = FONT_FAMILY, size = 16),
     axis.title = element_text(family = FONT_FAMILY, size = 16, face = "bold"),
     axis.text = element_text(family = FONT_FAMILY, size = 16, face = "bold"),
-    axis.text.y = element_text(family = FONT_FAMILY, size = 16, face = "bold", lineheight = 0.8),
+    axis.text.y = element_text(family = FONT_FAMILY, size = 16, face = "bold", lineheight = 0.8), #听AI说这个参数只对多行文本有意义，现在气泡图不折行了它就不起作用，是无害的残留
     plot.title = element_text(family = FONT_FAMILY, size = 16, face = "bold", hjust = 0.5),
     legend.title = element_text(family = FONT_FAMILY, size = 16, face = "bold"),
     legend.text = element_text(family = FONT_FAMILY, size = 16, face = "bold"),
