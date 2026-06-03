@@ -209,6 +209,15 @@ export function useDataState() {
     }
   }
 
+  /** 移除单个组学文件 */
+  function removeOmicsFile(id: string) {
+    omicsFileConfigs.value = omicsFileConfigs.value.filter(c => c.id !== id)
+    isOmicsUploaded.value = false
+    uploadStatus.value = omicsFileConfigs.value.length > 0
+      ? '文件已移除，将在运行时重新校验数据。'
+      : ''
+  }
+
   /** 组学格式变更标记 */
   function handleFormatChange() {
     if (omicsFileConfigs.value.length > 0) {
@@ -305,7 +314,7 @@ export function useDataState() {
     uploadedOmicsTypes, expressionMatrixType, differentialOmicsTypes,
     // 操作
     doUploadOmics, doUploadClinical, doUploadExpressionMatrix,
-    handleFileChange, handleFormatChange,
+    handleFileChange, handleFormatChange, removeOmicsFile,
     handleExpressionMatrixFileChange, handleExpressionMatrixFormatChange,
     handleClinicalFileChange, handleClinicalFormatChange,
     handleCustomEvalFileChange,

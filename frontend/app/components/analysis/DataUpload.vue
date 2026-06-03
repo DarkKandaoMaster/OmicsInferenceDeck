@@ -12,7 +12,7 @@ const {
   expressionMatrixIsRowSample, expressionMatrixHasHeader, expressionMatrixHasIndex,
   expressionMatrixExampleText,
   clinicalFile,
-  handleFileChange, handleFormatChange,
+  handleFileChange, handleFormatChange, removeOmicsFile,
   handleExpressionMatrixFileChange, handleExpressionMatrixFormatChange,
   handleClinicalFileChange, handleClinicalFormatChange,
   clearExpressionMatrixFile, clearClinicalFile,
@@ -88,11 +88,14 @@ function handleCancerSubtypeChange() {
         </div>
 
         <div v-if="omicsFileConfigs.length > 0" class="mt-3 flex flex-col gap-2">
-          <div v-for="config in omicsFileConfigs" :key="config.id" class="grid grid-cols-[minmax(0,1fr)_128px] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+          <div v-for="config in omicsFileConfigs" :key="config.id" class="grid grid-cols-[minmax(0,1fr)_128px_auto] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
             <span class="truncate text-[13px] text-slate-900" :title="config.originalName">{{ config.originalName }}</span>
             <select v-model="config.type" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[13px] outline-none focus:border-primary" @change="handleFormatChange">
               <option v-for="type in omicsTypes" :key="type" :value="type">{{ type }}</option>
             </select>
+            <button type="button" aria-label="移除" title="移除" class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-red-300 hover:text-red-600" @click="removeOmicsFile(config.id)">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </button>
           </div>
         </div>
 
@@ -141,7 +144,9 @@ function handleCancerSubtypeChange() {
 
         <div v-if="expressionMatrixFile" class="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
           <span class="truncate text-[13px] text-slate-900" :title="expressionMatrixFile.name">{{ expressionMatrixFile.name }}</span>
-          <button type="button" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[13px] text-slate-500 hover:border-red-300 hover:text-red-600" @click="clearExpressionMatrixFile()">移除</button>
+          <button type="button" aria-label="移除" title="移除" class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-red-300 hover:text-red-600" @click="clearExpressionMatrixFile()">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </button>
         </div>
 
         <div v-show="expressionMatrixUploadStatus" class="mt-3 whitespace-pre-wrap break-words rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-700">
@@ -189,7 +194,9 @@ function handleCancerSubtypeChange() {
 
         <div v-if="clinicalFile" class="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
           <span class="truncate text-[13px] text-slate-900" :title="clinicalFile.name">{{ clinicalFile.name }}</span>
-          <button type="button" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[13px] text-slate-500 hover:border-red-300 hover:text-red-600" @click="clearClinicalFile()">移除</button>
+          <button type="button" aria-label="移除" title="移除" class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-red-300 hover:text-red-600" @click="clearClinicalFile()">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </button>
         </div>
 
         <div v-show="clinicalUploadStatus" class="mt-3 whitespace-pre-wrap break-words rounded-lg p-2 text-xs" :class="clinicalUploadStatus.startsWith('❌') ? 'border border-red-200 bg-red-50 text-red-700' : clinicalUploadStatus.startsWith('✅') ? 'border border-green-200 bg-green-50 text-green-800' : 'border border-slate-200 bg-slate-50 text-slate-700'">
