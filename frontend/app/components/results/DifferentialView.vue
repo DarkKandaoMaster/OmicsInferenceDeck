@@ -8,7 +8,7 @@ import { renderDifferentialVolcano } from '~/utils/api'
 
 const {
   diffResult, isDiffLoading, selectedVolcanoCluster,
-  selectedDiffOmicsType, diffErrorMessage,
+  selectedDiffOmicsType,
   runDifferentialAnalysis,
 } = useDifferential()
 const { differentialOmicsTypes } = useDataState()
@@ -41,11 +41,7 @@ async function handleOmicsTypeChange() {
 
 <template>
   <div v-if="isDiffLoading" class="result-card col-span-2">
-    <div class="p-5 text-sm text-slate-600">Calculating differential expression results...</div>
-  </div>
-
-  <div v-if="diffErrorMessage" class="result-card col-span-2">
-    <div class="p-5 text-sm text-red-700">{{ diffErrorMessage }}</div>
+    <div class="p-5"><div class="h-48 animate-pulse rounded-lg bg-slate-100" /></div>
   </div>
 
   <template v-if="diffResult">
