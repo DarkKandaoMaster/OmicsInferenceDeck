@@ -9,15 +9,16 @@ suppressPackageStartupMessages({
 
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 3) {
-  stop("Usage: Rscript enrichment_bubble.R <enrichment.parquet> <mode> <database>")
+  stop("Usage: Rscript enrichment_bubble.R <enrichment.parquet> <mode> <database> [cluster_id] [dataset] [format] [output_path]")
 }
 
 data_path <- args[[1]]
 mode <- args[[2]]
 database <- toupper(args[[3]])
 cluster_arg <- if (length(args) >= 4) as.character(args[[4]]) else "0"
-output_format <- if (length(args) >= 5) tolower(args[[5]]) else ""
-output_path <- if (length(args) >= 6) args[[6]] else ""
+dataset <- if (length(args) >= 5) trimws(args[[5]]) else ""
+output_format <- if (length(args) >= 6) tolower(args[[6]]) else ""
+output_path <- if (length(args) >= 7) args[[7]] else ""
 is_download <- output_format %in% c("png", "svg", "pdf") && nzchar(output_path)
 FONT_FAMILY <- "serif"
 
@@ -97,12 +98,17 @@ if (mode == "by_gene") {
 df$TermShort <- factor(df$TermShort, levels = term_levels)
 
 if (mode == "by_gene") {
+  by_gene_title <- if (nzchar(dataset)) {
+    paste0(database, " Enrichment - ", dataset, " Cluster ", cluster_arg)
+  } else {
+    paste0(database, " Enrichment - Cluster ", cluster_arg)
+  }
   p <- ggplot(df, aes(x = Gene_Count, y = TermShort)) +
     geom_point(aes(size = Gene_Count, color = neg_adjusted_p)) +
     scale_color_gradient(low = "green", high = "red") +
     geom_text(aes(label = Gene_Count), hjust = -0.7, size = 5.6, color = "black", family = FONT_FAMILY) +
     labs(
-      title = paste0(database, " Enrichment - Cluster ", cluster_arg),
+      title = by_gene_title,
       x = "Gene Number",
       y = "Pathways",
       color = expression(p.adjust),
@@ -110,13 +116,18 @@ if (mode == "by_gene") {
     ) +
     theme_bw(base_family = FONT_FAMILY, base_size = 16)
 } else {
+  combined_title <- if (nzchar(dataset)) {
+    paste0(database, " Pathway Enrichment - ", dataset, " All Clusters")
+  } else {
+    paste0(database, " Pathway Enrichment - All Clusters")
+  }
   p <- ggplot(df, aes(x = cluster, y = TermShort)) +
     geom_point(aes(size = Gene_Count, color = neg_adjusted_p), alpha = 0.8) +
     scale_color_gradient(low = "blue", high = "red") +
     labs(
-      title = paste0(database, " Pathway Enrichment - All Clusters"),
+      title = combined_title,
       x = "Cluster",
-      y = "Pathways",
+      y = paste0(database, " Pathways"),
       color = expression(p.adjust),
       size = "Gene Count"
     ) +

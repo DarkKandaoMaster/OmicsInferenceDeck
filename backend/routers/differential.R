@@ -4,6 +4,7 @@
 suppressPackageStartupMessages({
   library(arrow)
   library(limma)
+  library(edgeR)
 })
 
 json_escape <- function(value) {
@@ -106,6 +107,54 @@ run_limma_contrast <- function(expr, group, cluster_id, comparison, positive_lev
   result
 }
 
+# edgeR negative-binomial exact test, aligned with the Subtype-MLMOSC pipeline:
+# DGEList -> calcNormFactors (TMM) -> estimateCommonDisp -> estimateTagwiseDisp
+# (trend = "movingave") -> exactTest(pair = c("tumor", "normal")) -> topTags.
+# `counts` are raw read counts (no log2 transform). `group` is the per-sample
+# SampleType vector, so the comparison does not depend on column ordering.
+run_edger_contrast <- function(counts, group, cluster_id, comparison) {
+  group <- tolower(as.character(group))
+  if (sum(group == "tumor", na.rm = TRUE) < 2 || sum(group == "normal", na.rm = TRUE) < 2) {
+    return(empty_volcano(cluster_id, rownames(counts), comparison))
+  }
+
+  # Drop genes with no reads within this cluster's samples (matches the reference
+  # rowMeans(TCGA) > 0 filter, which there is applied per cluster subset).
+  keep <- rowSums(counts, na.rm = TRUE) > 0
+  counts <- counts[keep, , drop = FALSE]
+  if (nrow(counts) < 1) {
+    return(empty_volcano(cluster_id, rownames(counts), comparison))
+  }
+
+  dge <- edgeR::DGEList(counts = counts, group = group)
+  dge <- edgeR::calcNormFactors(dge)
+  dge <- edgeR::estimateCommonDisp(dge)
+  dge <- edgeR::estimateTagwiseDisp(dge, trend = "movingave")
+  exact_test <- edgeR::exactTest(dge, pair = c("tumor", "normal"))
+  table <- edgeR::topTags(exact_test, n = Inf, sort.by = "none")$table
+
+  p_values <- as.numeric(table$PValue)
+  p_values[is.na(p_values) | !is.finite(p_values)] <- 1.0
+  p_values <- pmin(pmax(p_values, 0.0), 1.0)
+
+  fdr_values <- as.numeric(table$FDR)
+  fdr_values[is.na(fdr_values) | !is.finite(fdr_values)] <- 1.0
+  fdr_values <- pmin(pmax(fdr_values, 0.0), 1.0)
+
+  result <- data.frame(
+    cluster = cluster_id,
+    gene = rownames(table),
+    logFC = as.numeric(table$logFC),
+    t_pvalue = p_values,
+    FDR = fdr_values,
+    negLog10P = -log10(p_values + 1e-300),
+    comparison = comparison,
+    stringsAsFactors = FALSE
+  )
+  result$logFC[is.na(result$logFC) | !is.finite(result$logFC)] <- 0.0
+  result
+}
+
 top_significant_genes <- function(cluster_result) {
   significant <- cluster_result[
     cluster_result$FDR < 0.05 & abs(cluster_result$logFC) >= 0.5,
@@ -168,10 +217,21 @@ tryCatch(
       if (!any(valid_type)) {
         stop("mRNA expression differential analysis requires TCGA tumor and normal sample barcodes")
       }
-      expr_for_model <- log2(pmax(expr, 0) + 1)
+      # edgeR consumes raw counts directly (no log2 transform). Drop genes with no
+      # expression across samples, matching the reference rowMeans(expr) > 0 filter.
+      expr_for_model <- expr
+      keep_expressed <- rowMeans(expr_for_model, na.rm = TRUE) > 0
+      expr_for_model <- expr_for_model[keep_expressed, , drop = FALSE]
+      if (nrow(expr_for_model) < 1) {
+        stop("no expressed genes remain after removing all-zero counts (rowMeans > 0)")
+      }
+      # edgeR models raw counts, but the heatmap is shown on a log2(counts+1)
+      # scale so high-count samples do not flatten the per-gene z-score colours.
+      expr_for_heatmap_source <- log2(pmax(expr_for_model, 0) + 1)
       mode <- "tumor_vs_normal_within_cluster"
     } else {
       expr_for_model <- expr
+      expr_for_heatmap_source <- expr_for_model
       mode <- "cluster_vs_rest"
     }
 
@@ -182,13 +242,11 @@ tryCatch(
     for (cluster_id in clusters) {
       if (expression_mode) {
         idx <- df$Cluster == cluster_id & df$SampleType %in% c("tumor", "normal")
-        cluster_result <- run_limma_contrast(
+        cluster_result <- run_edger_contrast(
           expr_for_model[, idx, drop = FALSE],
           df$SampleType[idx],
           cluster_id,
-          "Tumor vs Normal",
-          "tumor",
-          "normal"
+          "Tumor vs Normal"
         )
       } else {
         group <- ifelse(df$Cluster == cluster_id, "target", "rest")
@@ -226,10 +284,10 @@ tryCatch(
     arrow::write_parquet(volcano_df, volcano_path)
 
     if (length(top_genes) > 0) {
-      top_genes <- top_genes[top_genes %in% rownames(expr_for_model)]
+      top_genes <- top_genes[top_genes %in% rownames(expr_for_heatmap_source)]
     }
     if (length(top_genes) > 0) {
-      expr_for_heatmap <- t(expr_for_model[top_genes, , drop = FALSE])
+      expr_for_heatmap <- t(expr_for_heatmap_source[top_genes, , drop = FALSE])
       heatmap_df <- data.frame(sample_name = df$sample_name, Cluster = df$Cluster, expr_for_heatmap, check.names = FALSE)
       for (gene in top_genes) {
         values <- heatmap_df[[gene]]

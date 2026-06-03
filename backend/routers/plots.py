@@ -63,6 +63,7 @@ class EnrichmentBubbleRequest(BaseModel):
     database: str
     mode: str = "combined"
     cluster_id: int | None = None
+    dataset: str | None = None
 
 
 class ParameterPlotRequest(BaseModel):
@@ -176,7 +177,7 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
         path = plot_path(request.session_id, enrichment_file(database))
         payload = run_r_plot_bytes(
             "enrichment_bubble.R",
-            [path, mode, database.upper(), cluster_id],
+            [path, mode, database.upper(), cluster_id, request.dataset or ""],
             file_format,
             session_dir(request.session_id),
         )
@@ -231,7 +232,7 @@ async def enrichment_bubble(request: EnrichmentBubbleRequest):
             "status": "success",
             "svg": run_r_svg(
                 "enrichment_bubble.R",
-                [path, mode, request.database.upper(), cluster_id],
+                [path, mode, request.database.upper(), cluster_id, request.dataset or ""],
             ),
         }
     except Exception as e:

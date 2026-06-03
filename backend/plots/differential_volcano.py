@@ -72,6 +72,9 @@ def build_figure(
         )
 
     if texts and _adjust_text is not None:
+        # Render once so adjustText has a renderer to measure text extents;
+        # without it the arrow drawing falls back and warns about FancyArrowPatch.
+        fig.canvas.draw()
         _adjust_text(
             texts,
             ax=ax,
@@ -79,7 +82,9 @@ def build_figure(
             expand_text=(1.2, 1.3),
             force_points=(0.4, 0.6),
             force_text=(0.3, 0.5),
-            arrowprops=dict(arrowstyle="-", color="#7A7F87", lw=0.6, alpha=0.8),
+            # shrinkA/shrinkB keep the leader line from striking through the
+            # label (and the dot) when adjustText falls back to ax.annotate.
+            arrowprops=dict(arrowstyle="-", color="#7A7F87", lw=0.6, alpha=0.8, shrinkA=4, shrinkB=2),
         )
     elif texts:
         for t in texts:
