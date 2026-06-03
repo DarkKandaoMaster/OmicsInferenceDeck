@@ -3,12 +3,12 @@ import { useDataState } from '~/composables/domain/useDataState'
 import { useAlgorithmState } from '~/composables/domain/useAlgorithmState'
 
 const {
-  omicsFileConfigs, omicsTypes, uploadStatus,
+  omicsFileConfigs, omicsTypes,
   omicsIsRowSample, omicsHasHeader, omicsHasIndex,
   exampleText,
-  clinicalUploadStatus, clinicalIsRowSample, clinicalHasHeader, clinicalHasIndex,
+  clinicalIsRowSample, clinicalHasHeader, clinicalHasIndex,
   clinicalExampleText,
-  expressionMatrixFile, expressionMatrixUploadStatus,
+  expressionMatrixFile,
   expressionMatrixIsRowSample, expressionMatrixHasHeader, expressionMatrixHasIndex,
   expressionMatrixExampleText,
   clinicalFile,
@@ -98,10 +98,6 @@ function handleCancerSubtypeChange() {
             </button>
           </div>
         </div>
-
-        <div v-show="uploadStatus" class="mt-3 whitespace-pre-wrap break-words rounded-lg p-2 text-xs" :class="uploadStatus.startsWith('❌') ? 'border border-red-200 bg-red-50 text-red-700' : uploadStatus.startsWith('✅') ? 'border border-green-200 bg-green-50 text-green-800' : 'border border-slate-200 bg-slate-50 text-slate-700'">
-          {{ uploadStatus }}
-        </div>
       </div>
 
       <div class="h-px bg-slate-200 xl:h-auto xl:w-px" />
@@ -148,10 +144,6 @@ function handleCancerSubtypeChange() {
             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>
         </div>
-
-        <div v-show="expressionMatrixUploadStatus" class="mt-3 whitespace-pre-wrap break-words rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-700">
-          {{ expressionMatrixUploadStatus }}
-        </div>
       </div>
 
       <div class="h-px bg-slate-200 xl:h-auto xl:w-px" />
@@ -197,10 +189,6 @@ function handleCancerSubtypeChange() {
           <button type="button" aria-label="移除" title="移除" class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-red-300 hover:text-red-600" @click="clearClinicalFile()">
             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>
-        </div>
-
-        <div v-show="clinicalUploadStatus" class="mt-3 whitespace-pre-wrap break-words rounded-lg p-2 text-xs" :class="clinicalUploadStatus.startsWith('❌') ? 'border border-red-200 bg-red-50 text-red-700' : clinicalUploadStatus.startsWith('✅') ? 'border border-green-200 bg-green-50 text-green-800' : 'border border-slate-200 bg-slate-50 text-slate-700'">
-          {{ clinicalUploadStatus }}
         </div>
       </div>
     </div>
