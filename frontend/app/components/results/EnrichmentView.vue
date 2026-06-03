@@ -86,10 +86,6 @@ async function handleGeneCountChange() {
 </script>
 
 <template>
-  <div v-if="diffResult && isEnrichmentLoading" class="result-card col-span-2">
-    <div class="p-5"><div class="h-48 animate-pulse rounded-lg bg-slate-100" /></div>
-  </div>
-
   <template v-if="diffResult && hasAnyResult">
     <!-- 1. 柱状图：GO、KEGG -->
     <template v-for="db in DATABASES" :key="`bar-${db}`">
