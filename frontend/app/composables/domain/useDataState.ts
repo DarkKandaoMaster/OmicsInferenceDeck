@@ -192,6 +192,17 @@ export function useDataState() {
     }
   }
 
+  /* 根据文件名推断默认组学类型，未命中则返回 Unknown */
+  function inferOmicsType(fileName: string) {
+    const defaultTypeByName: Record<string, string> = {
+      'cn.fea': 'CopyNumber',
+      'meth.fea': 'Methylation',
+      'mirna.fea': 'miRNA',
+      'rna.fea': 'mRNA',
+    }
+    return defaultTypeByName[fileName.toLowerCase()] ?? 'Unknown'
+  }
+
   function handleFileChange(event: Event) {
     const files = Array.from((event.target as HTMLInputElement).files || [])
     if (files.length > 0) {
@@ -199,7 +210,7 @@ export function useDataState() {
         id: uuidv4(),
         file: f,
         originalName: f.name,
-        type: 'Unknown',
+        type: inferOmicsType(f.name),
       }))
       uploadStatus.value = '文件已选择，将在运行时自动上传。'
       isOmicsUploaded.value = false
