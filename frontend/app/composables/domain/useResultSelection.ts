@@ -18,15 +18,15 @@ export const metricOptions: { key: MetricKey; label: string }[] = [
 ]
 
 export const chartOptions: { key: ChartKey; label: string }[] = [
-  { key: 'inputClusterScatter', label: 'Input Cluster Scatter' },
-  { key: 'clusterScatter', label: 'Cluster Scatter' },
-  { key: 'diffVolcano', label: 'Differential Volcano' },
-  { key: 'diffHeatmap', label: 'Differential Heatmap' },
-  { key: 'enrichBarGO', label: 'Enrichment Bar Plot (GO)' },
-  { key: 'enrichBarKEGG', label: 'Enrichment Bar Plot (KEGG)' },
-  { key: 'enrichBubbleGO', label: 'Enrichment Bubble Plot (GO)' },
-  { key: 'enrichBubbleKEGG', label: 'Enrichment Bubble Plot (KEGG)' },
-  { key: 'survival', label: 'Survival Curve' },
+  { key: 'inputClusterScatter', label: '聚类前散点图' },
+  { key: 'clusterScatter', label: '聚类后散点图' },
+  { key: 'diffVolcano', label: '差异火山图' },
+  { key: 'diffHeatmap', label: '差异热图' },
+  { key: 'enrichBarGO', label: 'GO富集分析条形图' },
+  { key: 'enrichBarKEGG', label: 'KEGG富集分析条形图' },
+  { key: 'enrichBubbleGO', label: 'GO富集分析气泡图' },
+  { key: 'enrichBubbleKEGG', label: 'KEGG富集分析气泡图' },
+  { key: 'survival', label: '生存曲线' },
 ]
 
 const enabledMetrics = reactive<Record<MetricKey, boolean>>({
