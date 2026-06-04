@@ -189,7 +189,7 @@ p <- p +
     legend.position = c(0.985, 0.985),
     legend.justification = c(1, 1),
     legend.title = element_blank(),
-    legend.text = element_text(family = FONT_FAMILY, size = 11),
+    legend.text = element_text(family = FONT_FAMILY, size = 11, face = "bold"),
     legend.background = element_rect(fill = "white", color = "black", linewidth = 0.4),
     legend.key = element_rect(fill = "white", color = NA),
     legend.margin = margin(2, 4, 2, 4)
