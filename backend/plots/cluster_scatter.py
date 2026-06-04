@@ -77,6 +77,7 @@ def build_figure(cluster_result_path: str, reduction: str = "PCA", random_state:
 
     configure_matplotlib()
     fig, ax = plt.subplots(figsize=(12, 10))
+    ax.set_box_aspect(0.75)
     unique_labels = sorted(pd.Series(labels).dropna().unique())
     palette = _scatter_palette(max(len(unique_labels), 1))
     label_font = reference_font_dict()

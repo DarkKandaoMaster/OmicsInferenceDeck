@@ -178,6 +178,7 @@ p <- p +
   guides(color = guide_legend(override.aes = list(size = 3, alpha = 1))) +
   theme_bw(base_family = FONT_FAMILY, base_size = 12) +
   theme(
+    aspect.ratio = 3 / 4,
     panel.background = element_rect(fill = "white", color = NA),
     panel.grid.major = element_line(color = "#E5E7EB", linewidth = 0.21),
     panel.grid.minor = element_blank(),

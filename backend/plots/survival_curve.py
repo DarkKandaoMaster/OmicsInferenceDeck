@@ -19,6 +19,7 @@ def build_figure(survival_data_path: str, p_value: float | None = None) -> plt.F
 
     configure_matplotlib()
     fig, ax = plt.subplots(figsize=(9, 6))
+    ax.set_box_aspect(2/3)
     for spine in ax.spines.values():
         spine.set_linewidth(0.8)
     kmf = KaplanMeierFitter()
