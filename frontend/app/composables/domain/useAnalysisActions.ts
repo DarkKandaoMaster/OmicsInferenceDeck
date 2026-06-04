@@ -167,22 +167,6 @@ export function useAnalysisActions() {
       mergeIntoBackendResponse({ clinical_metrics: clinicalMetrics })
     }
 
-    if (enabledCharts.clusterScatter) {
-      analysisStatus.value = '正在绘制聚类散点图...'
-      const plotRes = await renderClusterScatter({
-        session_id: sessionId.value,
-        reduction: currentReduction.value,
-        random_state: randomSeed.value,
-      })
-      mergeIntoBackendResponse({
-        reduction: currentReduction.value,
-        plots: {
-          ...(backendResponse.value?.data?.plots || {}),
-          cluster_scatter: plotRes.data.svg,
-        },
-      })
-    }
-
     if (enabledCharts.inputClusterScatter) {
       analysisStatus.value = '正在绘制聚类前散点图...'
       try {
@@ -200,6 +184,22 @@ export function useAnalysisActions() {
       } catch (_error) {
         // 失败不阻塞主流程
       }
+    }
+
+    if (enabledCharts.clusterScatter) {
+      analysisStatus.value = '正在绘制聚类散点图...'
+      const plotRes = await renderClusterScatter({
+        session_id: sessionId.value,
+        reduction: currentReduction.value,
+        random_state: randomSeed.value,
+      })
+      mergeIntoBackendResponse({
+        reduction: currentReduction.value,
+        plots: {
+          ...(backendResponse.value?.data?.plots || {}),
+          cluster_scatter: plotRes.data.svg,
+        },
+      })
     }
   }
 
