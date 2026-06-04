@@ -31,8 +31,6 @@ from plots.base import (
 from plots.cluster_scatter import build_figure as build_cluster_scatter_figure
 from plots.input_cluster_scatter import build_figure as build_input_cluster_scatter_figure
 from routers.upload import OMICS_DATA_FILE
-from plots.differential_volcano import build_figure as build_volcano_figure
-from plots.differential_volcano import render_svg as render_volcano_svg
 from plots.parameter_surface import build_figure as build_parameter_figure
 from plots.parameter_surface import render_svg as render_parameter_svg
 from plots.survival_curve import build_figure as build_survival_figure
@@ -136,8 +134,13 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
     if plot_type == "differential_volcano":
         cluster_id = _require_cluster_id(request)
         path = plot_path(request.session_id, DIFFERENTIAL_VOLCANO_FILE)
-        fig = build_volcano_figure(str(path), cluster_id)
-        return figure_to_bytes(fig, file_format, dpi=600), f"differential_volcano_cluster_{cluster_id}"
+        payload = run_r_plot_bytes(
+            "differential_volcano.R",
+            [path, cluster_id],
+            file_format,
+            session_dir(request.session_id),
+        )
+        return payload, f"differential_volcano_cluster_{cluster_id}"
 
     if plot_type == "survival_curve":
         path = plot_path(request.session_id, SURVIVAL_DATA_FILE)
@@ -193,7 +196,7 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
 async def differential_volcano(request: ClusterSpecificPlotRequest):
     try:
         path = plot_path(request.session_id, DIFFERENTIAL_VOLCANO_FILE)
-        return {"status": "success", "svg": render_volcano_svg(str(path), request.cluster_id)}
+        return {"status": "success", "svg": run_r_svg("differential_volcano.R", [path, request.cluster_id])}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
