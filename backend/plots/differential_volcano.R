@@ -178,7 +178,7 @@ p <- p +
   guides(color = guide_legend(override.aes = list(size = 3, alpha = 1))) +
   theme_bw(base_family = FONT_FAMILY, base_size = 12) +
   theme(
-    panel.background = element_rect(fill = "#FAFBFC", color = NA),
+    panel.background = element_rect(fill = "white", color = NA),
     panel.grid.major = element_line(color = "#E5E7EB", linewidth = 0.21),
     panel.grid.minor = element_blank(),
     panel.border = element_rect(color = "#2B2F36", fill = NA, linewidth = 0.5),
@@ -189,7 +189,7 @@ p <- p +
     legend.justification = c(1, 1),
     legend.title = element_blank(),
     legend.text = element_text(family = FONT_FAMILY, size = 11),
-    legend.background = element_rect(fill = "white", color = "#D0D4DA", linewidth = 0.21),
+    legend.background = element_rect(fill = "white", color = "black", linewidth = 0.4),
     legend.key = element_rect(fill = "white", color = NA),
     legend.margin = margin(2, 4, 2, 4)
   )
