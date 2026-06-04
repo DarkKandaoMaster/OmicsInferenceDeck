@@ -138,9 +138,14 @@ p <- ggplot(df, aes(x = logFC, y = negLog10P, color = category, size = category,
 
 if (nrow(top) > 0) {
   if (has_ggrepel) {
+    # Feed every scatter point to the repel layer so labels avoid ALL points,
+    # not just the labelled ones. Non-top genes get an empty label: ggrepel
+    # draws nothing for them but still treats their position as an obstacle.
+    repel_df <- df
+    repel_df$repel_label <- ifelse(repel_df$gene %in% top$gene, as.character(repel_df$gene), "")
     p <- p + ggrepel::geom_text_repel(
-      data = top,
-      mapping = aes(x = logFC, y = negLog10P, label = gene),
+      data = repel_df,
+      mapping = aes(x = logFC, y = negLog10P, label = repel_label),
       inherit.aes = FALSE,
       family = FONT_FAMILY,
       fontface = "bold",
