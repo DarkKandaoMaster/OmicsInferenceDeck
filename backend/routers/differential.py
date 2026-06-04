@@ -24,7 +24,6 @@ from plots.base import (
     plot_path,
     run_r_svg,
 )
-from plots.differential_volcano import render_svg as render_volcano_svg
 
 
 router = APIRouter()
@@ -288,7 +287,7 @@ async def run_differential_analysis(request: DifferentialAnalysisRequest):
         )
 
         try:
-            volcano_svg = render_volcano_svg(str(volcano_path), selected_cluster)
+            volcano_svg = run_r_svg("differential_volcano.R", [volcano_path, selected_cluster])
         except Exception as exc:
             volcano_svg = empty_svg(f"Volcano plot failed: {exc}", "Differential Volcano")
 
