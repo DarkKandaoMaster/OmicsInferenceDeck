@@ -16,7 +16,7 @@ cluster_id <- as.integer(args[[2]])
 output_format <- if (length(args) >= 3) tolower(args[[3]]) else ""
 output_path <- if (length(args) >= 4) args[[4]] else ""
 is_download <- output_format %in% c("png", "svg", "pdf") && nzchar(output_path)
-FONT_FAMILY <- "serif"
+FONT_FAMILY <- "Times New Roman"
 
 LOGFC_THRESHOLD <- 0.5
 P_THRESHOLD <- 0.05
@@ -29,11 +29,11 @@ LABEL_COLOR <- "#1F2329"
 
 open_plot_device <- function(width, height) {
   if (output_format == "png") {
-    grDevices::png(output_path, width = width, height = height, units = "in", res = 600, bg = "white")
+    grDevices::png(output_path, width = width, height = height, units = "in", res = 600, bg = "white", type = "cairo")
   } else if (output_format == "svg") {
     svglite::svglite(output_path, width = width, height = height, bg = "white")
   } else if (output_format == "pdf") {
-    grDevices::pdf(output_path, width = width, height = height, bg = "white", family = FONT_FAMILY)
+    grDevices::cairo_pdf(output_path, width = width, height = height, bg = "white", family = FONT_FAMILY)
   } else {
     stop("Unsupported output format")
   }
@@ -184,7 +184,7 @@ p <- p +
     panel.border = element_rect(color = "#2B2F36", fill = NA, linewidth = 0.5),
     plot.title = element_text(family = FONT_FAMILY, size = 16, fontface = "bold", hjust = 0.5),
     axis.title = element_text(family = FONT_FAMILY, size = 16, fontface = "bold"),
-    axis.text = element_text(family = FONT_FAMILY, size = 16, fontface = "bold"),
+    axis.text = element_text(family = FONT_FAMILY, size = 16, fontface = "bold", colour = "black"),
     legend.position = c(0.985, 0.985),
     legend.justification = c(1, 1),
     legend.title = element_blank(),
