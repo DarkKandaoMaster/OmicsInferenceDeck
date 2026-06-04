@@ -61,7 +61,7 @@ watch(isCustomEvalMode, (enabled) => {
       </div>
 
       <div class="border-t border-slate-100 bg-slate-50/50 px-5 py-3 text-[12px] leading-relaxed text-slate-500">
-        依赖关系：综合得分 依赖 聚类内部质量指标 / 临床关联指标 / 生物学相关性指标；生物学相关性指标 依赖 Enrichment 图；Enrichment 图 依赖 Differential 图。如取消上游而保留下游，对应计算可能因缺少前置数据而失败。
+        依赖关系： 综合得分 依赖 聚类内部质量指标、临床关联指标、生物学相关性指标； 生物学相关性指标 依赖 任一富集分析图； 富集分析图 依赖 任一差异分析图。 勾选下游会自动勾选其全部上游；当某组上游全部取消勾选时，依赖它的下游也会自动取消勾选。
       </div>
     </section>
 
