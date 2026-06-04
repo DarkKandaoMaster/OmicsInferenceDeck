@@ -82,8 +82,6 @@ def build_figure(
             expand_text=(1.2, 1.3),
             force_points=(0.4, 0.6),
             force_text=(0.3, 0.5),
-            # shrinkA/shrinkB keep the leader line from striking through the
-            # label (and the dot) when adjustText falls back to ax.annotate.
             arrowprops=dict(arrowstyle="-", color="#7A7F87", lw=0.6, alpha=0.8),
         )
     elif texts:
