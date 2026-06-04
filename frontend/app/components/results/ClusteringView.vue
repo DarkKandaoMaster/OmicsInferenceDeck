@@ -22,7 +22,7 @@ const downloadParams = computed(() => ({
 <template>
   <div v-if="enabledCharts.clusterScatter && clusterSvg" class="result-card">
     <div class="result-card-header">
-      <div class="result-card-title">Cluster Scatter</div>
+      <div class="result-card-title">聚类后散点图</div>
       <div class="flex items-center gap-3">
         <div class="inline-flex rounded-lg overflow-hidden border border-slate-200">
           <button @click="switchReduction('PCA')" :class="currentReduction === 'PCA' ? 'bg-primary text-white' : 'bg-white text-slate-600 hover:bg-slate-100'" :disabled="isLoading" class="chart-toggle">PCA</button>

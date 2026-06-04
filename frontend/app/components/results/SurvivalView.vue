@@ -17,7 +17,7 @@ const downloadParams = computed(() => ({
   <template v-if="enabledCharts.survival">
     <div v-if="survivalResult" class="result-card">
       <div class="result-card-header">
-        <div class="result-card-title">Survival Curve</div>
+        <div class="result-card-title">生存曲线</div>
         <div class="flex items-center gap-3 text-sm text-slate-600">
           <span>
             Log-Rank P-value:
