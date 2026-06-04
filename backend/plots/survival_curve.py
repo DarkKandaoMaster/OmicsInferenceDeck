@@ -62,6 +62,7 @@ def build_figure(survival_data_path: str, p_value: float | None = None) -> plt.F
 
     ax.set_xlabel("Time (days)", fontproperties=label_font)
     ax.set_ylabel("Survival Probability", fontproperties=label_font)
+    legend_font = reference_font_dict(size=11)
     legend = ax.legend(
         title="Clusters",
         loc="upper right",
@@ -70,10 +71,15 @@ def build_figure(survival_data_path: str, p_value: float | None = None) -> plt.F
         facecolor="white",
         edgecolor="black",
         bbox_to_anchor=(1, 1),
+        markerscale=0.7,
+        handlelength=1.5,
+        handletextpad=0.5,
+        labelspacing=0.3,
+        borderpad=0.4,
     )
-    plt.setp(legend.get_title(), fontproperties=label_font)
+    plt.setp(legend.get_title(), fontproperties=legend_font)
     for text in legend.get_texts():
-        text.set_fontproperties(label_font)
+        text.set_fontproperties(legend_font)
     fig.tight_layout()
     return fig
 
