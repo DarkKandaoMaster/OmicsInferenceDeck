@@ -86,6 +86,7 @@ def build_figure(
 
     configure_matplotlib()
     fig, ax = plt.subplots(figsize=(12, 10))
+    ax.set_box_aspect(0.75)
     unique_labels = sorted(pd.Series(labels).dropna().unique())
     palette = _scatter_palette(max(len(unique_labels), 1))
     label_font = reference_font_dict()

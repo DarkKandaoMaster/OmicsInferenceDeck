@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LightSource, LinearSegmentedColormap
 from scipy.interpolate import griddata
 
-from .base import SURFACE_COLORS, configure_matplotlib, empty_figure, figure_to_svg, set_2d_plot_box
+from .base import SURFACE_COLORS, configure_matplotlib, empty_figure, figure_to_svg
 
 
 def _maybe_log_axis(values: np.ndarray, force: bool = False) -> tuple[np.ndarray, bool]:
@@ -77,7 +77,7 @@ def build_figure(results_path: str, x_param: str, y_param: str | None = None) ->
         ax.set_xlabel(x_param, fontweight="bold")
         ax.set_ylabel("$-\\log_{10}(p)$", fontweight="bold")
         ax.set_title(f"Parameter Sensitivity ({x_param})", fontweight="bold")
-        set_2d_plot_box(ax)
+        ax.set_box_aspect(0.75)
         ax.grid(True, linestyle="--", alpha=0.28)
         fig.tight_layout()
         return fig
