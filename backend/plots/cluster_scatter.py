@@ -69,7 +69,7 @@ def build_figure(cluster_result_path: str, reduction: str = "PCA", random_state:
 
     emb_cols = [col for col in df.columns if col.startswith("emb_")]
     if len(emb_cols) == 0:
-        return empty_figure("No feature matrix columns found in cluster_result.parquet.", "Cluster Scatter")
+        return empty_figure("未检测到融合后的特征矩阵，无法绘制聚类后散点图。", "Cluster Scatter")
 
     labels = df["label"].to_numpy()
     embeddings = df[emb_cols].to_numpy(dtype=float)

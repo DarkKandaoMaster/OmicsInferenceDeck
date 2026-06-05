@@ -144,11 +144,16 @@ export function useAnalysisActions() {
 
     if (enabledMetrics.cluster) {
       analysisStatus.value = '正在计算聚类评估指标...'
-      const metricsRes = await computeMetrics({
-        session_id: sessionId.value,
-      })
-      const { data: nestedData = {}, ...topLevel } = metricsRes.data || {}
-      mergeIntoBackendResponse(nestedData, topLevel)
+      try {
+        const metricsRes = await computeMetrics({
+          session_id: sessionId.value,
+        })
+        const { data: nestedData = {}, ...topLevel } = metricsRes.data || {}
+        mergeIntoBackendResponse(nestedData, topLevel)
+      } catch (_error) {
+        // 缺失融合特征矩阵等情况下不让异常冒泡，避免中断后续分析
+        mergeIntoBackendResponse({ metrics: null, feature_matrix_available: false })
+      }
     }
 
     if (clinicalFile.value && enabledMetrics.clinical) {
@@ -188,18 +193,22 @@ export function useAnalysisActions() {
 
     if (enabledCharts.clusterScatter) {
       analysisStatus.value = '正在绘制聚类散点图...'
-      const plotRes = await renderClusterScatter({
-        session_id: sessionId.value,
-        reduction: currentReduction.value,
-        random_state: randomSeed.value,
-      })
-      mergeIntoBackendResponse({
-        reduction: currentReduction.value,
-        plots: {
-          ...(backendResponse.value?.data?.plots || {}),
-          cluster_scatter: plotRes.data.svg,
-        },
-      })
+      try {
+        const plotRes = await renderClusterScatter({
+          session_id: sessionId.value,
+          reduction: currentReduction.value,
+          random_state: randomSeed.value,
+        })
+        mergeIntoBackendResponse({
+          reduction: currentReduction.value,
+          plots: {
+            ...(backendResponse.value?.data?.plots || {}),
+            cluster_scatter: plotRes.data.svg,
+          },
+        })
+      } catch (_error) {
+        // 失败不阻塞主流程
+      }
     }
   }
 
