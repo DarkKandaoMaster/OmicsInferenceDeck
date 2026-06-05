@@ -36,8 +36,8 @@ const hasSelectedAlgorithm = computed(() => selectedAlgorithm.value.length > 0)
           1.从左到右分别是<br>
           <strong>病人名称</strong>（索引列）、<br>
           <strong>聚类结果</strong>（第2列）、<br>
-          <strong>融合后的特征矩阵</strong>（第3列及之后）。<br>
-          2.行代表病人，列代表特征。有表头行、索引列。
+          <strong>融合后的特征矩阵</strong>（第3列及之后）（可选）。<br>
+          2.有表头行。
         </p>
         <div class="relative rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 text-center transition-all hover:border-primary hover:bg-indigo-50">
           <input type="file" accept=".csv,.xlsx,.xls" class="absolute inset-0 h-full w-full cursor-pointer opacity-0" @change="handleCustomEvalFileChange($event)" />

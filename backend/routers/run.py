@@ -160,11 +160,11 @@ async def evaluate_custom(
             except Exception as e:
                 raise ValueError(f"结果文件解析失败，请确保格式正确: {str(e)}")
 
-        if df.shape[1] < 2:
-            raise ValueError(
-                "结果数据格式不符：除样本名称（索引列）外，"
-                "至少应包含一列聚类标签和一列特征数据。"
-            )
+        # if df.shape[1] < 2:
+        #     raise ValueError(
+        #         "结果数据格式不符：除样本名称（索引列）外，"
+        #         "至少应包含一列聚类标签和一列特征数据。"
+        #     )
 
         sample_names = df.index.astype(str).tolist()
 
