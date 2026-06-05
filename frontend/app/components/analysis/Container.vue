@@ -5,9 +5,11 @@ import { useAlgorithmState } from '~/composables/domain/useAlgorithmState'
 import { useResultSelection } from '~/composables/domain/useResultSelection'
 
 const { isCustomEvalMode } = useDataState()
-const { errorMessage } = useUIState()
-const { isTestMode } = useAlgorithmState()
+const { isLoading, errorMessage } = useUIState()
+const { isTestMode, isPsLoading } = useAlgorithmState()
 const { enabledMetrics, enabledCharts, metricOptions, chartOptions } = useResultSelection()
+
+const isBusy = computed(() => isLoading.value || isPsLoading.value)
 
 watch(isCustomEvalMode, (enabled) => {
   if (enabled) isTestMode.value = false
@@ -15,7 +17,7 @@ watch(isCustomEvalMode, (enabled) => {
 </script>
 
 <template>
-  <div class="mx-auto flex max-w-7xl flex-col gap-6">
+  <fieldset :disabled="isBusy" class="mx-auto flex max-w-7xl flex-col gap-6 min-w-0 border-0 p-0 m-0">
     <AnalysisModeSelector v-model:is-custom-eval-mode="isCustomEvalMode" />
 
     <AnalysisDataUpload />
@@ -72,5 +74,5 @@ watch(isCustomEvalMode, (enabled) => {
     </div>
 
     <ResultsContainer />
-  </div>
+  </fieldset>
 </template>
