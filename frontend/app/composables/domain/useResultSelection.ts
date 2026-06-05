@@ -61,7 +61,7 @@ const runEnrichment = computed(
     enabledCharts.enrichBubbleKEGG,
 )
 
-// ── 选项依赖联动 ───────────────────────────────────────────────────────────
+// 选项依赖联动
 // 依赖来自后端读取的中间文件（上游不算，下游会报错或得 0 分）：
 //   awa(综合得分) 依赖 cluster + clinical + biology
 //   biology(生物学相关性) 依赖 任一 Enrichment 图（读 enrichment_{GO/KEGG}.parquet）
