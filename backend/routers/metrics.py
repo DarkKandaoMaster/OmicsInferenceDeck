@@ -173,6 +173,24 @@ async def cluster_metrics(request: MetricsRequest):
         if not result_path.exists():
             raise FileNotFoundError("cluster_result.parquet not found. Please run clustering first.")
 
+        # 缺失融合后的特征矩阵（无 emb_ 列）时，跳过聚类内部质量指标的计算，
+        # 直接返回成功载荷，避免 R 脚本 stop 导致 400 中断整个分析流程。
+        result_df = pd.read_parquet(result_path)
+        has_feature_matrix = any(str(col).startswith("emb_") for col in result_df.columns)
+        if not has_feature_matrix:
+            return {
+                "status": "success",
+                "message": "No feature matrix found; cluster metrics skipped.",
+                "server_time": datetime.datetime.now().isoformat(),
+                "data": {
+                    "method": "Clustering",
+                    "metrics": None,
+                    "feature_matrix_available": False,
+                    "n_samples": len(result_df),
+                    "n_features": 0,
+                },
+            }
+
         metrics_scores, n_samples, n_features = compute_cluster_metrics(str(result_path))
         return {
             "status": "success",
@@ -181,6 +199,7 @@ async def cluster_metrics(request: MetricsRequest):
             "data": {
                 "method": "Clustering",
                 "metrics": metrics_scores,
+                "feature_matrix_available": True,
                 "n_samples": n_samples,
                 "n_features": n_features,
             },

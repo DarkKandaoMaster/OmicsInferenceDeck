@@ -33,11 +33,11 @@ const hasSelectedAlgorithm = computed(() => selectedAlgorithm.value.length > 0)
       <div>
         <p class="mb-4 text-[13px] leading-relaxed text-slate-500">
           请把你上传的组学数据作为输入，用你自己的算法，生成一个CSV/Excel文件：<br>
-          1.从左到右分别是<br>
+          1. 从左到右分别是<br>
           <strong>病人名称</strong>（索引列）、<br>
           <strong>聚类结果</strong>（第2列）、<br>
           <strong>融合后的特征矩阵</strong>（第3列及之后）（可选）。<br>
-          2.有表头行。
+          2. 有表头行。
         </p>
         <div class="relative rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 text-center transition-all hover:border-primary hover:bg-indigo-50">
           <input type="file" accept=".csv,.xlsx,.xls" class="absolute inset-0 h-full w-full cursor-pointer opacity-0" @change="handleCustomEvalFileChange($event)" />
