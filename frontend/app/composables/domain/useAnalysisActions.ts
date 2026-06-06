@@ -1,4 +1,4 @@
-import { computeAwaMetrics, computeBiologyMetrics, computeClinicalMetrics, computeMetrics, evaluateCustom, renderClusterScatter, renderInputClusterScatter, runAlgorithm, runParameterSearch } from '~/utils/api'
+import { computeAwaMetrics, computeBiologyMetrics, computeClinicalMetrics, computeMetrics, evaluateCustom, renderPredClusterScatter, renderInputClusterScatter, runAlgorithm, runParameterSearch } from '~/utils/api'
 import { useSession } from '~/composables/core/useSession'
 import { useUIState } from '~/composables/core/useUIState'
 import { useDataState } from '~/composables/domain/useDataState'
@@ -191,10 +191,10 @@ export function useAnalysisActions() {
       }
     }
 
-    if (enabledCharts.clusterScatter) {
+    if (enabledCharts.predClusterScatter) {
       analysisStatus.value = '正在绘制聚类散点图...'
       try {
-        const plotRes = await renderClusterScatter({
+        const plotRes = await renderPredClusterScatter({
           session_id: sessionId.value,
           reduction: currentReduction.value,
           random_state: randomSeed.value,
@@ -203,7 +203,7 @@ export function useAnalysisActions() {
           reduction: currentReduction.value,
           plots: {
             ...(backendResponse.value?.data?.plots || {}),
-            cluster_scatter: plotRes.data.svg,
+            pred_cluster_scatter: plotRes.data.svg,
           },
         })
       } catch (_error) {
@@ -286,7 +286,7 @@ export function useAnalysisActions() {
 
     isLoading.value = true
     try {
-      const res = await renderClusterScatter({
+      const res = await renderPredClusterScatter({
         session_id: sessionId.value,
         reduction: currentReduction.value,
         random_state: randomSeed.value,
@@ -295,7 +295,7 @@ export function useAnalysisActions() {
         reduction: currentReduction.value,
         plots: {
           ...(backendResponse.value?.data?.plots || {}),
-          cluster_scatter: res.data.svg,
+          pred_cluster_scatter: res.data.svg,
         },
       })
 

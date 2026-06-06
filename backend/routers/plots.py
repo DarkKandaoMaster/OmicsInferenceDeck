@@ -28,7 +28,7 @@ from plots.base import (
     run_r_svg,
     session_dir,
 )
-from plots.cluster_scatter import build_figure as build_cluster_scatter_figure
+from plots.pred_cluster_scatter import build_figure as build_pred_cluster_scatter_figure
 from plots.input_cluster_scatter import build_figure as build_input_cluster_scatter_figure
 from routers.upload import OMICS_DATA_FILE
 from plots.parameter_surface import build_figure as build_parameter_figure
@@ -115,10 +115,10 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
     plot_type = request.plot_type.strip().lower()
     file_format = request.format.strip().lower()
 
-    if plot_type == "cluster_scatter":
+    if plot_type == "pred_cluster_scatter":
         path = plot_path(request.session_id, CLUSTER_RESULT_FILE)
-        fig = build_cluster_scatter_figure(str(path), request.reduction, _seed_or_none(request.random_state))
-        return figure_to_bytes(fig, file_format, dpi=600), f"cluster_scatter_{request.reduction}"
+        fig = build_pred_cluster_scatter_figure(str(path), request.reduction, _seed_or_none(request.random_state))
+        return figure_to_bytes(fig, file_format, dpi=600), f"pred_cluster_scatter_{request.reduction}"
 
     if plot_type == "input_cluster_scatter":
         omics_path = plot_path(request.session_id, OMICS_DATA_FILE)

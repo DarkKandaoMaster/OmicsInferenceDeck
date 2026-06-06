@@ -11,7 +11,7 @@ const { backendResponse, switchReduction } = useAnalysisActions()
 const { sessionId } = useSession()
 const { enabledCharts } = useResultSelection()
 
-const clusterSvg = computed(() => backendResponse.value?.data?.plots?.cluster_scatter || '')
+const clusterSvg = computed(() => backendResponse.value?.data?.plots?.pred_cluster_scatter || '')
 const downloadParams = computed(() => ({
   session_id: sessionId.value,
   reduction: currentReduction.value,
@@ -20,7 +20,7 @@ const downloadParams = computed(() => ({
 </script>
 
 <template>
-  <div v-if="enabledCharts.clusterScatter && clusterSvg" class="result-card">
+  <div v-if="enabledCharts.predClusterScatter && clusterSvg" class="result-card">
     <div class="result-card-header">
       <div class="result-card-title">聚类后散点图</div>
       <div class="flex items-center gap-3">
@@ -29,7 +29,7 @@ const downloadParams = computed(() => ({
           <button @click="switchReduction('t-SNE')" :class="currentReduction === 't-SNE' ? 'bg-primary text-white' : 'bg-white text-slate-600 hover:bg-slate-100'" :disabled="isLoading" class="chart-toggle">t-SNE</button>
           <button @click="switchReduction('UMAP')" :class="currentReduction === 'UMAP' ? 'bg-primary text-white' : 'bg-white text-slate-600 hover:bg-slate-100'" :disabled="isLoading" class="chart-toggle">UMAP</button>
         </div>
-        <ResultsPlotDownloadButton plot-type="cluster_scatter" :params="downloadParams" filename-prefix="cluster_scatter" :disabled="isLoading" />
+        <ResultsPlotDownloadButton plot-type="pred_cluster_scatter" :params="downloadParams" filename-prefix="pred_cluster_scatter" :disabled="isLoading" />
       </div>
     </div>
     <div class="svg-chart" v-html="clusterSvg" />

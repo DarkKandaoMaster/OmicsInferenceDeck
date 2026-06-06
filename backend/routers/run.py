@@ -2,7 +2,7 @@
 
 本文件读取 upload.py 保存的组学数据，根据前端传来的算法名称和参数加载算法，
 执行聚类并生成每个样本的标签和特征矩阵。结果会保存为 cluster_result.parquet，
-供 metrics.py、cluster_scatter.py、survival.py、differential.py 等后续接口使用。
+供 metrics.py、pred_cluster_scatter.py、survival.py、differential.py 等后续接口使用。
 """
 
 import os
@@ -95,7 +95,7 @@ async def run_analysis(request:AnalysisRequest): #指定record的类型为Analys
         #   sample_names — 长度 n_samples 的列表，样本名称
         labels, embeddings, sample_names = algo_instance.fit_predict(data_dict)
 
-        # 4. 将中间结果持久化到 cluster_result.parquet，供 /api/metrics 和 /api/plots/cluster_scatter 读取
+        # 4. 将中间结果持久化到 cluster_result.parquet，供 /api/metrics 和 /api/plots/pred_cluster_scatter 读取
         n_features = embeddings.shape[1]
         df_result = pd.DataFrame(
             embeddings,
@@ -109,7 +109,7 @@ async def run_analysis(request:AnalysisRequest): #指定record的类型为Analys
         # 5. 返回基础聚类信息（不含指标和散点图，由独立指标/绘图接口负责）
         return {
             "status": "success",
-            "message": f"算法 {request.algorithm} 运行成功，请调用 /api/metrics 获取指标，并调用 /api/plots/cluster_scatter 获取散点图",
+            "message": f"算法 {request.algorithm} 运行成功，请调用 /api/metrics 获取指标，并调用 /api/plots/pred_cluster_scatter 获取散点图",
             "server_time": datetime.datetime.now().isoformat(),
             "data": {
                 "method": request.algorithm,
@@ -130,7 +130,7 @@ async def run_analysis(request:AnalysisRequest): #指定record的类型为Analys
 
 本文件用于用户已经在外部完成聚类的情况。它接收用户上传的结果文件，检查样本是否
 能和 upload.py 保存的组学数据、临床数据对应上，然后保存成和 /api/run 相同格式的
-cluster_result.parquet。这样 metrics.py、cluster_scatter.py 等后续接口可以继续使用。
+cluster_result.parquet。这样 metrics.py、pred_cluster_scatter.py 等后续接口可以继续使用。
 """
 
 @router.post("/api/evaluate_custom")
@@ -200,7 +200,7 @@ async def evaluate_custom(
         labels = df_filtered.iloc[:, 0].values
         embeddings = df_filtered.iloc[:, 1:].values
 
-        # 5. 持久化中间结果，供 /api/metrics 和 /api/plots/cluster_scatter 读取（Parquet 格式）
+        # 5. 持久化中间结果，供 /api/metrics 和 /api/plots/pred_cluster_scatter 读取（Parquet 格式）
         n_features = embeddings.shape[1]
         df_result = pd.DataFrame(
             embeddings,
@@ -217,7 +217,7 @@ async def evaluate_custom(
         # 6. 返回基础聚类信息（不含指标和散点图，由独立指标/绘图接口负责）
         return {
             "status": "success",
-            "message": "自定义结果解析成功，请调用 /api/metrics 获取指标，并调用 /api/plots/cluster_scatter 获取散点图",
+            "message": "自定义结果解析成功，请调用 /api/metrics 获取指标，并调用 /api/plots/pred_cluster_scatter 获取散点图",
             "server_time": datetime.datetime.now().isoformat(),
             "data": {
                 "method": "Custom Evaluation",
