@@ -64,8 +64,8 @@ async function handleDownload(format: PlotFormat) {
           />
           <label class="mt-4 flex w-full max-w-[280px] cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
             <span>
-              <span class="block text-sm font-semibold text-slate-900">图表类型</span>
-              <span class="block text-xs text-slate-500">{{ variantLabel }}</span>
+              <span class="block text-sm font-semibold text-slate-900">我想绘制：<br>{{ variantLabel }}</span>
+              <!-- <span class="block text-xs text-slate-500">{{ variantLabel }}</span> -->
             </span>
             <span class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors" :class="isClinical ? 'bg-primary' : 'bg-slate-300'">
               <input v-model="isClinical" type="checkbox" class="sr-only" />
@@ -79,7 +79,7 @@ async function handleDownload(format: PlotFormat) {
               :disabled="isLoading"
               @click="generate"
             >
-              {{ isLoading ? '生成中...' : '生成箱线图' }}
+              {{ isLoading ? '生成中...' : '生成图表' }}
             </button>
             <p v-if="errorMessage" class="text-[13px] text-red-600">{{ errorMessage }}</p>
           </div>
@@ -90,7 +90,7 @@ async function handleDownload(format: PlotFormat) {
         <!-- 预览区 -->
         <div>
           <div class="mb-3 flex items-center justify-between gap-3">
-            <h4 class="m-0 text-sm font-semibold text-slate-900">箱线图预览</h4>
+            <h4 class="m-0 text-sm font-semibold text-slate-900">图表预览</h4>
             <div ref="downloadRoot" class="relative inline-flex">
               <button
                 type="button"
