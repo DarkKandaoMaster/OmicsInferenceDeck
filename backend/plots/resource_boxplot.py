@@ -5,6 +5,8 @@
 x 轴标签与标题（A：-log10 P-values；B：显著临床参数数量）。
 """
 
+import io
+import re
 from collections import OrderedDict
 
 import pandas as pd
@@ -24,37 +26,51 @@ VARIANTS: "OrderedDict[str, dict[str, str]]" = OrderedDict(
 
 
 def parse_boxplot_data(text: str) -> "OrderedDict[str, list[float]]":
-    """解析「名称,数值,数值,...」格式的多行文本。
+    """用 pandas.read_csv 解析「名称<分隔符>数值<分隔符>数值...」文本，支持 CSV 与 TSV。
 
-    - 空行（含纯空白行）跳过；
-    - 每行第一个字段为方法名，其余字段为数值，数量不限（不硬编码 9）；
+    - 分隔符交给 read_csv 自动嗅探（sep=None + engine="python"，与 upload.py 一致），
+      逗号、制表符等格式均通吃，无需手动判定；
+    - 每行数值数量不限（不硬编码 9）：预留足够列数，较短行由 read_csv 补 NaN 后丢弃；
     - 名称缺失、数值无法解析或最终无任何有效行时，抛出 ValueError 并给出中文提示。
     """
     if not text or not text.strip():
-        raise ValueError("输入数据为空，请粘贴「名称,数值,数值,...」格式的数据。")
+        raise ValueError("输入数据为空，请粘贴「名称,数值,数值,...」格式的 CSV 或 TSV 数据。")
+
+    # 预留列数上界：实际分隔符必是逗号/制表符/空格之一，按这三者的并集切分必然 ≥ 真实列数，
+    # 因此无需提前知道分隔符即可给出安全上界（多出的列由 read_csv 补 NaN，循环里被丢弃）。
+    nonblank_lines = [line for line in text.splitlines() if line.strip()]
+    max_cols = max(len(re.split(r"[,\t ]", line)) for line in nonblank_lines)
+
+    try:
+        df = pd.read_csv(
+            io.StringIO(text),
+            sep=None,                     # 自动嗅探分隔符：CSV / TSV 通吃
+            engine="python",             # 自动嗅探与不等长行需要 python 引擎
+            header=None,
+            names=list(range(max_cols)),  # 预留足够列数，较短行自动补 NaN
+            skip_blank_lines=True,
+            dtype=str,                    # 统一按字符串读入，数值转换与校验自行处理
+        )
+    except pd.errors.ParserError as exc:
+        raise ValueError(f"数据解析失败，请检查格式是否为规范的 CSV / TSV：{exc}")
 
     data: "OrderedDict[str, list[float]]" = OrderedDict()
-    for lineno, raw_line in enumerate(text.splitlines(), start=1):
-        line = raw_line.strip()
-        if not line:
-            continue
+    for rowno, (_, row) in enumerate(df.iterrows(), start=1):
+        # 丢弃补位产生的 NaN（float），并去除每个单元格的首尾空白
+        cells = [c.strip() for c in row.tolist() if isinstance(c, str) and c.strip() != ""]
+        if len(cells) < 2:
+            raise ValueError(f"第 {rowno} 行格式错误：需要「名称」加上至少一个数值。")
 
-        # 优先按逗号切分；若整行没有逗号，则退化为按空白切分，更宽容
-        parts = [p.strip() for p in line.split(",")] if "," in line else line.split()
-        parts = [p for p in parts if p != ""]
-        if len(parts) < 2:
-            raise ValueError(f"第 {lineno} 行格式错误：需要「名称」加上至少一个数值。")
-
-        name = parts[0]
+        name = cells[0]
         values: list[float] = []
-        for token in parts[1:]:
+        for token in cells[1:]:
             try:
                 values.append(float(token))
             except ValueError:
-                raise ValueError(f"第 {lineno} 行的数值「{token}」无法解析为数字。")
+                raise ValueError(f"第 {rowno} 行的数值「{token}」无法解析为数字。")
 
         if name in data:
-            raise ValueError(f"第 {lineno} 行的方法名「{name}」重复。")
+            raise ValueError(f"第 {rowno} 行的方法名「{name}」重复。")
         data[name] = values
 
     if not data:
