@@ -1,4 +1,4 @@
-"""资源页面箱线图接口（无状态）。
+"""工具页面箱线图接口（无状态）。
 
 与 analysis 系列路由不同，本路由不依赖 session_id / upload 机制：用户在前端粘贴
 「名称,数值,数值,...」格式文本并选择变体，直接渲染并下载箱线图。
@@ -11,9 +11,9 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from plots.base import media_type_for_format, normalize_plot_format
-from plots.resource_boxplot import render_bytes, render_svg
-from plots.resource_heatmap import render_bytes as render_heatmap_bytes, render_svg as render_heatmap_svg
-from plots.resource_stitch import make_preview as stitch_make_preview, stitch as stitch_bytes
+from plots.tool_boxplot import render_bytes, render_svg
+from plots.tool_heatmap import render_bytes as render_heatmap_bytes, render_svg as render_heatmap_svg
+from plots.tool_stitch import make_preview as stitch_make_preview, stitch as stitch_bytes
 
 
 router = APIRouter()
@@ -28,8 +28,8 @@ class BoxplotDownloadRequest(BoxplotRequest):
     format: str = "png"
 
 
-@router.post("/api/resources/boxplot")
-async def resource_boxplot(request: BoxplotRequest):
+@router.post("/api/tools/boxplot")
+async def tool_boxplot(request: BoxplotRequest):
     try:
         svg = render_svg(request.data, request.variant)
         return {"status": "success", "svg": svg, "variant": request.variant}
@@ -37,8 +37,8 @@ async def resource_boxplot(request: BoxplotRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/api/resources/boxplot/download")
-async def resource_boxplot_download(request: BoxplotDownloadRequest):
+@router.post("/api/tools/boxplot/download")
+async def tool_boxplot_download(request: BoxplotDownloadRequest):
     try:
         fmt = normalize_plot_format(request.format)
         payload = render_bytes(request.data, request.variant, fmt)
@@ -63,8 +63,8 @@ class HeatmapDownloadRequest(HeatmapRequest):
     format: str = "png"
 
 
-@router.post("/api/resources/heatmap")
-async def resource_heatmap(request: HeatmapRequest):
+@router.post("/api/tools/heatmap")
+async def tool_heatmap(request: HeatmapRequest):
     try:
         svg = render_heatmap_svg(request.data)
         return {"status": "success", "svg": svg}
@@ -72,8 +72,8 @@ async def resource_heatmap(request: HeatmapRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/api/resources/heatmap/download")
-async def resource_heatmap_download(request: HeatmapDownloadRequest):
+@router.post("/api/tools/heatmap/download")
+async def tool_heatmap_download(request: HeatmapDownloadRequest):
     try:
         fmt = normalize_plot_format(request.format)
         payload = render_heatmap_bytes(request.data, fmt)
@@ -110,8 +110,8 @@ async def _collect_stitch_files(
     return normalized, collected
 
 
-@router.post("/api/resources/stitch")
-async def resource_stitch(
+@router.post("/api/tools/stitch")
+async def tool_stitch(
     files: list[UploadFile] = File(...),
     row1: int = Form(...),
     row2: int = Form(...),
@@ -132,8 +132,8 @@ async def resource_stitch(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/api/resources/stitch/download")
-async def resource_stitch_download(
+@router.post("/api/tools/stitch/download")
+async def tool_stitch_download(
     files: list[UploadFile] = File(...),
     row1: int = Form(...),
     row2: int = Form(...),

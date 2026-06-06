@@ -1,10 +1,10 @@
 import {
-  renderResourceBoxplot,
-  downloadResourceBoxplot,
-  renderResourceHeatmap,
-  downloadResourceHeatmap,
-  renderResourceStitch,
-  downloadResourceStitch,
+  renderToolBoxplot,
+  downloadToolBoxplot,
+  renderToolHeatmap,
+  downloadToolHeatmap,
+  renderToolStitch,
+  downloadToolStitch,
   type PlotFormat,
 } from '~/utils/api'
 
@@ -34,14 +34,14 @@ const isLoading = ref(false)
 const isDownloading = ref<PlotFormat | null>(null)
 const errorMessage = ref('')
 
-export function useResources() {
+export function useTools() {
   async function generate() {
     isLoading.value = true
     errorMessage.value = ''
     // 未填写任何数据时，使用示例输入作为兜底
     if (!inputText.value.trim()) inputText.value = EXAMPLE_INPUT
     try {
-      const res = await renderResourceBoxplot({
+      const res = await renderToolBoxplot({
         data: inputText.value,
         variant: variant.value,
       })
@@ -59,7 +59,7 @@ export function useResources() {
     isDownloading.value = format
     errorMessage.value = ''
     try {
-      const response = await downloadResourceBoxplot({
+      const response = await downloadToolBoxplot({
         data: inputText.value,
         variant: variant.value,
         format,
@@ -118,14 +118,14 @@ const heatmapIsLoading = ref(false)
 const heatmapIsDownloading = ref<PlotFormat | null>(null)
 const heatmapErrorMessage = ref('')
 
-export function useResourceHeatmap() {
+export function useToolHeatmap() {
   async function generate() {
     heatmapIsLoading.value = true
     heatmapErrorMessage.value = ''
     // 未填写任何数据时，使用示例输入作为兜底
     if (!heatmapInputText.value.trim()) heatmapInputText.value = HEATMAP_EXAMPLE_INPUT
     try {
-      const res = await renderResourceHeatmap({ data: heatmapInputText.value })
+      const res = await renderToolHeatmap({ data: heatmapInputText.value })
       heatmapSvg.value = res.data.svg
     } catch (error: any) {
       heatmapSvg.value = ''
@@ -140,7 +140,7 @@ export function useResourceHeatmap() {
     heatmapIsDownloading.value = format
     heatmapErrorMessage.value = ''
     try {
-      const response = await downloadResourceHeatmap({
+      const response = await downloadToolHeatmap({
         data: heatmapInputText.value,
         format,
       })
@@ -197,7 +197,7 @@ const stitchIsLoading = ref(false)
 const stitchIsDownloading = ref(false)
 const stitchErrorMessage = ref('')
 
-export function useResourceStitch() {
+export function useToolStitch() {
   const total = computed(() => stitchFiles.value.length)
   const rowSum = computed(() => stitchRow1.value + stitchRow2.value + stitchRow3.value)
   const canStitch = computed(() => total.value > 0 && rowSum.value === total.value)
@@ -276,7 +276,7 @@ export function useResourceStitch() {
     stitchIsLoading.value = true
     stitchErrorMessage.value = ''
     try {
-      const res = await renderResourceStitch(buildFormData())
+      const res = await renderToolStitch(buildFormData())
       stitchPreview.value = res.data.preview
       stitchPreviewFormat.value = res.data.preview_format
     } catch (error: any) {
@@ -302,7 +302,7 @@ export function useResourceStitch() {
     stitchIsDownloading.value = true
     stitchErrorMessage.value = ''
     try {
-      const response = await downloadResourceStitch(buildFormData())
+      const response = await downloadToolStitch(buildFormData())
       const blob = response.data instanceof Blob
         ? response.data
         : new Blob([response.data])
