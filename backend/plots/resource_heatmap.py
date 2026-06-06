@@ -119,7 +119,6 @@ def build_figure(df: pd.DataFrame) -> plt.Figure:
         ax=ax,
     )
 
-    ax.set_title("Comprehensive Algorithm Scores Across Cancer Types", fontsize=14, pad=14, weight="bold")
     ax.set_xlabel("Cancer type / Average", fontsize=11, labelpad=8)
     ax.set_ylabel("Algorithm", fontsize=11, labelpad=8)
     ax.tick_params(axis="x", labelrotation=0, labelsize=10)
