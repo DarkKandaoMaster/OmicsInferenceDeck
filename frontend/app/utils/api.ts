@@ -212,3 +212,13 @@ export function renderResourceHeatmap(params: { data: string }) {
 export function downloadResourceHeatmap(params: { data: string; format: PlotFormat }) {
   return http.post('/resources/heatmap/download', params, { responseType: 'blob' })
 }
+
+/** 资源页面：拼接图表预览（multipart 上传多个同格式图表） */
+export function renderResourceStitch(formData: FormData) {
+  return http.post('/resources/stitch', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+}
+
+/** 资源页面：下载拼接结果（PNG/SVG/PDF） */
+export function downloadResourceStitch(formData: FormData) {
+  return http.post('/resources/stitch/download', formData, { responseType: 'blob', headers: { 'Content-Type': 'multipart/form-data' } })
+}
