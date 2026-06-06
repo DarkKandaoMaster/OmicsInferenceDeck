@@ -2,6 +2,7 @@
 import {
   useResources,
   useResourceHeatmap,
+  useResourceStitch,
   BOXPLOT_VARIANTS,
   EXAMPLE_INPUT,
   HEATMAP_EXAMPLE_INPUT,
@@ -24,6 +25,38 @@ const {
   generate: heatmapGenerate,
   download: heatmapDownload,
 } = useResourceHeatmap()
+
+const {
+  files: stitchFiles,
+  format: stitchFormat,
+  row1: stitchRow1,
+  row2: stitchRow2,
+  row3: stitchRow3,
+  preview: stitchPreview,
+  previewFormat: stitchPreviewFormat,
+  isLoading: stitchIsLoading,
+  isDownloading: stitchIsDownloading,
+  errorMessage: stitchErrorMessage,
+  total: stitchTotal,
+  rowSum: stitchRowSum,
+  canStitch: stitchCanStitch,
+  addFiles: stitchAddFiles,
+  removeFile: stitchRemoveFile,
+  stitch: stitchStitch,
+  download: stitchDownload,
+} = useResourceStitch()
+
+// 文件上传框的 accept：已选格式则锁定，否则允许三种
+const stitchAccept = computed(() =>
+  stitchFormat.value ? `.${stitchFormat.value}` : '.png,.svg,.pdf',
+)
+
+function handleStitchFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  stitchAddFiles(input.files)
+  // 允许重复选择同一文件
+  input.value = ''
+}
 
 const formats: Array<{ label: string, value: PlotFormat }> = [
   { label: 'PNG', value: 'png' },
@@ -252,6 +285,114 @@ async function handleHeatmapDownload(format: PlotFormat) {
             <div v-if="heatmapSvg" class="svg-chart" v-html="heatmapSvg" />
             <div v-else class="svg-chart text-slate-400 text-sm">
               生成图表后在此预览。
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 第三张卡片：图表拼接 -->
+    <section class="mx-auto mt-8 w-full max-w-6xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+      <!-- 卡片头部：标题 + 说明 -->
+      <div class="border-b border-slate-200 bg-slate-50 px-5 py-4">
+        <h3 class="m-0 text-3xl font-bold text-slate-900">图表拼接</h3>
+        <p class="mt-1 text-xs text-slate-500">
+          上传多个<strong>同一格式</strong>（PNG / PDF / SVG）的图表，按上传顺序从左到右、从上到下拼成最多 3 行的网格。<br>
+          输出格式与上传格式一致，不做跨格式转换。
+        </p>
+      </div>
+
+      <!-- 卡片主体：控制区 + 预览 -->
+      <div class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)]">
+        <!-- 控制区 -->
+        <div>
+          <h4 class="m-0 mb-3 text-sm font-semibold text-slate-900">总图表有 {{ stitchTotal }} 个</h4>
+
+          <div class="flex flex-col gap-2">
+            <label class="flex items-center gap-2 text-[13px] text-slate-700">
+              <span class="w-14 shrink-0">第一行</span>
+              <input v-model.number="stitchRow1" type="number" min="0" class="w-24 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[13px] outline-none focus:border-primary" />
+              <span>个</span>
+            </label>
+            <label class="flex items-center gap-2 text-[13px] text-slate-700">
+              <span class="w-14 shrink-0">第二行</span>
+              <input v-model.number="stitchRow2" type="number" min="0" class="w-24 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[13px] outline-none focus:border-primary" />
+              <span>个</span>
+            </label>
+            <label class="flex items-center gap-2 text-[13px] text-slate-700">
+              <span class="w-14 shrink-0">第三行</span>
+              <input v-model.number="stitchRow3" type="number" min="0" class="w-24 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[13px] outline-none focus:border-primary" />
+              <span>个</span>
+            </label>
+          </div>
+
+          <p v-if="stitchTotal > 0 && stitchRowSum !== stitchTotal" class="mt-2 text-[13px] text-red-600">
+            三行之和需等于总数（当前 {{ stitchRowSum }} / {{ stitchTotal }}）
+          </p>
+
+          <div class="mt-4 flex items-center gap-3">
+            <button
+              type="button"
+              class="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+              :disabled="!stitchCanStitch || stitchIsLoading"
+              @click="stitchStitch"
+            >
+              {{ stitchIsLoading ? '拼接中...' : '拼接图表' }}
+            </button>
+            <p v-if="stitchErrorMessage" class="text-[13px] text-red-600">{{ stitchErrorMessage }}</p>
+          </div>
+
+          <!-- 文件上传框 -->
+          <div class="relative mt-4 rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 text-center transition-all hover:border-primary hover:bg-indigo-50">
+            <input
+              id="stitch-file"
+              type="file"
+              multiple
+              :accept="stitchAccept"
+              class="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              @change="handleStitchFileChange"
+            />
+            <label for="stitch-file" class="flex min-h-[104px] flex-col items-center justify-center px-4 py-5 pointer-events-none">
+              <span class="text-sm font-semibold text-slate-900">选择或拖入图表文件</span>
+              <small class="mt-1 text-xs leading-relaxed text-slate-500">
+                {{ stitchFormat ? `已锁定 ${stitchFormat.toUpperCase()} 格式` : '支持 PNG / PDF / SVG，多选；首个文件确定格式。' }}
+              </small>
+            </label>
+          </div>
+
+          <!-- 已上传文件列表 -->
+          <div v-if="stitchFiles.length > 0" class="mt-3 flex flex-col gap-2">
+            <div v-for="(file, index) in stitchFiles" :key="index" class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              <span class="truncate text-[13px] text-slate-900" :title="file.name">{{ file.name }}</span>
+              <button type="button" aria-label="移除" title="移除" class="flex h-7 w-7 items-center justify-center text-slate-500 hover:text-red-600" @click="stitchRemoveFile(index)">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="h-px bg-slate-200 lg:h-auto lg:w-px" />
+
+        <!-- 预览区 -->
+        <div>
+          <div class="mb-3 flex items-center justify-between gap-3">
+            <h4 class="m-0 text-sm font-semibold text-slate-900">拼接预览</h4>
+            <button
+              type="button"
+              class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-[13px] text-slate-700 hover:bg-slate-100 disabled:opacity-60 disabled:cursor-not-allowed"
+              :disabled="!stitchPreview || stitchIsDownloading"
+              @click="stitchDownload"
+            >
+              {{ stitchIsDownloading ? 'Preparing...' : 'Download' }}
+            </button>
+          </div>
+          <div class="overflow-hidden rounded-lg border border-slate-200 bg-slate-50/50">
+            <div v-if="stitchPreview && stitchPreviewFormat === 'svg'" class="svg-chart" v-html="stitchPreview" />
+            <div v-else-if="stitchPreview" class="svg-chart">
+              <img :src="stitchPreview" alt="拼接预览" class="max-w-full" />
+            </div>
+            <div v-else class="svg-chart text-slate-400 text-sm">
+              拼接后在此预览。
             </div>
           </div>
         </div>
