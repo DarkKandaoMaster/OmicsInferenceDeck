@@ -202,3 +202,13 @@ export function renderResourceBoxplot(params: { data: string; variant: string })
 export function downloadResourceBoxplot(params: { data: string; variant: string; format: PlotFormat }) {
   return http.post('/resources/boxplot/download', params, { responseType: 'blob' })
 }
+
+/** 资源页面：渲染热力图（无状态，直接传带表头的矩阵文本） */
+export function renderResourceHeatmap(params: { data: string }) {
+  return http.post('/resources/heatmap', params)
+}
+
+/** 资源页面：下载热力图（PNG/SVG/PDF） */
+export function downloadResourceHeatmap(params: { data: string; format: PlotFormat }) {
+  return http.post('/resources/heatmap/download', params, { responseType: 'blob' })
+}

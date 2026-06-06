@@ -1,4 +1,10 @@
-import { renderResourceBoxplot, downloadResourceBoxplot, type PlotFormat } from '~/utils/api'
+import {
+  renderResourceBoxplot,
+  downloadResourceBoxplot,
+  renderResourceHeatmap,
+  downloadResourceHeatmap,
+  type PlotFormat,
+} from '~/utils/api'
 
 /** 变体定义：A 为 -log10 P-values，B 为显著临床参数数量 */
 export const BOXPLOT_VARIANTS = [
@@ -76,6 +82,90 @@ export function useResources() {
 
   return {
     inputText, variant, svg, isLoading, isDownloading, errorMessage,
+    generate, download,
+  }
+}
+
+/**热力图示例输入：带「表头行 + 索引列」的评分矩阵，取自 senior_algorithms/1.py。
+这里不能直接写成：
+export const HEATMAP_EXAMPLE_INPUT = `,Average,BLCA,BRCA,KIRC
+Hclust,6.36,5.79,6.69,6.60
+K-means,6.68,6.09,6.37,7.59
+MOSD,6.62,6.60,6.34,6.93
+NEMO,6.74,6.45,6.64,7.12
+PIntMF,6.67,6.69,6.07,7.26
+SNF,6.75,6.28,6.87,7.10
+Spectral,7.05,6.94,6.58,7.64`
+不然会网站显示一片空白，什么都显示不了。原因不知道...精确触发条件尚未坐实。*/
+export const HEATMAP_EXAMPLE_INPUT = [
+  ',Average,BLCA,BRCA,KIRC',
+  'Hclust,6.36,5.79,6.69,6.60',
+  'K-means,6.68,6.09,6.37,7.59',
+  'MOSD,6.62,6.60,6.34,6.93',
+  'NEMO,6.74,6.45,6.64,7.12',
+  'PIntMF,6.67,6.69,6.07,7.26',
+  'SNF,6.75,6.28,6.87,7.10',
+  'Spectral,7.05,6.94,6.58,7.64',
+].join('\n')
+
+
+// 与箱线图状态隔离，避免两张卡片互相串数据
+const heatmapInputText = ref('')
+const heatmapSvg = ref('')
+const heatmapIsLoading = ref(false)
+const heatmapIsDownloading = ref<PlotFormat | null>(null)
+const heatmapErrorMessage = ref('')
+
+export function useResourceHeatmap() {
+  async function generate() {
+    heatmapIsLoading.value = true
+    heatmapErrorMessage.value = ''
+    // 未填写任何数据时，使用示例输入作为兜底
+    if (!heatmapInputText.value.trim()) heatmapInputText.value = HEATMAP_EXAMPLE_INPUT
+    try {
+      const res = await renderResourceHeatmap({ data: heatmapInputText.value })
+      heatmapSvg.value = res.data.svg
+    } catch (error: any) {
+      heatmapSvg.value = ''
+      heatmapErrorMessage.value = '生成失败: ' + (error.response?.data?.detail || error.message)
+    } finally {
+      heatmapIsLoading.value = false
+    }
+  }
+
+  async function download(format: PlotFormat) {
+    if (heatmapIsDownloading.value) return
+    heatmapIsDownloading.value = format
+    heatmapErrorMessage.value = ''
+    try {
+      const response = await downloadResourceHeatmap({
+        data: heatmapInputText.value,
+        format,
+      })
+      const blob = response.data instanceof Blob
+        ? response.data
+        : new Blob([response.data])
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = `heatmap.${format}`
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(url)
+    } catch (error: any) {
+      heatmapErrorMessage.value = '下载失败: ' + (error.response?.data?.detail || error.message)
+    } finally {
+      heatmapIsDownloading.value = null
+    }
+  }
+
+  return {
+    inputText: heatmapInputText,
+    svg: heatmapSvg,
+    isLoading: heatmapIsLoading,
+    isDownloading: heatmapIsDownloading,
+    errorMessage: heatmapErrorMessage,
     generate, download,
   }
 }

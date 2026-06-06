@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from plots.base import media_type_for_format, normalize_plot_format
 from plots.resource_boxplot import render_bytes, render_svg
+from plots.resource_heatmap import render_bytes as render_heatmap_bytes, render_svg as render_heatmap_svg
 
 
 router = APIRouter()
@@ -42,6 +43,41 @@ async def resource_boxplot_download(request: BoxplotDownloadRequest):
         payload = render_bytes(request.data, request.variant, fmt)
         headers = {
             "Content-Disposition": f'attachment; filename="boxplot_{request.variant}.{fmt}"',
+            "Cache-Control": "no-store",
+        }
+        return StreamingResponse(
+            io.BytesIO(payload),
+            media_type=media_type_for_format(fmt),
+            headers=headers,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+class HeatmapRequest(BaseModel):
+    data: str
+
+
+class HeatmapDownloadRequest(HeatmapRequest):
+    format: str = "png"
+
+
+@router.post("/api/resources/heatmap")
+async def resource_heatmap(request: HeatmapRequest):
+    try:
+        svg = render_heatmap_svg(request.data)
+        return {"status": "success", "svg": svg}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/api/resources/heatmap/download")
+async def resource_heatmap_download(request: HeatmapDownloadRequest):
+    try:
+        fmt = normalize_plot_format(request.format)
+        payload = render_heatmap_bytes(request.data, fmt)
+        headers = {
+            "Content-Disposition": f'attachment; filename="heatmap.{fmt}"',
             "Cache-Control": "no-store",
         }
         return StreamingResponse(
