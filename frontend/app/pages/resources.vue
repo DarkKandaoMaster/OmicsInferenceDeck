@@ -183,7 +183,7 @@ async function handleHeatmapDownload(format: PlotFormat) {
         <h3 class="m-0 text-3xl font-bold text-slate-900">综合评分热力图</h3>
         <p class="mt-1 text-xs text-slate-500">
           把「算法 × 癌症类型」的二维评分矩阵渲染成热力图：单元格两位小数标注、3D-AWA score 颜色条、红框圈出每列最大值。<br>
-          注意输入数据需要表头行（列名）和索引列（行名）。
+          注意输入数据需要表头行和索引列。
         </p>
       </div>
 
@@ -198,7 +198,7 @@ async function handleHeatmapDownload(format: PlotFormat) {
             spellcheck="false"
             class="w-full resize-y rounded-lg border bg-slate-50 p-3 font-mono text-[13px] leading-relaxed text-slate-700 outline-none focus:border-primary"
             :class="heatmapIsDragOver ? 'border-primary border-dashed bg-primary/5' : 'border-slate-200'"
-            :placeholder="`示例输入：（需要表头行 + 索引列，支持直接拖入CSV/TSV格式的纯文本文件）\n${HEATMAP_EXAMPLE_INPUT}`"
+            :placeholder="`示例输入：（支持直接拖入CSV/TSV格式的纯文本文件）\n${HEATMAP_EXAMPLE_INPUT}`"
             @dragover.prevent="heatmapIsDragOver = true"
             @dragleave.prevent="heatmapIsDragOver = false"
             @drop.prevent="handleHeatmapDrop"
