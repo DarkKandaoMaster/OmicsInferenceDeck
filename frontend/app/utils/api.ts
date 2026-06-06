@@ -204,12 +204,12 @@ export function downloadToolBoxplot(params: { data: string; variant: string; for
 }
 
 /** 工具页面：渲染热力图（无状态，直接传带表头的矩阵文本） */
-export function renderToolHeatmap(params: { data: string }) {
+export function renderToolHeatmap(params: { data: string; xlabel?: string; ylabel?: string; legend?: string }) {
   return http.post('/tools/heatmap', params)
 }
 
 /** 工具页面：下载热力图（PNG/SVG/PDF） */
-export function downloadToolHeatmap(params: { data: string; format: PlotFormat }) {
+export function downloadToolHeatmap(params: { data: string; format: PlotFormat; xlabel?: string; ylabel?: string; legend?: string }) {
   return http.post('/tools/heatmap/download', params, { responseType: 'blob' })
 }
 

@@ -117,6 +117,10 @@ const heatmapSvg = ref('')
 const heatmapIsLoading = ref(false)
 const heatmapIsDownloading = ref<PlotFormat | null>(null)
 const heatmapErrorMessage = ref('')
+// 可自定义的三处标签，默认留空；留空时图表对应处不显示文字
+const heatmapXlabel = ref('')
+const heatmapYlabel = ref('')
+const heatmapLegend = ref('')
 
 export function useToolHeatmap() {
   async function generate() {
@@ -125,7 +129,12 @@ export function useToolHeatmap() {
     // 未填写任何数据时，使用示例输入作为兜底
     if (!heatmapInputText.value.trim()) heatmapInputText.value = HEATMAP_EXAMPLE_INPUT
     try {
-      const res = await renderToolHeatmap({ data: heatmapInputText.value })
+      const res = await renderToolHeatmap({
+        data: heatmapInputText.value,
+        xlabel: heatmapXlabel.value,
+        ylabel: heatmapYlabel.value,
+        legend: heatmapLegend.value,
+      })
       heatmapSvg.value = res.data.svg
     } catch (error: any) {
       heatmapSvg.value = ''
@@ -143,6 +152,9 @@ export function useToolHeatmap() {
       const response = await downloadToolHeatmap({
         data: heatmapInputText.value,
         format,
+        xlabel: heatmapXlabel.value,
+        ylabel: heatmapYlabel.value,
+        legend: heatmapLegend.value,
       })
       const blob = response.data instanceof Blob
         ? response.data
@@ -168,6 +180,9 @@ export function useToolHeatmap() {
     isLoading: heatmapIsLoading,
     isDownloading: heatmapIsDownloading,
     errorMessage: heatmapErrorMessage,
+    xlabel: heatmapXlabel,
+    ylabel: heatmapYlabel,
+    legend: heatmapLegend,
     generate, download,
   }
 }

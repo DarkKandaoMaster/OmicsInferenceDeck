@@ -57,6 +57,9 @@ async def tool_boxplot_download(request: BoxplotDownloadRequest):
 
 class HeatmapRequest(BaseModel):
     data: str
+    xlabel: str = ""
+    ylabel: str = ""
+    legend: str = ""
 
 
 class HeatmapDownloadRequest(HeatmapRequest):
@@ -66,7 +69,7 @@ class HeatmapDownloadRequest(HeatmapRequest):
 @router.post("/api/tools/heatmap")
 async def tool_heatmap(request: HeatmapRequest):
     try:
-        svg = render_heatmap_svg(request.data)
+        svg = render_heatmap_svg(request.data, request.xlabel, request.ylabel, request.legend)
         return {"status": "success", "svg": svg}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -76,7 +79,7 @@ async def tool_heatmap(request: HeatmapRequest):
 async def tool_heatmap_download(request: HeatmapDownloadRequest):
     try:
         fmt = normalize_plot_format(request.format)
-        payload = render_heatmap_bytes(request.data, fmt)
+        payload = render_heatmap_bytes(request.data, fmt, request.xlabel, request.ylabel, request.legend)
         headers = {
             "Content-Disposition": f'attachment; filename="heatmap.{fmt}"',
             "Cache-Control": "no-store",
