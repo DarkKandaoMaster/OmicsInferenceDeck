@@ -90,7 +90,7 @@ async function handleHeatmapDownload(format: PlotFormat) {
       <div class="border-b border-slate-200 bg-slate-50 px-5 py-4">
         <h3 class="m-0 text-3xl font-bold text-slate-900">箱线图</h3>
         <p class="mt-1 text-xs text-slate-500">
-          你可以在这里绘制“各方法在x个癌症数据集上的-log10 P-values分布”或者“各方法在x个癌症数据集上的显著临床参数数量分布”。<br>
+          您可以在这里绘制“各方法在x个癌症数据集上的-log10 P-values分布”或者“各方法在x个癌症数据集上的显著临床参数数量分布”。<br>
           注意输入数据需要索引列，不需要表头行。
         </p>
       </div>
