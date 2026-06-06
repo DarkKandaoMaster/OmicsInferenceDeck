@@ -2,7 +2,6 @@
 
 本模块是无状态的——不读取 upload/ 下的会话文件，而是直接解析前端传来的文本。
 绘图逻辑由 senior_algorithms/2.py、3.py 两个脚本合并而来，通过 variant 参数化区分
-x 轴标签与标题（A：-log10 P-values；B：显著临床参数数量）。
 
 示例输入：
 各方法在九个癌症数据集上的-log10 P-values分布：
@@ -80,11 +79,10 @@ import matplotlib.pyplot as plt
 from .base import figure_to_bytes, figure_to_svg
 
 
-# 变体配置：决定 x 轴标签与左上角标题
 VARIANTS: "OrderedDict[str, dict[str, str]]" = OrderedDict(
     [
-        ("pvalues", {"xlabel": "-log10 P-values", "title": "A"}),
-        ("clinical", {"xlabel": "The number of significant clinical parameters", "title": "B"}),
+        ("pvalues", {"xlabel": "-log10 P-values"}),
+        ("clinical", {"xlabel": "The number of significant clinical parameters"}),
     ]
 )
 
@@ -156,7 +154,6 @@ def build_figure(
     """把解析后的数据绘制成横向箱线图。
 
     保留原脚本观感：white 主题、tab10 配色、横向 orient="h"、width=0.7、菱形离群点、despine。
-    title 取自 VARIANTS[variant]（A/B 不变）；非法 variant 抛出 ValueError。
 
     显示标签与 DataFrame 列名解耦：列名固定为内部常量 "value"，避免用户留空 xlabel
     时列名变成空串。xlabel / ylabel 语义：None=回退该变体默认，空串=该轴不显示文字。
@@ -197,7 +194,6 @@ def build_figure(
 
     ax.set_xlabel(x_label, fontsize=13)
     ax.set_ylabel(y_label, fontsize=13)
-    ax.set_title(config["title"], loc="left", fontsize=15, fontweight="bold")
     sns.despine(top=True, right=True, ax=ax)
 
     fig.tight_layout()
