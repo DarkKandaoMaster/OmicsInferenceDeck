@@ -204,20 +204,20 @@ export function useDataState() {
   }
 
   function handleFileChange(event: Event) {
-    const files = Array.from((event.target as HTMLInputElement).files || [])
+    const input = event.target as HTMLInputElement
+    const files = Array.from(input.files || [])
     if (files.length > 0) {
-      omicsFileConfigs.value = files.map(f => ({
+      const added = files.map(f => ({
         id: uuidv4(),
         file: f,
         originalName: f.name,
         type: inferOmicsType(f.name),
       }))
+      omicsFileConfigs.value = [...omicsFileConfigs.value, ...added]
       uploadStatus.value = '文件已选择，将在运行时自动上传。'
       isOmicsUploaded.value = false
-    } else {
-      omicsFileConfigs.value = []
-      uploadStatus.value = ''
     }
+    input.value = ''
   }
 
   /* 移除单个组学文件 */
