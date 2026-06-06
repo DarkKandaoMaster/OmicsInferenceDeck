@@ -15,6 +15,10 @@ NEMO,6.74,6.45,6.64,7.12
 PIntMF,6.67,6.69,6.07,7.26
 SNF,6.75,6.28,6.87,7.10
 Spectral,7.05,6.94,6.58,7.64
+
+X轴标签：Cancer type / Average
+Y轴标签：Algorithm
+颜色条标签：3D-AWA score
 """
 
 import io
