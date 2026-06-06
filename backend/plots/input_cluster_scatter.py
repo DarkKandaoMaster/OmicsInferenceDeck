@@ -23,7 +23,7 @@ from .base import (
     plot_path,
     reference_font_dict,
 )
-from .cluster_scatter import _coords, _scatter_palette
+from .pred_cluster_scatter import _coords, _scatter_palette
 
 
 PLOT_TITLE = "Input Cluster Scatter"

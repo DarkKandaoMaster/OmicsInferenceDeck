@@ -70,12 +70,12 @@ export function computeAwaMetrics(params: {
 }
 
 /** 绘制聚类散点图 */
-export function renderClusterScatter(params: {
+export function renderPredClusterScatter(params: {
   session_id: string
   reduction: string
   random_state: number
 }) {
-  return http.post('/plots/cluster_scatter', params)
+  return http.post('/plots/pred_cluster_scatter', params)
 }
 
 /** 绘制聚类前的输入空间散点图 */

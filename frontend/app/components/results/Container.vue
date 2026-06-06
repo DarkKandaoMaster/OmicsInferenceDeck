@@ -29,7 +29,7 @@ const hasAnyChartsVisible = computed(() => {
   const data = backendResponse.value?.data
   if (!data) return false
   if (enabledCharts.inputClusterScatter && data.plots?.input_cluster_scatter) return true
-  if (enabledCharts.clusterScatter && data.plots?.cluster_scatter) return true
+  if (enabledCharts.predClusterScatter && data.plots?.pred_cluster_scatter) return true
   if ((enabledCharts.diffVolcano || enabledCharts.diffHeatmap) && diffResult.value) return true
   if ((enabledCharts.enrichBarGO || enabledCharts.enrichBarKEGG || enabledCharts.enrichBubbleGO || enabledCharts.enrichBubbleKEGG) && diffResult.value && enrichmentResult.value) return true
   if (enabledCharts.survival && survivalResult.value) return true

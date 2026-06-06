@@ -1,7 +1,7 @@
 export type MetricKey = 'cluster' | 'clinical' | 'biology' | 'awa'
 export type ChartKey =
   | 'inputClusterScatter'
-  | 'clusterScatter'
+  | 'predClusterScatter'
   | 'diffVolcano'
   | 'diffHeatmap'
   | 'enrichBarGO'
@@ -19,7 +19,7 @@ export const metricOptions: { key: MetricKey; label: string }[] = [
 
 export const chartOptions: { key: ChartKey; label: string }[] = [
   { key: 'inputClusterScatter', label: '聚类前散点图' },
-  { key: 'clusterScatter', label: '聚类后散点图' },
+  { key: 'predClusterScatter', label: '聚类后散点图' },
   { key: 'diffVolcano', label: '差异火山图' },
   { key: 'diffHeatmap', label: '差异热图' },
   { key: 'enrichBarGO', label: 'GO富集分析条形图' },
@@ -38,7 +38,7 @@ const enabledMetrics = reactive<Record<MetricKey, boolean>>({
 
 const enabledCharts = reactive<Record<ChartKey, boolean>>({
   inputClusterScatter: true,
-  clusterScatter: true,
+  predClusterScatter: true,
   diffVolcano: true,
   diffHeatmap: true,
   enrichBarGO: true,

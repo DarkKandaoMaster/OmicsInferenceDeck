@@ -47,8 +47,8 @@ app.include_router(run_router)
 from routers.metrics import router as metrics_router
 app.include_router(metrics_router)
 
-from routers.cluster_scatter import router as cluster_scatter_router
-app.include_router(cluster_scatter_router)
+from routers.pred_cluster_scatter import router as pred_cluster_scatter_router
+app.include_router(pred_cluster_scatter_router)
 
 from routers.input_cluster_scatter import router as input_cluster_scatter_router
 app.include_router(input_cluster_scatter_router)
