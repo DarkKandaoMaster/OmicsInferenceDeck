@@ -36,6 +36,10 @@ def parse_boxplot_data(text: str) -> "OrderedDict[str, list[float]]":
     if not text or not text.strip():
         raise ValueError("输入数据为空，请粘贴「名称,数值,数值,...」格式的 CSV 或 TSV 数据。")
 
+    # 去掉可能的 UTF-8 BOM（U+FEFF）：从 Excel 导出再粘贴时，文本可能以 BOM 开头，
+    # 会让第一个方法名带上隐藏字符；str.strip() 不会去掉 U+FEFF，需在此显式 lstrip。
+    text = text.lstrip("\ufeff")
+
     # 预留列数上界：实际分隔符必是逗号/制表符/空格之一，按这三者的并集切分必然 ≥ 真实列数，
     # 因此无需提前知道分隔符即可给出安全上界（多出的列由 read_csv 补 NaN，循环里被丢弃）。
     nonblank_lines = [line for line in text.splitlines() if line.strip()]
