@@ -27,6 +27,16 @@ const variantLabel = computed(
 const downloadOpen = ref(false)
 const downloadRoot = ref<HTMLElement | null>(null)
 
+const isDragOver = ref(false)
+
+async function handleDrop(event: DragEvent) {
+  isDragOver.value = false
+  const file = event.dataTransfer?.files?.[0]
+  if (!file) return
+  // 读取为纯文本（CSV/TSV/txt 等文本文件）
+  inputText.value = await file.text()
+}
+
 function handleDocumentClick(event: MouseEvent) {
   if (!downloadRoot.value?.contains(event.target as Node)) downloadOpen.value = false
 }
@@ -59,13 +69,17 @@ async function handleDownload(format: PlotFormat) {
             v-model="inputText"
             rows="14"
             spellcheck="false"
-            class="w-full resize-y rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-[13px] leading-relaxed text-slate-700 outline-none focus:border-primary"
-            placeholder="Subtype-DCC,1.11,2.33,8.79,..."
+            class="w-full resize-y rounded-lg border bg-slate-50 p-3 font-mono text-[13px] leading-relaxed text-slate-700 outline-none focus:border-primary"
+            :class="isDragOver ? 'border-primary border-dashed bg-primary/5' : 'border-slate-200'"
+            placeholder="Subtype-DCC,1.11,2.33,8.79,...（也可拖入 CSV/TSV/txt 文件）"
+            @dragover.prevent="isDragOver = true"
+            @dragleave.prevent="isDragOver = false"
+            @drop.prevent="handleDrop"
           />
           <label class="mt-4 flex w-full max-w-[280px] cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
             <span>
-              <span class="block text-sm font-semibold text-slate-900">我想绘制：<br>{{ variantLabel }}</span>
-              <!-- <span class="block text-xs text-slate-500">{{ variantLabel }}</span> -->
+              <span class="block text-sm font-semibold text-slate-900">我想绘制：</span>
+              <span class="block text-xs text-slate-500">{{ variantLabel }}</span>
             </span>
             <span class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors" :class="isClinical ? 'bg-primary' : 'bg-slate-300'">
               <input v-model="isClinical" type="checkbox" class="sr-only" />
