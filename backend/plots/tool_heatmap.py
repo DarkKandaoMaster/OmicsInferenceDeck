@@ -104,11 +104,18 @@ def build_figure(df: pd.DataFrame) -> plt.Figure:
         pad = (vmax - vmin) * 0.1
         vmin, vmax = vmin - pad, vmax + pad
 
+    # 标注格式自适应：输入矩阵全为整数时用 ".0f"（显示 6 而非 6.00），否则两位小数。
+    # parse_heatmap_data 返回 float DataFrame，整数也以 6.0 形式存在，故用 == round() 判断；
+    # stack() 会自动丢弃空单元格产生的 NaN，避免误判。
+    non_na = df.stack()
+    all_integers = not non_na.empty and (non_na == non_na.round()).all()
+    fmt = ".0f" if all_integers else ".2f"
+
     cmap = sns.color_palette("YlGnBu", as_cmap=True)
     sns.heatmap(
         df,
         annot=True,
-        fmt=".2f",
+        fmt=fmt,
         cmap=cmap,
         vmin=vmin,
         vmax=vmax,
