@@ -36,7 +36,7 @@ async function handleDownload(format: PlotFormat) {
       <!-- 卡片头部：标题 + 说明 + 图表类型选择 -->
       <div class="flex flex-col gap-4 border-b border-slate-200 bg-slate-50 px-5 py-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h3 class="m-0 text-base font-semibold text-slate-900">箱线图</h3>
+          <h3 class="m-0 text-3xl font-bold text-slate-900">箱线图</h3>
           <p class="mt-1 text-xs text-slate-500">
             粘贴「方法名,数值,数值,...」格式的数据（每行一个方法，数值数量不限），选择图表类型后生成横向箱线图，并可下载为 PNG / SVG / PDF。
           </p>
