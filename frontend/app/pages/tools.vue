@@ -362,17 +362,17 @@ async function handleHeatmapDownload(format: PlotFormat) {
             <label class="flex items-center gap-2 text-[13px] text-slate-700">
               <span class="w-14 shrink-0">X轴标签:</span>
               <input v-model="heatmapXlabel" type="text" placeholder="允许留空"
-                class="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+                class="w-64 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
             </label>
             <label class="flex items-center gap-2 text-[13px] text-slate-700">
               <span class="w-14 shrink-0">Y轴标签:</span>
               <input v-model="heatmapYlabel" type="text" placeholder="允许留空"
-                class="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+                class="w-64 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
             </label>
             <label class="flex items-center gap-2 text-[13px] text-slate-700">
               <span class="w-14 shrink-0">图例标签:</span>
               <input v-model="heatmapLegend" type="text" placeholder="允许留空"
-                class="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+                class="w-64 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
             </label>
           </div>
           <div class="mt-4 flex items-center gap-3">
