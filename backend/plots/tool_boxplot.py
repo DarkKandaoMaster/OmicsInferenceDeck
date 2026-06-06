@@ -147,34 +147,43 @@ def parse_boxplot_data(text: str) -> "OrderedDict[str, list[float]]":
     return data
 
 
-def build_figure(data: "OrderedDict[str, list[float]]", variant: str) -> plt.Figure:
+def build_figure(
+    data: "OrderedDict[str, list[float]]",
+    variant: str,
+    xlabel: "str | None" = None,
+    ylabel: "str | None" = None,
+) -> plt.Figure:
     """把解析后的数据绘制成横向箱线图。
 
     保留原脚本观感：white 主题、tab10 配色、横向 orient="h"、width=0.7、菱形离群点、despine。
-    xlabel / title 取自 VARIANTS[variant]；非法 variant 抛出 ValueError。
+    title 取自 VARIANTS[variant]（A/B 不变）；非法 variant 抛出 ValueError。
+
+    显示标签与 DataFrame 列名解耦：列名固定为内部常量 "value"，避免用户留空 xlabel
+    时列名变成空串。xlabel / ylabel 语义：None=回退该变体默认，空串=该轴不显示文字。
     """
     if variant not in VARIANTS:
         valid = "、".join(VARIANTS.keys())
         raise ValueError(f"未知的图表类型「{variant}」，可选值为：{valid}。")
 
     config = VARIANTS[variant]
-    xlabel = config["xlabel"]
+    x_label = config["xlabel"] if xlabel is None else xlabel
+    y_label = "Approaches" if ylabel is None else ylabel
 
     # 方法显示顺序（从上到下）保持输入顺序
     order = list(data.keys())
 
-    # 转换为长格式
+    # 转换为长格式：列名用固定内部常量，与显示标签解耦
     records = []
     for method, values in data.items():
         for v in values:
-            records.append({"Approaches": method, xlabel: v})
+            records.append({"Approaches": method, "value": v})
     df = pd.DataFrame(records)
 
     sns.set_theme(style="white")
     fig, ax = plt.subplots(figsize=(8, 6))
     sns.boxplot(
         data=df,
-        x=xlabel,
+        x="value",
         y="Approaches",
         order=order,
         orient="h",
@@ -186,8 +195,8 @@ def build_figure(data: "OrderedDict[str, list[float]]", variant: str) -> plt.Fig
         ax=ax,
     )
 
-    ax.set_xlabel(xlabel, fontsize=13)
-    ax.set_ylabel("Approaches", fontsize=13)
+    ax.set_xlabel(x_label, fontsize=13)
+    ax.set_ylabel(y_label, fontsize=13)
     ax.set_title(config["title"], loc="left", fontsize=15, fontweight="bold")
     sns.despine(top=True, right=True, ax=ax)
 
@@ -195,9 +204,22 @@ def build_figure(data: "OrderedDict[str, list[float]]", variant: str) -> plt.Fig
     return fig
 
 
-def render_svg(text: str, variant: str) -> str:
-    return figure_to_svg(build_figure(parse_boxplot_data(text), variant))
+def render_svg(
+    text: str,
+    variant: str,
+    xlabel: "str | None" = None,
+    ylabel: "str | None" = None,
+) -> str:
+    return figure_to_svg(build_figure(parse_boxplot_data(text), variant, xlabel, ylabel))
 
 
-def render_bytes(text: str, variant: str, file_format: str) -> bytes:
-    return figure_to_bytes(build_figure(parse_boxplot_data(text), variant), file_format)
+def render_bytes(
+    text: str,
+    variant: str,
+    file_format: str,
+    xlabel: "str | None" = None,
+    ylabel: "str | None" = None,
+) -> bytes:
+    return figure_to_bytes(
+        build_figure(parse_boxplot_data(text), variant, xlabel, ylabel), file_format
+    )

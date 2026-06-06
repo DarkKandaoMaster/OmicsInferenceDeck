@@ -14,6 +14,17 @@ export const BOXPLOT_VARIANTS = [
   { value: 'clinical', label: 'The number of significant clinical parameters' },
 ] as const
 
+/** 两种变体的 Y 轴默认标签都是 Approaches */
+export const BOXPLOT_YLABEL = 'Approaches'
+
+/** 根据变体取默认的 X/Y 轴标签：X=变体含义，Y=Approaches */
+export function boxplotDefaultLabels(variant: string) {
+  return {
+    xlabel: BOXPLOT_VARIANTS.find(i => i.value === variant)?.label ?? '',
+    ylabel: BOXPLOT_YLABEL,
+  }
+}
+
 /** 示例输入：当用户未填写任何数据时作为兜底输入 */
 export const EXAMPLE_INPUT = `Subtype-DCC,1.11,2.33,8.79,1.69,3.75,5.94,1.48,5.46,2.77
 Subtype-GAN,1.28,1.45,7.77,2.83,1.65,0.1,0.39,7.4,2.62
@@ -33,6 +44,9 @@ const svg = ref('')
 const isLoading = ref(false)
 const isDownloading = ref<PlotFormat | null>(null)
 const errorMessage = ref('')
+// 可自定义的坐标轴标签，初始值对应默认变体 pvalues；留空时对应轴不显示文字
+const boxplotXlabel = ref('-log10 P-values')
+const boxplotYlabel = ref('Approaches')
 
 export function useTools() {
   async function generate() {
@@ -44,6 +58,8 @@ export function useTools() {
       const res = await renderToolBoxplot({
         data: inputText.value,
         variant: variant.value,
+        xlabel: boxplotXlabel.value,
+        ylabel: boxplotYlabel.value,
       })
       svg.value = res.data.svg
     } catch (error: any) {
@@ -63,6 +79,8 @@ export function useTools() {
         data: inputText.value,
         variant: variant.value,
         format,
+        xlabel: boxplotXlabel.value,
+        ylabel: boxplotYlabel.value,
       })
       const blob = response.data instanceof Blob
         ? response.data
@@ -84,6 +102,7 @@ export function useTools() {
 
   return {
     inputText, variant, svg, isLoading, isDownloading, errorMessage,
+    xlabel: boxplotXlabel, ylabel: boxplotYlabel,
     generate, download,
   }
 }

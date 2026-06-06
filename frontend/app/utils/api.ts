@@ -194,12 +194,12 @@ export function downloadPlot(params: DownloadPlotParams) {
 }
 
 /** 工具页面：渲染箱线图（无状态，直接传文本） */
-export function renderToolBoxplot(params: { data: string; variant: string }) {
+export function renderToolBoxplot(params: { data: string; variant: string; xlabel?: string; ylabel?: string }) {
   return http.post('/tools/boxplot', params)
 }
 
 /** 工具页面：下载箱线图（PNG/SVG/PDF） */
-export function downloadToolBoxplot(params: { data: string; variant: string; format: PlotFormat }) {
+export function downloadToolBoxplot(params: { data: string; variant: string; format: PlotFormat; xlabel?: string; ylabel?: string }) {
   return http.post('/tools/boxplot/download', params, { responseType: 'blob' })
 }
 
