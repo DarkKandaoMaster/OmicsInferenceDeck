@@ -192,3 +192,13 @@ export type DownloadPlotParams = {
 export function downloadPlot(params: DownloadPlotParams) {
   return http.post('/plots/download', params, { responseType: 'blob' })
 }
+
+/** 资源页面：渲染箱线图（无状态，直接传文本） */
+export function renderResourceBoxplot(params: { data: string; variant: string }) {
+  return http.post('/resources/boxplot', params)
+}
+
+/** 资源页面：下载箱线图（PNG/SVG/PDF） */
+export function downloadResourceBoxplot(params: { data: string; variant: string; format: PlotFormat }) {
+  return http.post('/resources/boxplot/download', params, { responseType: 'blob' })
+}
