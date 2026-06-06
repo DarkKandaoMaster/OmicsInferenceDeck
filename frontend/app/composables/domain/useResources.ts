@@ -2,8 +2,8 @@ import { renderResourceBoxplot, downloadResourceBoxplot, type PlotFormat } from 
 
 /** 变体定义：A 为 -log10 P-values，B 为显著临床参数数量 */
 export const BOXPLOT_VARIANTS = [
-  { value: 'pvalues', label: 'A · -log10 P-values' },
-  { value: 'clinical', label: 'B · The number of significant clinical parameters' },
+  { value: 'pvalues', label: '-log10 P-values' },
+  { value: 'clinical', label: 'The number of significant clinical parameters' },
 ] as const
 
 const inputText = ref('')
