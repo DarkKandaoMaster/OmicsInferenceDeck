@@ -140,17 +140,17 @@ async function handleHeatmapDownload(format: PlotFormat) {
           <div class="flex flex-col gap-2">
             <label class="flex items-center gap-2 text-[13px] text-slate-700">
               <span class="w-10 shrink-0">第一行</span>
-              <input v-model.number="stitchRow1" type="number" min="0" class="w-20 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[13px] outline-none focus:border-primary" />
+              <input v-model.number="stitchRow1" type="number" min="0" class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none w-20 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[13px] outline-none focus:border-primary" />
               <span>个</span>
             </label>
             <label class="flex items-center gap-2 text-[13px] text-slate-700">
               <span class="w-10 shrink-0">第二行</span>
-              <input v-model.number="stitchRow2" type="number" min="0" class="w-20 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[13px] outline-none focus:border-primary" />
+              <input v-model.number="stitchRow2" type="number" min="0" class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none w-20 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[13px] outline-none focus:border-primary" />
               <span>个</span>
             </label>
             <label class="flex items-center gap-2 text-[13px] text-slate-700">
               <span class="w-10 shrink-0">第三行</span>
-              <input v-model.number="stitchRow3" type="number" min="0" class="w-20 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[13px] outline-none focus:border-primary" />
+              <input v-model.number="stitchRow3" type="number" min="0" class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none w-20 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[13px] outline-none focus:border-primary" />
               <span>个</span>
             </label>
           </div>
