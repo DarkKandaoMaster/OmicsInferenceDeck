@@ -22,6 +22,8 @@ router = APIRouter()
 class BoxplotRequest(BaseModel):
     data: str
     variant: str = "pvalues"
+    xlabel: str = ""
+    ylabel: str = ""
 
 
 class BoxplotDownloadRequest(BoxplotRequest):
@@ -31,7 +33,7 @@ class BoxplotDownloadRequest(BoxplotRequest):
 @router.post("/api/tools/boxplot")
 async def tool_boxplot(request: BoxplotRequest):
     try:
-        svg = render_svg(request.data, request.variant)
+        svg = render_svg(request.data, request.variant, request.xlabel, request.ylabel)
         return {"status": "success", "svg": svg, "variant": request.variant}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -41,7 +43,7 @@ async def tool_boxplot(request: BoxplotRequest):
 async def tool_boxplot_download(request: BoxplotDownloadRequest):
     try:
         fmt = normalize_plot_format(request.format)
-        payload = render_bytes(request.data, request.variant, fmt)
+        payload = render_bytes(request.data, request.variant, fmt, request.xlabel, request.ylabel)
         headers = {
             "Content-Disposition": f'attachment; filename="boxplot_{request.variant}.{fmt}"',
             "Cache-Control": "no-store",

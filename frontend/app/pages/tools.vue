@@ -4,6 +4,7 @@ import {
   useToolHeatmap,
   useToolStitch,
   BOXPLOT_VARIANTS,
+  boxplotDefaultLabels,
   EXAMPLE_INPUT,
   HEATMAP_EXAMPLE_INPUT,
 } from '~/composables/domain/useTools'
@@ -13,6 +14,7 @@ useHead({ title: 'Tools - OmicsInferenceDeck' })
 
 const {
   inputText, variant, svg, isLoading, isDownloading, errorMessage,
+  xlabel: boxXlabel, ylabel: boxYlabel,
   generate, download,
 } = useTools()
 
@@ -71,7 +73,13 @@ const formats: Array<{ label: string, value: PlotFormat }> = [
 // 开关：关 = pvalues，开 = clinical
 const isClinical = computed({
   get: () => variant.value === 'clinical',
-  set: (checked: boolean) => { variant.value = checked ? 'clinical' : 'pvalues' },
+  set: (checked: boolean) => {
+    variant.value = checked ? 'clinical' : 'pvalues'
+    // 切换变体时把两个输入框重置为该变体的默认值
+    const d = boxplotDefaultLabels(variant.value)
+    boxXlabel.value = d.xlabel
+    boxYlabel.value = d.ylabel
+  },
 })
 const variantLabel = computed(
   () => BOXPLOT_VARIANTS.find(item => item.value === variant.value)?.label ?? '',
@@ -276,6 +284,18 @@ async function handleHeatmapDownload(format: PlotFormat) {
               <span class="h-[18px] w-[18px] rounded-full bg-white transition-transform" :class="isClinical ? 'translate-x-5' : 'translate-x-[3px]'" />
             </span>
           </label>
+          <div class="mt-4 flex flex-col gap-2">
+            <label class="flex items-center gap-2 text-[13px] text-slate-700">
+              <span class="shrink-0">X轴标签:</span>
+              <input v-model="boxXlabel" type="text" placeholder="允许留空"
+                class="w-64 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+            </label>
+            <label class="flex items-center gap-2 text-[13px] text-slate-700">
+              <span class="shrink-0">Y轴标签:</span>
+              <input v-model="boxYlabel" type="text" placeholder="允许留空"
+                class="w-64 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+            </label>
+          </div>
           <div class="mt-4 flex items-center gap-3">
             <button
               type="button"
