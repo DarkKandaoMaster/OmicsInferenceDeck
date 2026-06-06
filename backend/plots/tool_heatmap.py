@@ -39,7 +39,7 @@ def parse_heatmap_data(text: str) -> pd.DataFrame:
 
     # 去掉可能的 UTF-8 BOM（U+FEFF）：从 Excel 导出再粘贴时，文本可能以 BOM 开头，
     # 会让第一个列名/行名带上隐藏字符；str.strip() 不会去掉 U+FEFF，需在此显式 lstrip。
-    text = text.lstrip("﻿")
+    text = text.lstrip("\ufeff")
 
     try:
         df = pd.read_csv(
