@@ -239,16 +239,14 @@ export function useDataState() {
 
   /** 处理临床文件选择 */
   function handleExpressionMatrixFileChange(event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0]
+    const input = event.target as HTMLInputElement
+    const file = input.files?.[0]
     if (file) {
       expressionMatrixFile.value = file
       expressionMatrixUploadStatus.value = 'mRNA 表达矩阵已选择，将在运行分析时自动上传。'
       isExpressionMatrixUploaded.value = false
-    } else {
-      expressionMatrixFile.value = null
-      expressionMatrixUploadStatus.value = ''
-      isExpressionMatrixUploaded.value = false
     }
+    input.value = ''
   }
 
   function handleExpressionMatrixFormatChange() {
@@ -259,12 +257,14 @@ export function useDataState() {
   }
 
   function handleClinicalFileChange(event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0]
+    const input = event.target as HTMLInputElement
+    const file = input.files?.[0]
     if (file) {
       clinicalFile.value = file
       clinicalUploadStatus.value = '文件已选择，将在运行时自动上传。'
       isClinicalUploaded.value = false
     }
+    input.value = ''
   }
 
   /** 临床格式变更标记 */
@@ -297,14 +297,13 @@ export function useDataState() {
 
   /** 处理自定义评估文件选择 */
   function handleCustomEvalFileChange(event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0]
+    const input = event.target as HTMLInputElement
+    const file = input.files?.[0]
     if (file) {
       customEvalFile.value = file
       customEvalUploadStatus.value = '结果文件已选择，将在运行时自动提交评估。'
-    } else {
-      customEvalFile.value = null
-      customEvalUploadStatus.value = ''
     }
+    input.value = ''
   }
 
   return {
