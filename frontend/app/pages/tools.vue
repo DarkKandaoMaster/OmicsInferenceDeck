@@ -70,19 +70,27 @@ const formats: Array<{ label: string, value: PlotFormat }> = [
   { label: 'PDF', value: 'pdf' },
 ]
 
+// 用户手动改过坐标轴标签后置位；此时显示「其他」并把开关视觉置为关闭。
+// 只有点击开关（isClinical setter）才会清除，符合「只有点开关才退出」。
+const isCustom = ref(false)
+
 // 开关：关 = pvalues，开 = clinical
 const isClinical = computed({
-  get: () => variant.value === 'clinical',
+  // isCustom 为真时返回 false，使滑块停在灰色关闭位
+  get: () => !isCustom.value && variant.value === 'clinical',
   set: (checked: boolean) => {
     variant.value = checked ? 'clinical' : 'pvalues'
     // 切换变体时把两个输入框重置为该变体的默认值
     const d = boxplotDefaultLabels(variant.value)
     boxXlabel.value = d.xlabel
     boxYlabel.value = d.ylabel
+    isCustom.value = false // 点击开关即退出「其他」
   },
 })
-const variantLabel = computed(
-  () => BOXPLOT_VARIANTS.find(item => item.value === variant.value)?.label ?? '',
+const variantLabel = computed(() =>
+  isCustom.value
+    ? '其他'
+    : BOXPLOT_VARIANTS.find(item => item.value === variant.value)?.label ?? '',
 )
 
 const downloadOpen = ref(false)
@@ -287,12 +295,12 @@ async function handleHeatmapDownload(format: PlotFormat) {
           <div class="mt-4 flex flex-col gap-2">
             <label class="flex items-center gap-2 text-[13px] text-slate-700">
               <span class="shrink-0">X轴标签:</span>
-              <input v-model="boxXlabel" type="text" placeholder="允许留空"
+              <input v-model="boxXlabel" type="text" placeholder="允许留空" @input="isCustom = true"
                 class="w-64 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
             </label>
             <label class="flex items-center gap-2 text-[13px] text-slate-700">
               <span class="shrink-0">Y轴标签:</span>
-              <input v-model="boxYlabel" type="text" placeholder="允许留空"
+              <input v-model="boxYlabel" type="text" placeholder="允许留空" @input="isCustom = true"
                 class="w-64 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
             </label>
           </div>
