@@ -299,7 +299,8 @@ async function handleHeatmapDownload(format: PlotFormat) {
         <h3 class="m-0 text-3xl font-bold text-slate-900">图表拼接</h3>
         <p class="mt-1 text-xs text-slate-500">
           上传多个<strong>同一格式</strong>（PNG / PDF / SVG）的图表，按上传顺序从左到右、从上到下拼成最多 3 行的网格。<br>
-          输出格式与上传格式一致，不做跨格式转换。
+          输出格式与上传格式一致，不做跨格式转换。<br>
+          如果是尺寸相同的图片，拼接出来保证一像素都不损失；如果尺寸不同，那么部分图片可能会因放大或者缩小损失点像素
         </p>
       </div>
 
