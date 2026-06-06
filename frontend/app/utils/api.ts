@@ -193,32 +193,32 @@ export function downloadPlot(params: DownloadPlotParams) {
   return http.post('/plots/download', params, { responseType: 'blob' })
 }
 
-/** 资源页面：渲染箱线图（无状态，直接传文本） */
-export function renderResourceBoxplot(params: { data: string; variant: string }) {
-  return http.post('/resources/boxplot', params)
+/** 工具页面：渲染箱线图（无状态，直接传文本） */
+export function renderToolBoxplot(params: { data: string; variant: string }) {
+  return http.post('/tools/boxplot', params)
 }
 
-/** 资源页面：下载箱线图（PNG/SVG/PDF） */
-export function downloadResourceBoxplot(params: { data: string; variant: string; format: PlotFormat }) {
-  return http.post('/resources/boxplot/download', params, { responseType: 'blob' })
+/** 工具页面：下载箱线图（PNG/SVG/PDF） */
+export function downloadToolBoxplot(params: { data: string; variant: string; format: PlotFormat }) {
+  return http.post('/tools/boxplot/download', params, { responseType: 'blob' })
 }
 
-/** 资源页面：渲染热力图（无状态，直接传带表头的矩阵文本） */
-export function renderResourceHeatmap(params: { data: string }) {
-  return http.post('/resources/heatmap', params)
+/** 工具页面：渲染热力图（无状态，直接传带表头的矩阵文本） */
+export function renderToolHeatmap(params: { data: string }) {
+  return http.post('/tools/heatmap', params)
 }
 
-/** 资源页面：下载热力图（PNG/SVG/PDF） */
-export function downloadResourceHeatmap(params: { data: string; format: PlotFormat }) {
-  return http.post('/resources/heatmap/download', params, { responseType: 'blob' })
+/** 工具页面：下载热力图（PNG/SVG/PDF） */
+export function downloadToolHeatmap(params: { data: string; format: PlotFormat }) {
+  return http.post('/tools/heatmap/download', params, { responseType: 'blob' })
 }
 
-/** 资源页面：拼接图表预览（multipart 上传多个同格式图表） */
-export function renderResourceStitch(formData: FormData) {
-  return http.post('/resources/stitch', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+/** 工具页面：拼接图表预览（multipart 上传多个同格式图表） */
+export function renderToolStitch(formData: FormData) {
+  return http.post('/tools/stitch', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
 }
 
-/** 资源页面：下载拼接结果（PNG/SVG/PDF） */
-export function downloadResourceStitch(formData: FormData) {
-  return http.post('/resources/stitch/download', formData, { responseType: 'blob', headers: { 'Content-Type': 'multipart/form-data' } })
+/** 工具页面：下载拼接结果（PNG/SVG/PDF） */
+export function downloadToolStitch(formData: FormData) {
+  return http.post('/tools/stitch/download', formData, { responseType: 'blob', headers: { 'Content-Type': 'multipart/form-data' } })
 }

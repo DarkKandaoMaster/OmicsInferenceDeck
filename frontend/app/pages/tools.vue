@@ -1,20 +1,20 @@
 <script setup lang="ts">
 import {
-  useResources,
-  useResourceHeatmap,
-  useResourceStitch,
+  useTools,
+  useToolHeatmap,
+  useToolStitch,
   BOXPLOT_VARIANTS,
   EXAMPLE_INPUT,
   HEATMAP_EXAMPLE_INPUT,
-} from '~/composables/domain/useResources'
+} from '~/composables/domain/useTools'
 import type { PlotFormat } from '~/utils/api'
 
-useHead({ title: 'Resources - OmicsInferenceDeck' })
+useHead({ title: 'Tools - OmicsInferenceDeck' })
 
 const {
   inputText, variant, svg, isLoading, isDownloading, errorMessage,
   generate, download,
-} = useResources()
+} = useTools()
 
 const {
   inputText: heatmapInput,
@@ -24,7 +24,7 @@ const {
   errorMessage: heatmapErrorMessage,
   generate: heatmapGenerate,
   download: heatmapDownload,
-} = useResourceHeatmap()
+} = useToolHeatmap()
 
 const {
   files: stitchFiles,
@@ -45,7 +45,7 @@ const {
   stitch: stitchStitch,
   download: stitchDownload,
   clear: stitchClear,
-} = useResourceStitch()
+} = useToolStitch()
 
 // 文件上传框的 accept：已选格式则锁定，否则允许三种
 const stitchAccept = computed(() =>

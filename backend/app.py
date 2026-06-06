@@ -65,5 +65,5 @@ app.include_router(enrichment_router)
 from routers.plots import router as plots_router
 app.include_router(plots_router)
 
-from routers.resources import router as resources_router
-app.include_router(resources_router)
+from routers.tools import router as tools_router
+app.include_router(tools_router)
