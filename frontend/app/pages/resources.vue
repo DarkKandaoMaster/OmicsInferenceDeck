@@ -15,6 +15,15 @@ const formats: Array<{ label: string, value: PlotFormat }> = [
   { label: 'PDF', value: 'pdf' },
 ]
 
+// 开关：关 = pvalues，开 = clinical
+const isClinical = computed({
+  get: () => variant.value === 'clinical',
+  set: (checked: boolean) => { variant.value = checked ? 'clinical' : 'pvalues' },
+})
+const variantLabel = computed(
+  () => BOXPLOT_VARIANTS.find(item => item.value === variant.value)?.label ?? '',
+)
+
 const downloadOpen = ref(false)
 const downloadRoot = ref<HTMLElement | null>(null)
 
@@ -33,25 +42,12 @@ async function handleDownload(format: PlotFormat) {
 <template>
   <div class="py-8 max-w-6xl mx-auto px-4">
     <section class="mx-auto w-full max-w-6xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-      <!-- 卡片头部：标题 + 说明 + 图表类型选择 -->
-      <div class="flex flex-col gap-4 border-b border-slate-200 bg-slate-50 px-5 py-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h3 class="m-0 text-3xl font-bold text-slate-900">箱线图</h3>
-          <p class="mt-1 text-xs text-slate-500">
-            粘贴「方法名,数值,数值,...」格式的数据（每行一个方法，数值数量不限），选择图表类型后生成横向箱线图，并可下载为 PNG / SVG / PDF。
-          </p>
-        </div>
-        <div class="flex items-center gap-3">
-          <label class="whitespace-nowrap text-xs font-medium text-slate-700">图表类型：</label>
-          <select
-            v-model="variant"
-            class="w-40 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-          >
-            <option v-for="item in BOXPLOT_VARIANTS" :key="item.value" :value="item.value">
-              {{ item.label }}
-            </option>
-          </select>
-        </div>
+      <!-- 卡片头部：标题 + 说明 -->
+      <div class="border-b border-slate-200 bg-slate-50 px-5 py-4">
+        <h3 class="m-0 text-3xl font-bold text-slate-900">箱线图</h3>
+        <p class="mt-1 text-xs text-slate-500">
+          粘贴「方法名,数值,数值,...」格式的数据（每行一个方法，数值数量不限），选择图表类型后生成横向箱线图，并可下载为 PNG / SVG / PDF。
+        </p>
       </div>
 
       <!-- 卡片主体：输入数据 + 预览 -->
@@ -66,6 +62,16 @@ async function handleDownload(format: PlotFormat) {
             class="w-full resize-y rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-[13px] leading-relaxed text-slate-700 outline-none focus:border-primary"
             placeholder="Subtype-DCC,1.11,2.33,8.79,..."
           />
+          <label class="mt-4 flex w-full max-w-[280px] cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
+            <span>
+              <span class="block text-sm font-semibold text-slate-900">图表类型</span>
+              <span class="block text-xs text-slate-500">{{ variantLabel }}</span>
+            </span>
+            <span class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors" :class="isClinical ? 'bg-primary' : 'bg-slate-300'">
+              <input v-model="isClinical" type="checkbox" class="sr-only" />
+              <span class="h-[18px] w-[18px] rounded-full bg-white transition-transform" :class="isClinical ? 'translate-x-5' : 'translate-x-[3px]'" />
+            </span>
+          </label>
           <div class="mt-4 flex items-center gap-3">
             <button
               type="button"
