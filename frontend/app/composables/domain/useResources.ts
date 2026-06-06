@@ -287,6 +287,16 @@ export function useResourceStitch() {
     }
   }
 
+  function clear() {
+    stitchFiles.value = []
+    stitchFormat.value = ''
+    stitchRow1.value = 0
+    stitchRow2.value = 0
+    stitchRow3.value = 0
+    stitchErrorMessage.value = ''
+    resetPreview()
+  }
+
   async function download() {
     if (stitchIsDownloading.value || !canStitch.value) return
     stitchIsDownloading.value = true
@@ -323,6 +333,6 @@ export function useResourceStitch() {
     isDownloading: stitchIsDownloading,
     errorMessage: stitchErrorMessage,
     total, rowSum, canStitch,
-    addFiles, removeFile, stitch, download,
+    addFiles, removeFile, stitch, download, clear,
   }
 }

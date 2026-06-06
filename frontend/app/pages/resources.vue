@@ -44,6 +44,7 @@ const {
   removeFile: stitchRemoveFile,
   stitch: stitchStitch,
   download: stitchDownload,
+  clear: stitchClear,
 } = useResourceStitch()
 
 // 文件上传框的 accept：已选格式则锁定，否则允许三种
@@ -338,6 +339,14 @@ async function handleHeatmapDownload(format: PlotFormat) {
               @click="stitchStitch"
             >
               {{ stitchIsLoading ? '拼接中...' : '拼接图表' }}
+            </button>
+            <button
+              type="button"
+              class="rounded-lg border border-slate-200 bg-white px-5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-60 disabled:cursor-not-allowed"
+              :disabled="stitchTotal === 0 || stitchIsLoading"
+              @click="stitchClear"
+            >
+              清空
             </button>
             <p v-if="stitchErrorMessage" class="text-[13px] text-red-600">{{ stitchErrorMessage }}</p>
           </div>
