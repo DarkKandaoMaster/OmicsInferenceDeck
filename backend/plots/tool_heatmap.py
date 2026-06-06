@@ -79,14 +79,20 @@ def parse_heatmap_data(text: str) -> pd.DataFrame:
     return numeric
 
 
-def build_figure(df: pd.DataFrame) -> plt.Figure:
+def build_figure(df: pd.DataFrame, xlabel: str = "", ylabel: str = "", legend: str = "") -> plt.Figure:
     """把评分矩阵绘制成热力图，完整复刻 senior_algorithms/1.py 的观感。
 
     - white 主题、YlGnBu 颜色条、单元格两位小数标注、白色网格线；
     - vmin/vmax 从数据动态推算（留少量 padding），以支持任意矩阵；
     - 红框高亮每列最大值所在单元格。
+    - xlabel / ylabel / legend 为可自定义的标签，空串时对应处不显示文字。
     """
-    sns.set_theme(style="white", font="DejaVu Sans")
+    # 用 sans-serif 字体族 + 优先级回退：中文优先 Microsoft YaHei / SimHei（Windows 自带），
+    # 英文/数字仍由 DejaVu Sans 兜底，保持原观感。matplotlib 会逐字符挑选第一个含该字形的字体。
+    sns.set_theme(style="white")
+    plt.rcParams["font.family"] = "sans-serif"
+    plt.rcParams["font.sans-serif"] = ["DejaVu Sans", "Microsoft YaHei", "SimHei"]
+    plt.rcParams["axes.unicode_minus"] = False  # 避免负号变方块
 
     # 图尺寸按矩阵形状略作自适应，并保留 1.py 的下限
     n_rows, n_cols = df.shape
@@ -121,13 +127,13 @@ def build_figure(df: pd.DataFrame) -> plt.Figure:
         vmax=vmax,
         linewidths=0.8,
         linecolor="white",
-        cbar_kws={"label": "3D-AWA score"},
+        cbar_kws={"label": legend},
         annot_kws={"fontsize": 10},
         ax=ax,
     )
 
-    ax.set_xlabel("Cancer type / Average", fontsize=11, labelpad=8)
-    ax.set_ylabel("Algorithm", fontsize=11, labelpad=8)
+    ax.set_xlabel(xlabel, fontsize=11, labelpad=8)
+    ax.set_ylabel(ylabel, fontsize=11, labelpad=8)
     ax.tick_params(axis="x", labelrotation=0, labelsize=10)
     ax.tick_params(axis="y", labelrotation=0, labelsize=10)
 
@@ -143,9 +149,9 @@ def build_figure(df: pd.DataFrame) -> plt.Figure:
     return fig
 
 
-def render_svg(text: str) -> str:
-    return figure_to_svg(build_figure(parse_heatmap_data(text)))
+def render_svg(text: str, xlabel: str = "", ylabel: str = "", legend: str = "") -> str:
+    return figure_to_svg(build_figure(parse_heatmap_data(text), xlabel, ylabel, legend))
 
 
-def render_bytes(text: str, file_format: str) -> bytes:
-    return figure_to_bytes(build_figure(parse_heatmap_data(text)), file_format)
+def render_bytes(text: str, file_format: str, xlabel: str = "", ylabel: str = "", legend: str = "") -> bytes:
+    return figure_to_bytes(build_figure(parse_heatmap_data(text), xlabel, ylabel, legend), file_format)

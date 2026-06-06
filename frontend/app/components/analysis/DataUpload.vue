@@ -37,7 +37,7 @@ function handleCancerSubtypeChange() {
         <p class="mt-1 text-xs text-slate-500">组学数据必填；mRNA表达矩阵和临床数据可选，用于后续差异、富集和临床评估。</p>
       </div>
       <div class="flex items-center gap-3">
-        <label class="whitespace-nowrap text-xs font-medium text-slate-700"><h4 class="m-0 text-sm font-semibold text-slate-900">数据对应的癌症亚型：</h4></label>
+        <label class="whitespace-nowrap text-xs font-medium text-slate-700"><h4 class="m-0 text-sm font-semibold text-slate-900">数据对应的癌症亚型:</h4></label>
         <select
           v-model="selectedCancerSubtype"
           class="w-40 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"

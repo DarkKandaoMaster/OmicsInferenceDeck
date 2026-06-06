@@ -22,6 +22,9 @@ const {
   isLoading: heatmapIsLoading,
   isDownloading: heatmapIsDownloading,
   errorMessage: heatmapErrorMessage,
+  xlabel: heatmapXlabel,
+  ylabel: heatmapYlabel,
+  legend: heatmapLegend,
   generate: heatmapGenerate,
   download: heatmapDownload,
 } = useToolHeatmap()
@@ -355,6 +358,23 @@ async function handleHeatmapDownload(format: PlotFormat) {
             @dragleave.prevent="heatmapIsDragOver = false"
             @drop.prevent="handleHeatmapDrop"
           />
+          <div class="mt-4 flex flex-col gap-2">
+            <label class="flex items-center gap-2 text-[13px] text-slate-700">
+              <span class="w-14 shrink-0">X轴标签:</span>
+              <input v-model="heatmapXlabel" type="text" placeholder="允许留空"
+                class="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[13px] outline-none focus:border-primary" />
+            </label>
+            <label class="flex items-center gap-2 text-[13px] text-slate-700">
+              <span class="w-14 shrink-0">Y轴标签:</span>
+              <input v-model="heatmapYlabel" type="text" placeholder="允许留空"
+                class="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[13px] outline-none focus:border-primary" />
+            </label>
+            <label class="flex items-center gap-2 text-[13px] text-slate-700">
+              <span class="w-14 shrink-0">图例标签:</span>
+              <input v-model="heatmapLegend" type="text" placeholder="允许留空"
+                class="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[13px] outline-none focus:border-primary" />
+            </label>
+          </div>
           <div class="mt-4 flex items-center gap-3">
             <button
               type="button"
