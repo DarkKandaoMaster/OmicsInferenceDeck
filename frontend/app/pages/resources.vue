@@ -306,7 +306,7 @@ async function handleHeatmapDownload(format: PlotFormat) {
       <div class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)]">
         <!-- 控制区 -->
         <div>
-          <h4 class="m-0 mb-3 text-sm font-semibold text-slate-900">总图表有 {{ stitchTotal }} 个</h4>
+          <h4 class="m-0 mb-3 text-sm font-semibold text-slate-900">总图表 {{ stitchTotal }} 个</h4>
 
           <div class="flex flex-col gap-2">
             <label class="flex items-center gap-2 text-[13px] text-slate-700">
