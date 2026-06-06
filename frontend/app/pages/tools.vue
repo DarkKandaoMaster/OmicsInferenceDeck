@@ -332,7 +332,7 @@ async function handleHeatmapDownload(format: PlotFormat) {
     <section class="mx-auto mt-8 w-full max-w-6xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
       <!-- 卡片头部：标题 + 说明 -->
       <div class="border-b border-slate-200 bg-slate-50 px-5 py-4">
-        <h3 class="m-0 text-3xl font-bold text-slate-900">综合评分热力图</h3>
+        <h3 class="m-0 text-3xl font-bold text-slate-900">热力图</h3>
         <p class="mt-1 text-xs text-slate-500">
           把「算法 × 癌症类型」的二维评分矩阵渲染成热力图：单元格两位小数标注、3D-AWA score 颜色条、红框圈出每列最大值。<br>
           注意输入数据需要表头行和索引列。
