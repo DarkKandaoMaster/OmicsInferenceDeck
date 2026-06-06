@@ -56,7 +56,8 @@ async function handleDownload(format: PlotFormat) {
       <div class="border-b border-slate-200 bg-slate-50 px-5 py-4">
         <h3 class="m-0 text-3xl font-bold text-slate-900">箱线图</h3>
         <p class="mt-1 text-xs text-slate-500">
-          粘贴「方法名,数值,数值,...」格式的数据（每行一个方法，数值数量不限，CSV或TSV），选择图表类型后生成横向箱线图，并可下载为 PNG / SVG / PDF。
+          你可以在这里绘制“各方法在x个癌症数据集上的-log10 P-values分布”或者“各方法在x个癌症数据集上的显著临床参数数量分布”。<br>
+          注意输入数据需要索引列，不需要表头行。
         </p>
       </div>
 
@@ -71,7 +72,18 @@ async function handleDownload(format: PlotFormat) {
             spellcheck="false"
             class="w-full resize-y rounded-lg border bg-slate-50 p-3 font-mono text-[13px] leading-relaxed text-slate-700 outline-none focus:border-primary"
             :class="isDragOver ? 'border-primary border-dashed bg-primary/5' : 'border-slate-200'"
-            placeholder="Subtype-DCC,1.11,2.33,8.79,...（也可拖入 CSV/TSV/txt 文件）"
+            placeholder="示例输入：（支持直接拖入CSV/TSV格式的纯文本文件）
+Subtype-DCC,1.11,2.33,8.79,1.69,3.75,5.94,1.48,5.46,2.77
+Subtype-GAN,1.28,1.45,7.77,2.83,1.65,0.1,0.39,7.4,2.62
+NEMO,1.21,2.8,5.72,2.63,3.04,5.01,1.8,5.96,2.38
+SNF,0.93,1.31,8.19,2.23,3.24,5.27,0.72,5,2.77
+PINS,1.42,1.61,4.44,2.46,3.41,2.32,1.26,5.04,3.63
+NMF,0.4,0.24,5.63,0.42,1.49,3.54,0.1,5.1,1.39
+MCCA,1.73,1.03,7.91,0.49,2.15,0.89,0.18,3.75,1.1
+iCluster,0.53,0.21,2.95,0.23,0.54,0.98,0.06,2.13,1.36
+Spectral,0.08,1.67,5.46,0.6,2.39,1.77,0.19,0.81,1.82
+K-Means,0.12,0.66,4.77,1.01,2.38,1.56,0.01,7.03,1.67
+LRAcluster,0.27,0.63,6.83,0.19,2.03,2.05,0.14,4.58,2.52"
             @dragover.prevent="isDragOver = true"
             @dragleave.prevent="isDragOver = false"
             @drop.prevent="handleDrop"
@@ -134,7 +146,7 @@ async function handleDownload(format: PlotFormat) {
           <div class="overflow-hidden rounded-lg border border-slate-200 bg-slate-50/50">
             <div v-if="svg" class="svg-chart" v-html="svg" />
             <div v-else class="svg-chart text-slate-400 text-sm">
-              点击「生成箱线图」后在此预览。
+              生成图表后在此预览。
             </div>
           </div>
         </div>
