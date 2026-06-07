@@ -15,7 +15,20 @@ const {
   expressionMatrixUploadStatus,
   clinicalUploadStatus,
   customEvalUploadStatus,
+  isCustomEvalMode,
+  isCustomEvalTestMode,
 } = useDataState()
+
+// 两种模式各有一个“参数敏感性分析”开关：内置算法用 isTestMode，自己的算法用 isCustomEvalTestMode。
+// 只要当前模式的开关打开，就展示“运行参数敏感性分析”按钮。
+const isSensitivityMode = computed(() =>
+  isCustomEvalMode.value ? isCustomEvalTestMode.value : isTestMode.value,
+)
+
+// 自己的算法模式的敏感性流程走 runAnalysisFlow（内部处理 .mat 上传），内置算法模式走 runParameterSearchFlow。
+function runSensitivityFlow() {
+  return isCustomEvalMode.value ? runAnalysisFlow() : runParameterSearchFlow()
+}
 const { isDiffLoading, diffErrorMessage } = useDifferential()
 const { isEnrichmentLoading, enrichmentErrorMessage } = useEnrichment()
 const { isSurvivalLoading, survivalErrorMessage, survivalResult } = useSurvival()
@@ -25,7 +38,7 @@ const { isSurvivalLoading, survivalErrorMessage, survivalResult } = useSurvival(
   <div class="mx-auto flex w-full max-w-5xl flex-col items-center gap-3 py-4">
     <div class="flex justify-center">
       <button
-        v-if="!isTestMode"
+        v-if="!isSensitivityMode"
         @click="runAnalysisFlow"
         :disabled="isLoading"
         class="min-w-[220px] cursor-pointer rounded-full border-none bg-gradient-to-r from-blue-500 to-indigo-600 px-10 py-3.5 text-base font-semibold text-white shadow-lg shadow-indigo-500/30 transition-all hover:from-blue-600 hover:to-indigo-700 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
@@ -38,7 +51,7 @@ const { isSurvivalLoading, survivalErrorMessage, survivalResult } = useSurvival(
 
       <button
         v-else
-        @click="runParameterSearchFlow"
+        @click="runSensitivityFlow"
         :disabled="isPsLoading"
         class="min-w-[220px] cursor-pointer rounded-full border-none bg-gradient-to-r from-amber-500 to-amber-600 px-10 py-3.5 text-base font-semibold text-white shadow-lg shadow-amber-500/30 transition-all hover:from-amber-600 hover:to-amber-700 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
       >
