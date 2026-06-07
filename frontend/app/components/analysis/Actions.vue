@@ -28,7 +28,7 @@ const { isSurvivalLoading, survivalErrorMessage, survivalResult } = useSurvival(
         v-if="!isTestMode"
         @click="runAnalysisFlow"
         :disabled="isLoading"
-        class="min-w-[220px] cursor-pointer rounded-lg border-none bg-primary px-10 py-3.5 text-base font-semibold text-white shadow-sm transition-all hover:bg-primary-hover hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
+        class="min-w-[220px] cursor-pointer rounded-full border-none bg-gradient-to-r from-blue-500 to-indigo-600 px-10 py-3.5 text-base font-semibold text-white shadow-lg shadow-indigo-500/30 transition-all hover:from-blue-600 hover:to-indigo-700 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
       >
         <span class="flex items-center justify-center gap-2">
           <span v-if="isLoading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
