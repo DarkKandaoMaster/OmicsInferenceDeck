@@ -88,25 +88,25 @@ TCGA-03,1,0.58,0.21,...</pre>
 
         <div class="mt-4 flex flex-col gap-2">
           <label class="flex items-center gap-2 text-[13px] text-slate-700">
-            <span class="shrink-0 w-32">X 轴标签:</span>
+            <span class="shrink-0">X轴标签:</span>
             <input v-model="matXLabel" type="text" placeholder="gamma"
               class="w-48 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
-            <span class="shrink-0">X 列号:</span>
+            <span class="shrink-0">X列号:</span>
             <input v-model.number="matXCol" type="number" min="1"
-              class="w-20 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+              class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none w-20 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
           </label>
           <label class="flex items-center gap-2 text-[13px] text-slate-700">
-            <span class="shrink-0 w-32">Y 轴标签:</span>
+            <span class="shrink-0">Y轴标签:</span>
             <input v-model="matYLabel" type="text" placeholder="delta"
               class="w-48 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
-            <span class="shrink-0">Y 列号:</span>
+            <span class="shrink-0">Y列号:</span>
             <input v-model.number="matYCol" type="number" min="1" placeholder="留空画 2D"
-              class="w-24 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+              class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none w-20 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
           </label>
           <label class="flex items-center gap-2 text-[13px] text-slate-700">
-            <span class="shrink-0 w-32">−log10(p) 列号:</span>
+            <span class="shrink-0">−log10(p)列号:</span>
             <input v-model.number="matScoreCol" type="number" min="1"
-              class="w-20 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+              class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none w-20 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
           </label>
           <p class="mt-1 text-xs text-slate-500">Y 轴列号留空 → 仅按 X 绘制 2D 敏感性曲线。列号均为 1 起始。</p>
         </div>
