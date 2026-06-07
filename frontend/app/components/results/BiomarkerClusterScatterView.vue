@@ -22,10 +22,7 @@ const downloadParams = computed(() => ({
   <div v-if="diffResult && enabledCharts.biomarkerClusterScatter" class="result-card">
     <div class="result-card-header">
       <div class="result-card-title">
-        生物标志物簇散点图
-        <span v-if="biomarkerGene" class="text-slate-500 font-normal">
-          - {{ biomarkerGene }}(cluster{{ selectedBiomarkerCluster }})
-        </span>
+        生物标志物簇散点图<span v-if="biomarkerGene" class="text-slate-500 font-normal"> - {{ biomarkerGene }}(cluster{{ selectedBiomarkerCluster }})</span>
       </div>
       <div class="flex items-center gap-3">
         <select v-model.number="selectedBiomarkerCluster" @change="renderBiomarkerScatter" class="chart-select">
