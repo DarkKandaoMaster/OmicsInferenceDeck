@@ -15,8 +15,6 @@ const { enrichmentResult } = useEnrichment()
 const { survivalResult } = useSurvival()
 const { enabledMetrics, enabledCharts } = useResultSelection()
 
-const resultsAreaRef = ref<HTMLElement | null>(null)
-
 const hasAnyMetricsVisible = computed(() => {
   const data = backendResponse.value?.data
   if (!data) return false
@@ -47,24 +45,10 @@ const hasAnyVisibleResult = computed(() => {
   if (isParameterSensitivity.value) return !!psResult.value
   return hasAnyMetricsVisible.value || hasAnyChartsVisible.value
 })
-
-watch(backendResponse, async (val) => {
-  if (val) {
-    await nextTick()
-    resultsAreaRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-})
-
-watch(psResult, async (val) => {
-  if (val) {
-    await nextTick()
-    resultsAreaRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-})
 </script>
 
 <template>
-  <div v-if="hasAnyVisibleResult" ref="resultsAreaRef" class="animate-[fadeIn_0.4s_ease-out_forwards]">
+  <div v-if="hasAnyVisibleResult" class="animate-[fadeIn_0.4s_ease-out_forwards]">
     <div v-if="isParameterSensitivity && psResult" class="results-grid">
       <ResultsParameterView />
     </div>
