@@ -21,6 +21,7 @@ const expressionMatrixUploadStatus = ref('')
 const isCustomEvalMode = ref(true)
 const customEvalFile = ref<File | null>(null)
 const customEvalUploadStatus = ref('')
+const isCustomEvalTestMode = ref(false)
 
 // =================== 组学数据格式 ===================
 const omicsIsRowSample = ref(true)
@@ -313,7 +314,7 @@ export function useDataState() {
     clinicalFile, isClinicalUploaded, clinicalUploadStatus,
     expressionMatrixFile, isExpressionMatrixUploaded, expressionMatrixUploadStatus,
     // 自定义评估
-    isCustomEvalMode, customEvalFile, customEvalUploadStatus,
+    isCustomEvalMode, customEvalFile, customEvalUploadStatus, isCustomEvalTestMode,
     // 格式状态
     omicsIsRowSample, omicsHasHeader, omicsHasIndex,
     clinicalIsRowSample, clinicalHasHeader, clinicalHasIndex,

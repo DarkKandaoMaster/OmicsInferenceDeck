@@ -15,7 +15,7 @@ const {
   nNeighbors,
 } = useAlgorithmState()
 
-const { isCustomEvalMode, customEvalFile, handleCustomEvalFileChange, clearCustomEvalFile } = useDataState()
+const { isCustomEvalMode, customEvalFile, isCustomEvalTestMode, handleCustomEvalFileChange, clearCustomEvalFile } = useDataState()
 
 const algorithmsWithK = ['K-means', 'Spectral Clustering', 'NEMO', 'SNF', 'Hclust', 'PIntMF', 'MOSD', 'Parea']
 const algorithmsWithSeed = ['K-means', 'Spectral Clustering', 'Hclust', 'PIntMF', 'MOSD', 'Parea']
@@ -26,8 +26,18 @@ const hasSelectedAlgorithm = computed(() => selectedAlgorithm.value.length > 0)
 
 <template>
   <section v-if="isCustomEvalMode" class="mx-auto w-full max-w-5xl rounded-lg border border-slate-200 bg-white shadow-sm">
-    <div class="border-b border-slate-200 bg-slate-50 px-5 py-4">
+    <div class="flex flex-col gap-4 border-b border-slate-200 bg-slate-50 px-5 py-4 md:flex-row md:items-center md:justify-between">
       <h3 class="m-0 text-base font-semibold text-slate-900">2. 上传自己算法生成的结果文件</h3>
+      <label class="flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border px-4 py-3 md:w-[280px]" :class="isCustomEvalTestMode ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-white'">
+        <span>
+          <span class="block text-sm font-semibold" :class="isCustomEvalTestMode ? 'text-amber-700' : 'text-slate-900'">参数敏感性分析</span>
+          <span class="block text-xs text-slate-500">按参数范围运行搜索</span>
+        </span>
+        <span class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors" :class="isCustomEvalTestMode ? 'bg-amber-500' : 'bg-slate-300'">
+          <input v-model="isCustomEvalTestMode" type="checkbox" class="sr-only" />
+          <span class="h-[18px] w-[18px] rounded-full bg-white transition-transform" :class="isCustomEvalTestMode ? 'translate-x-5' : 'translate-x-[3px]'" />
+        </span>
+      </label>
     </div>
     <div class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div>
