@@ -85,19 +85,6 @@ TCGA-03,1,0.58,0.21,...</pre>
           上传算法参数扫描产生的 <strong>.mat</strong> 结果文件，平台自动取其中首个数据变量、直接读取现成的列绘制参数敏感性图，<strong>无需</strong>再上传组学/临床数据。<br>
           默认按 MLMOSC 格式（X/Y/−log10(p) = 第 15/16/17 列）；如需适配其它 .mat，可在下方自定义列号与轴标签。
         </p>
-        <div class="relative rounded-lg border-2 border-dashed border-amber-200 bg-amber-50/60 text-center transition-all hover:border-amber-400 hover:bg-amber-50">
-          <input type="file" accept=".mat" class="absolute inset-0 h-full w-full cursor-pointer opacity-0" @change="handleCustomEvalMatFileChange($event)" />
-          <div class="flex min-h-[116px] flex-col items-center justify-center px-4 py-5 pointer-events-none">
-            <span class="text-sm font-semibold text-slate-900">点击选择 .mat 结果文件</span>
-            <span class="mt-1 text-xs text-slate-500">MATLAB .mat</span>
-          </div>
-        </div>
-        <div v-if="customEvalMatFile" class="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-          <span class="truncate text-[13px] text-slate-900" :title="customEvalMatFile.name">{{ customEvalMatFile.name }}</span>
-          <button type="button" aria-label="移除" title="移除" class="flex h-7 w-7 items-center justify-center text-slate-500 hover:text-red-600" @click="clearCustomEvalMatFile()">
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-          </button>
-        </div>
 
         <div class="mt-4 flex flex-col gap-2">
           <label class="flex items-center gap-2 text-[13px] text-slate-700">
@@ -122,6 +109,20 @@ TCGA-03,1,0.58,0.21,...</pre>
               class="w-20 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
           </label>
           <p class="mt-1 text-xs text-slate-500">Y 轴列号留空 → 仅按 X 绘制 2D 敏感性曲线。列号均为 1 起始。</p>
+        </div>
+
+        <div class="relative mt-4 rounded-lg border-2 border-dashed border-amber-200 bg-amber-50/60 text-center transition-all hover:border-amber-400 hover:bg-amber-50">
+          <input type="file" accept=".mat" class="absolute inset-0 h-full w-full cursor-pointer opacity-0" @change="handleCustomEvalMatFileChange($event)" />
+          <div class="flex min-h-[116px] flex-col items-center justify-center px-4 py-5 pointer-events-none">
+            <span class="text-sm font-semibold text-slate-900">点击选择 .mat 结果文件</span>
+            <span class="mt-1 text-xs text-slate-500">MATLAB .mat</span>
+          </div>
+        </div>
+        <div v-if="customEvalMatFile" class="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+          <span class="truncate text-[13px] text-slate-900" :title="customEvalMatFile.name">{{ customEvalMatFile.name }}</span>
+          <button type="button" aria-label="移除" title="移除" class="flex h-7 w-7 items-center justify-center text-slate-500 hover:text-red-600" @click="clearCustomEvalMatFile()">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </button>
         </div>
       </div>
 
