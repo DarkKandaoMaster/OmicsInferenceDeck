@@ -5,8 +5,10 @@ import { useDifferential } from '~/composables/domain/useDifferential'
 import { useEnrichment } from '~/composables/domain/useEnrichment'
 import { useSurvival } from '~/composables/domain/useSurvival'
 import { useResultSelection } from '~/composables/domain/useResultSelection'
+import { useDataState } from '~/composables/domain/useDataState'
 
 const { isTestMode, psResult } = useAlgorithmState()
+const { isCustomEvalMode, isCustomEvalTestMode } = useDataState()
 const { backendResponse } = useAnalysisActions()
 const { diffResult } = useDifferential()
 const { enrichmentResult } = useEnrichment()
@@ -36,8 +38,12 @@ const hasAnyChartsVisible = computed(() => {
   return false
 })
 
+const isParameterSensitivity = computed(
+  () => isTestMode.value || (isCustomEvalMode.value && isCustomEvalTestMode.value),
+)
+
 const hasAnyVisibleResult = computed(() => {
-  if (isTestMode.value) return !!psResult.value
+  if (isParameterSensitivity.value) return !!psResult.value
   return hasAnyMetricsVisible.value || hasAnyChartsVisible.value
 })
 
@@ -58,11 +64,11 @@ watch(psResult, async (val) => {
 
 <template>
   <div v-if="hasAnyVisibleResult" ref="resultsAreaRef" class="animate-[fadeIn_0.4s_ease-out_forwards]">
-    <div v-if="isTestMode && psResult" class="results-grid">
+    <div v-if="isParameterSensitivity && psResult" class="results-grid">
       <ResultsParameterView />
     </div>
 
-    <template v-if="!isTestMode && backendResponse">
+    <template v-if="!isParameterSensitivity && backendResponse">
       <ResultsEvaluationMetrics />
       <ResultsClinicalMetrics />
       <ResultsBiologyMetrics />

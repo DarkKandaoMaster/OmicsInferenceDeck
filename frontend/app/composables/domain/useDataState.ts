@@ -23,6 +23,15 @@ const customEvalFile = ref<File | null>(null)
 const customEvalUploadStatus = ref('')
 const isCustomEvalTestMode = ref(false)
 
+// =================== 参数敏感性 .mat 上传状态 ===================
+const customEvalMatFile = ref<File | null>(null)
+const customEvalMatUploadStatus = ref('')
+const matXCol = ref(15)
+const matYCol = ref<number | null>(16)
+const matScoreCol = ref(17)
+const matXLabel = ref('gamma')
+const matYLabel = ref('delta')
+
 // =================== 组学数据格式 ===================
 const omicsIsRowSample = ref(true)
 const omicsHasHeader = ref(true)
@@ -307,6 +316,23 @@ export function useDataState() {
     input.value = ''
   }
 
+  /** 处理参数敏感性 .mat 文件选择 */
+  function handleCustomEvalMatFileChange(event: Event) {
+    const input = event.target as HTMLInputElement
+    const file = input.files?.[0]
+    if (file) {
+      customEvalMatFile.value = file
+      customEvalMatUploadStatus.value = '.mat 文件已选择，将在运行时自动绘制参数敏感性图。'
+    }
+    input.value = ''
+  }
+
+  /** 清除参数敏感性 .mat 文件 */
+  function clearCustomEvalMatFile() {
+    customEvalMatFile.value = null
+    customEvalMatUploadStatus.value = ''
+  }
+
   return {
     // 组学状态
     omicsFileConfigs, omicsTypes, isOmicsUploaded, uploadStatus,
@@ -315,6 +341,10 @@ export function useDataState() {
     expressionMatrixFile, isExpressionMatrixUploaded, expressionMatrixUploadStatus,
     // 自定义评估
     isCustomEvalMode, customEvalFile, customEvalUploadStatus, isCustomEvalTestMode,
+    // 参数敏感性 .mat
+    customEvalMatFile, customEvalMatUploadStatus,
+    matXCol, matYCol, matScoreCol, matXLabel, matYLabel,
+    handleCustomEvalMatFileChange, clearCustomEvalMatFile,
     // 格式状态
     omicsIsRowSample, omicsHasHeader, omicsHasIndex,
     clinicalIsRowSample, clinicalHasHeader, clinicalHasIndex,
