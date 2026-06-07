@@ -40,9 +40,9 @@ const { isSurvivalLoading, survivalErrorMessage, survivalResult } = useSurvival(
         v-else
         @click="runParameterSearchFlow"
         :disabled="isPsLoading"
-        class="min-w-[220px] cursor-pointer rounded-lg border-none bg-amber-600 px-10 py-3.5 text-base font-semibold text-white shadow-sm transition-all hover:bg-amber-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
+        class="min-w-[220px] cursor-pointer rounded-full border-none bg-gradient-to-r from-amber-500 to-amber-600 px-10 py-3.5 text-base font-semibold text-white shadow-lg shadow-amber-500/30 transition-all hover:from-amber-600 hover:to-amber-700 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
       >
-        <span class="flex items-center gap-2">
+        <span class="flex items-center justify-center gap-2">
           <span v-if="isPsLoading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
           {{ isPsLoading ? '正在搜索...' : '运行参数敏感性分析' }}
         </span>
