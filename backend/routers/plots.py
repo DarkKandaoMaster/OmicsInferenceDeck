@@ -28,6 +28,8 @@ from plots.base import (
     run_r_svg,
     session_dir,
 )
+from plots.biomarker_cluster_scatter import build_figure as build_biomarker_scatter_figure
+from plots.biomarker_cluster_scatter import render_svg as render_biomarker_scatter_svg
 from plots.pred_cluster_scatter import build_figure as build_pred_cluster_scatter_figure
 from plots.input_cluster_scatter import build_figure as build_input_cluster_scatter_figure
 from routers.upload import OMICS_DATA_FILE
@@ -131,6 +133,17 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
         )
         return figure_to_bytes(fig, file_format, dpi=600), f"input_cluster_scatter_{request.reduction}"
 
+    if plot_type == "biomarker_cluster_scatter":
+        cluster_id = _require_cluster_id(request)
+        fig, gene = build_biomarker_scatter_figure(
+            str(plot_path(request.session_id, CLUSTER_RESULT_FILE)),
+            str(plot_path(request.session_id, DIFFERENTIAL_HEATMAP_FILE)),
+            str(plot_path(request.session_id, DIFFERENTIAL_VOLCANO_FILE)),
+            cluster_id,
+        )
+        stem = f"biomarker_cluster_scatter_cluster_{cluster_id}" + (f"_{gene}" if gene else "")
+        return figure_to_bytes(fig, file_format, dpi=600), stem
+
     if plot_type == "differential_volcano":
         cluster_id = _require_cluster_id(request)
         path = plot_path(request.session_id, DIFFERENTIAL_VOLCANO_FILE)
@@ -190,6 +203,20 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
         return payload, stem
 
     raise ValueError(f"Unsupported plot_type: {request.plot_type}")
+
+
+@router.post("/api/plots/biomarker_cluster_scatter")
+async def biomarker_cluster_scatter(request: ClusterSpecificPlotRequest):
+    try:
+        svg, gene = render_biomarker_scatter_svg(
+            str(plot_path(request.session_id, CLUSTER_RESULT_FILE)),
+            str(plot_path(request.session_id, DIFFERENTIAL_HEATMAP_FILE)),
+            str(plot_path(request.session_id, DIFFERENTIAL_VOLCANO_FILE)),
+            request.cluster_id,
+        )
+        return {"status": "success", "svg": svg, "gene": gene}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/api/plots/differential_volcano")

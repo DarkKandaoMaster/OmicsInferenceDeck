@@ -4,6 +4,7 @@ export type ChartKey =
   | 'predClusterScatter'
   | 'diffVolcano'
   | 'diffHeatmap'
+  | 'biomarkerClusterScatter'
   | 'enrichBarGO'
   | 'enrichBarKEGG'
   | 'enrichBubbleGO'
@@ -22,6 +23,7 @@ export const chartOptions: { key: ChartKey; label: string }[] = [
   { key: 'predClusterScatter', label: '聚类后散点图' },
   { key: 'diffVolcano', label: '差异火山图' },
   { key: 'diffHeatmap', label: '差异热图' },
+  { key: 'biomarkerClusterScatter', label: '生物标志物簇散点图' },
   { key: 'enrichBarGO', label: 'GO富集分析条形图' },
   { key: 'enrichBarKEGG', label: 'KEGG富集分析条形图' },
   { key: 'enrichBubbleGO', label: 'GO富集分析气泡图' },
@@ -41,6 +43,7 @@ const enabledCharts = reactive<Record<ChartKey, boolean>>({
   predClusterScatter: true,
   diffVolcano: true,
   diffHeatmap: true,
+  biomarkerClusterScatter: true,
   enrichBarGO: true,
   enrichBarKEGG: true,
   enrichBubbleGO: true,
@@ -75,6 +78,7 @@ const DIFF_KEYS: ChartKey[] = ['diffVolcano', 'diffHeatmap']
 // 勾选某项时需要一并勾选的直接上游依赖（补勾整组全部）。
 const CHECK_DEPENDENCIES: Partial<Record<SelectionKey, SelectionKey[]>> = {
   awa: ['cluster', 'clinical', 'biology'],
+  biomarkerClusterScatter: [...DIFF_KEYS],
   biology: [...ENRICH_KEYS],
   enrichBarGO: [...DIFF_KEYS],
   enrichBarKEGG: [...DIFF_KEYS],
@@ -120,6 +124,10 @@ function cascadeOff(): void {
     if (!anyDiff()) {
       for (const key of ENRICH_KEYS) {
         if (enabledCharts[key]) { enabledCharts[key] = false; changed = true }
+      }
+      if (enabledCharts.biomarkerClusterScatter) {
+        enabledCharts.biomarkerClusterScatter = false
+        changed = true
       }
     }
     if (!anyEnrich() && enabledMetrics.biology) {

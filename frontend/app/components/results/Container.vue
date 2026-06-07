@@ -33,6 +33,7 @@ const hasAnyChartsVisible = computed(() => {
   if (enabledCharts.inputClusterScatter && data.plots?.input_cluster_scatter) return true
   if (enabledCharts.predClusterScatter && data.plots?.pred_cluster_scatter) return true
   if ((enabledCharts.diffVolcano || enabledCharts.diffHeatmap) && diffResult.value) return true
+  if (enabledCharts.biomarkerClusterScatter && diffResult.value) return true
   if ((enabledCharts.enrichBarGO || enabledCharts.enrichBarKEGG || enabledCharts.enrichBubbleGO || enabledCharts.enrichBubbleKEGG) && diffResult.value && enrichmentResult.value) return true
   if (enabledCharts.survival && survivalResult.value) return true
   return false
@@ -77,6 +78,7 @@ watch(psResult, async (val) => {
         <ResultsInputClusteringView />
         <ResultsClusteringView />
         <ResultsDifferentialView />
+        <ResultsBiomarkerClusterScatterView />
         <ResultsEnrichmentView />
         <ResultsSurvivalView />
       </div>
