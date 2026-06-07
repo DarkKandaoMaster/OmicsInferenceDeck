@@ -79,8 +79,8 @@ watch(psResult, async (val) => {
         <ResultsClusteringView />
         <ResultsDifferentialView />
         <ResultsBiomarkerClusterScatterView />
-        <ResultsEnrichmentView />
         <ResultsSurvivalView />
+        <ResultsEnrichmentView />
       </div>
     </template>
   </div>
