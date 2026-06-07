@@ -4,12 +4,21 @@ import { useUIState } from '~/composables/core/useUIState'
 import { useAlgorithmState } from '~/composables/domain/useAlgorithmState'
 import { useResultSelection } from '~/composables/domain/useResultSelection'
 
-const { isCustomEvalMode } = useDataState()
+const { isCustomEvalMode, isCustomEvalTestMode } = useDataState()
 const { isLoading, errorMessage } = useUIState()
 const { isTestMode, isPsLoading } = useAlgorithmState()
 const { enabledMetrics, enabledCharts, metricOptions, chartOptions } = useResultSelection()
 
 const isBusy = computed(() => isLoading.value || isPsLoading.value)
+
+// 当前模式下「参数敏感性分析」是否开启
+const psActive = computed(() =>
+  isCustomEvalMode.value ? isCustomEvalTestMode.value : isTestMode.value,
+)
+// 步骤1：仅自定义算法模式 + PS 开启时禁用
+const disableDataUpload = computed(() => isCustomEvalMode.value && isCustomEvalTestMode.value)
+// 步骤3：任一模式 PS 开启时禁用
+const disableResultSelection = psActive
 
 watch(isCustomEvalMode, (enabled) => {
   if (enabled) isTestMode.value = false
@@ -20,10 +29,21 @@ watch(isCustomEvalMode, (enabled) => {
   <fieldset :disabled="isBusy" class="mx-auto flex max-w-7xl flex-col gap-6 min-w-0 border-0 p-0 m-0">
     <AnalysisModeSelector v-model:is-custom-eval-mode="isCustomEvalMode" />
 
-    <AnalysisDataUpload />
+    <fieldset
+      :disabled="disableDataUpload"
+      class="border-0 p-0 m-0 min-w-0 transition-opacity"
+      :class="disableDataUpload ? 'opacity-50 pointer-events-none' : ''"
+    >
+      <AnalysisDataUpload />
+    </fieldset>
 
     <AnalysisAlgorithmSelect />
 
+    <fieldset
+      :disabled="disableResultSelection"
+      class="border-0 p-0 m-0 min-w-0 transition-opacity"
+      :class="disableResultSelection ? 'opacity-50 pointer-events-none' : ''"
+    >
     <section class="mx-auto w-full max-w-4xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
       <div class="border-b border-slate-200 bg-slate-50 px-5 py-4">
         <h3 class="m-0 text-base font-semibold text-slate-900">3. 选择想展示的结果</h3>
@@ -66,6 +86,7 @@ watch(isCustomEvalMode, (enabled) => {
         依赖关系： 综合得分 依赖 聚类内部质量指标、临床关联指标、生物学相关性指标； 生物学相关性指标 依赖 任一富集分析图； 富集分析图 依赖 任一差异分析图。 勾选下游会自动勾选其全部上游；当某组上游全部取消勾选时，依赖它的下游也会自动取消勾选。
       </div>
     </section>
+    </fieldset>
 
     <AnalysisActions />
 
