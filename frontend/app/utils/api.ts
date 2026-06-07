@@ -140,6 +140,10 @@ export function renderDifferentialVolcano(params: {
   return http.post('/plots/differential_volcano', params)
 }
 
+export function renderBiomarkerClusterScatter(params: { session_id: string; cluster_id: number }) {
+  return http.post('/plots/biomarker_cluster_scatter', params)
+}
+
 export function renderEnrichmentBar(params: {
   session_id: string
   database: string
