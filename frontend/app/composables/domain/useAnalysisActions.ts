@@ -1,4 +1,4 @@
-import { computeAwaMetrics, computeBiologyMetrics, computeClinicalMetrics, computeMetrics, evaluateCustom, renderPredClusterScatter, renderInputClusterScatter, runAlgorithm, runParameterSearch } from '~/utils/api'
+import { computeAwaMetrics, computeBiologyMetrics, computeClinicalMetrics, computeMetrics, evaluateCustom, renderPredClusterScatter, renderInputClusterScatter, runAlgorithm, runParameterSearch, uploadParameterMat } from '~/utils/api'
 import { useSession } from '~/composables/core/useSession'
 import { useUIState } from '~/composables/core/useUIState'
 import { useDataState } from '~/composables/domain/useDataState'
@@ -27,6 +27,13 @@ export function useAnalysisActions() {
     isExpressionMatrixUploaded,
     isCustomEvalMode,
     customEvalFile,
+    isCustomEvalTestMode,
+    customEvalMatFile,
+    matXCol,
+    matYCol,
+    matScoreCol,
+    matXLabel,
+    matYLabel,
   } = useDataState()
   const {
     selectedAlgorithm,
@@ -214,6 +221,38 @@ export function useAnalysisActions() {
 
   async function runAnalysisFlow() {
     if (isCustomEvalMode.value) {
+      // 参数敏感性分析（.mat 上传）：不依赖任何原始组学/临床文件，直接读 .mat 现成列绘图
+      if (isCustomEvalTestMode.value) {
+        if (!customEvalMatFile.value) { alert('请先选择 .mat 结果文件。'); return }
+
+        isLoading.value = true   // 驱动运行按钮的禁用/转圈，避免重复提交
+        isPsLoading.value = true
+        psResult.value = null
+
+        try {
+          const formData = new FormData()
+          formData.append('file', customEvalMatFile.value)
+          formData.append('session_id', sessionId.value)
+          formData.append('x_col', String(matXCol.value))
+          formData.append('score_col', String(matScoreCol.value))
+          formData.append('x_label', matXLabel.value)
+          // Y 列号留空（null）则传空字符串 → 后端画 2D 曲线
+          formData.append('y_col', matYCol.value == null ? '' : String(matYCol.value))
+          formData.append('y_label', matYLabel.value)
+
+          const res = await uploadParameterMat(formData)
+          psResult.value = res.data
+          psParam1.value = res.data.x_param || matXLabel.value
+          psParam2.value = res.data.y_param || ''
+        } catch (error: any) {
+          alert('参数敏感性分析失败: ' + (error.response?.data?.detail || error.message))
+        } finally {
+          isPsLoading.value = false
+          isLoading.value = false
+        }
+        return
+      }
+
       if (!customEvalFile.value) { alert('请先选择结果数据文件。'); return }
 
       isLoading.value = true

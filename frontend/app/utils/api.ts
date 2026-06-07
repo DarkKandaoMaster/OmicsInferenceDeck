@@ -166,6 +166,13 @@ export function renderParameterSurface(params: {
   return http.post('/plots/parameter_surface', params)
 }
 
+/** 上传 .mat 生成参数敏感性图 */
+export function uploadParameterMat(formData: FormData) {
+  return http.post('/parameter_search_mat', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
 /** 会话清理 (使用 beacon，不走 axios) */
 export function cleanupSession(sessionId: string) {
   const formData = new FormData()

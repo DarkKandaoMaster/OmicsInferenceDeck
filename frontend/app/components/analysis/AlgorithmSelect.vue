@@ -15,7 +15,11 @@ const {
   nNeighbors,
 } = useAlgorithmState()
 
-const { isCustomEvalMode, customEvalFile, isCustomEvalTestMode, handleCustomEvalFileChange, clearCustomEvalFile } = useDataState()
+const {
+  isCustomEvalMode, customEvalFile, isCustomEvalTestMode, handleCustomEvalFileChange, clearCustomEvalFile,
+  customEvalMatFile, matXCol, matYCol, matScoreCol, matXLabel, matYLabel,
+  handleCustomEvalMatFileChange, clearCustomEvalMatFile,
+} = useDataState()
 
 const algorithmsWithK = ['K-means', 'Spectral Clustering', 'NEMO', 'SNF', 'Hclust', 'PIntMF', 'MOSD', 'Parea']
 const algorithmsWithSeed = ['K-means', 'Spectral Clustering', 'Hclust', 'PIntMF', 'MOSD', 'Parea']
@@ -39,7 +43,8 @@ const hasSelectedAlgorithm = computed(() => selectedAlgorithm.value.length > 0)
         </span>
       </label>
     </div>
-    <div class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <!-- 默认：上传自定义聚类结果（CSV/XLSX） -->
+    <div v-if="!isCustomEvalTestMode" class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div>
         <p class="mb-4 text-[13px] leading-relaxed text-slate-500">
           请把您上传的组学数据作为输入，用您自己的算法，生成一个CSV/Excel文件：<br>
@@ -70,6 +75,63 @@ const hasSelectedAlgorithm = computed(() => selectedAlgorithm.value.length > 0)
 TCGA-01,1,0.42,0.18,...
 TCGA-02,2,0.31,0.66,...
 TCGA-03,1,0.58,0.21,...</pre>
+      </div>
+    </div>
+
+    <!-- 参数敏感性分析：上传结果 .mat，直接读取指定列绘制敏感性曲面图 -->
+    <div v-else class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div>
+        <p class="mb-4 text-[13px] leading-relaxed text-slate-500">
+          上传算法参数扫描产生的 <strong>.mat</strong> 结果文件，平台自动取其中首个数据变量、直接读取现成的列绘制参数敏感性图，<strong>无需</strong>再上传组学/临床数据。<br>
+          默认按 MLMOSC 格式（X/Y/−log10(p) = 第 15/16/17 列）；如需适配其它 .mat，可在下方自定义列号与轴标签。
+        </p>
+        <div class="relative rounded-lg border-2 border-dashed border-amber-200 bg-amber-50/60 text-center transition-all hover:border-amber-400 hover:bg-amber-50">
+          <input type="file" accept=".mat" class="absolute inset-0 h-full w-full cursor-pointer opacity-0" @change="handleCustomEvalMatFileChange($event)" />
+          <div class="flex min-h-[116px] flex-col items-center justify-center px-4 py-5 pointer-events-none">
+            <span class="text-sm font-semibold text-slate-900">点击选择 .mat 结果文件</span>
+            <span class="mt-1 text-xs text-slate-500">MATLAB .mat</span>
+          </div>
+        </div>
+        <div v-if="customEvalMatFile" class="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+          <span class="truncate text-[13px] text-slate-900" :title="customEvalMatFile.name">{{ customEvalMatFile.name }}</span>
+          <button type="button" aria-label="移除" title="移除" class="flex h-7 w-7 items-center justify-center text-slate-500 hover:text-red-600" @click="clearCustomEvalMatFile()">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </button>
+        </div>
+
+        <div class="mt-4 flex flex-col gap-2">
+          <label class="flex items-center gap-2 text-[13px] text-slate-700">
+            <span class="shrink-0 w-32">X 轴标签:</span>
+            <input v-model="matXLabel" type="text" placeholder="gamma"
+              class="w-48 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+            <span class="shrink-0">X 列号:</span>
+            <input v-model.number="matXCol" type="number" min="1"
+              class="w-20 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+          </label>
+          <label class="flex items-center gap-2 text-[13px] text-slate-700">
+            <span class="shrink-0 w-32">Y 轴标签:</span>
+            <input v-model="matYLabel" type="text" placeholder="delta"
+              class="w-48 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+            <span class="shrink-0">Y 列号:</span>
+            <input v-model.number="matYCol" type="number" min="1" placeholder="留空画 2D"
+              class="w-24 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+          </label>
+          <label class="flex items-center gap-2 text-[13px] text-slate-700">
+            <span class="shrink-0 w-32">−log10(p) 列号:</span>
+            <input v-model.number="matScoreCol" type="number" min="1"
+              class="w-20 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+          </label>
+          <p class="mt-1 text-xs text-slate-500">Y 轴列号留空 → 仅按 X 绘制 2D 敏感性曲线。列号均为 1 起始。</p>
+        </div>
+      </div>
+
+      <div class="rounded-lg bg-slate-900 p-4">
+        <div class="mb-2 text-[11px] font-semibold uppercase text-slate-400">.mat 列语义（MLMOSC 默认）</div>
+        <pre class="m-0 overflow-x-auto whitespace-pre text-xs leading-relaxed text-slate-100">results = N×18 矩阵
+ 第15列  gamma        → X 轴
+ 第16列  delta        → Y 轴
+ 第17列  -log10(p)    → 高度(Z)
+ 第18列  enrichment   (本图不用)</pre>
       </div>
     </div>
   </section>
