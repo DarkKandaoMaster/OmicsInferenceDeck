@@ -144,9 +144,8 @@ async function handleHeatmapDownload(format: PlotFormat) {
       <div class="border-b border-slate-200 bg-slate-50 px-5 py-4">
         <h3 class="m-0 text-3xl font-bold text-slate-900">图表拼接</h3>
         <p class="mt-1 text-xs text-slate-500">
-          上传多个<strong>同一格式</strong>（PNG / PDF / SVG）的图表，按上传顺序从左到右、从上到下拼成最多 3 行的网格。<br>
-          输出格式与上传格式一致，不做跨格式转换。<br>
-          如果是尺寸相同的图片，拼接出来保证一像素都不损失；如果尺寸不同，那么部分图片可能会因放大或者缩小损失点像素
+          您可以在这里上传多个<strong>同一格式</strong>（PNG/SVG/PDF）的图表，我们会把它按照上传顺序从左到右、从上到下拼接成最多3行的网格图表。输出格式将会与上传格式一致。<br>
+          如果是尺寸相同的图片，拼接出来保证一像素都不损失；如果尺寸不同，那么部分图片可能会因放大或缩小稍微损失点像素
         </p>
       </div>
 
@@ -261,7 +260,7 @@ async function handleHeatmapDownload(format: PlotFormat) {
       <div class="border-b border-slate-200 bg-slate-50 px-5 py-4">
         <h3 class="m-0 text-3xl font-bold text-slate-900">箱线图</h3>
         <p class="mt-1 text-xs text-slate-500">
-          您可以在这里绘制“各方法在x个癌症数据集上的-log10 P-values分布”或者“各方法在x个癌症数据集上的显著临床参数数量分布”。<br>
+          您可以在这里绘制箱线图，例如“各方法在x个癌症数据集上的-log10 P-values分布”或者“各方法在x个癌症数据集上的显著临床参数数量分布”。<br>
           注意输入数据需要索引列，不需要表头行。
         </p>
       </div>
@@ -365,7 +364,7 @@ async function handleHeatmapDownload(format: PlotFormat) {
       <div class="border-b border-slate-200 bg-slate-50 px-5 py-4">
         <h3 class="m-0 text-3xl font-bold text-slate-900">热图</h3>
         <p class="mt-1 text-xs text-slate-500">
-          把「算法 × 癌症类型」的二维评分矩阵渲染成热力图：单元格两位小数标注、3D-AWA score 颜色条、红框圈出每列最大值。<br>
+          您可以在这里绘制热图。参考输入示例输入个二维矩阵就可以了。绘制出来的热图会用红框圈出每列最大值。<br>
           注意输入数据需要表头行和索引列。
         </p>
       </div>
