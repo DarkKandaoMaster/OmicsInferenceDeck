@@ -83,7 +83,6 @@ TCGA-03,1,0.58,0.21,...</pre>
       <div>
         <p class="mb-4 text-[13px] leading-relaxed text-slate-500">
           上传算法参数扫描产生的 <strong>.mat</strong> 结果文件，平台自动取其中首个数据变量、直接读取现成的列绘制参数敏感性图，<strong>无需</strong>再上传组学/临床数据。<br>
-          默认按 MLMOSC 格式（X/Y/−log10(p) = 第 15/16/17 列）；如需适配其它 .mat，可在下方自定义列号与轴标签。
         </p>
 
         <div class="mt-4 flex flex-col gap-2">
