@@ -1,35 +1,55 @@
+# ============================================================
+# Python 依赖 (pip install -r requirements.txt)
+# ============================================================
+
+# --- Web 框架 / 服务 ---
 fastapi
 uvicorn
-pydantic 
+pydantic
+python-multipart
+
+# --- 数据处理 ---
 pandas
 numpy
 scipy
+pyarrow
+openpyxl
+
+# --- 机器学习 / 聚类 ---
 scikit-learn
-seaborn
-snfpy
 umap-learn
+snfpy
+pyrea
+
+# --- 生存分析 / 富集分析 ---
 lifelines
 gseapy
-python-multipart
-openpyxl
-pyarrow
-pyrea
+
+# --- 绘图 ---
+matplotlib
+seaborn
 adjustText
+PyMuPDF      # 提供 fitz 模块, 用于 PDF 拼图 (plots/tool_stitch.py)
+Pillow       # 提供 PIL 模块, 图像处理 (plots/tool_stitch.py)
+svgutils     # SVG 拼接 (plots/tool_stitch.py)
 
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 （不过本项目似乎没有使用到torch...）
+# ============================================================
+# 可选: PyTorch (本项目当前未使用, 如需 GPU 版按需安装)
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+# ============================================================
 
-
-
-R包：
-install.packages("devtools")
-install.packages("arrow")
-install.packages("SNFtool")
-install.packages("survival")
-install.packages("gtsummary")
-install.packages("broom")
-devtools::install_github("Shamir-Lab/NEMO/NEMO")
-devtools::install_github("DXCODEE/MOSD")
-devtools::install_github("mpierrejean/pintmf")
-install.packages("BiocManager")
-BiocManager::install("clusterProfiler")
-BiocManager::install("limma")
+# ============================================================
+# R 包 (部分算法 / 富集 / 生存分析通过 R 子进程调用, 需在 R 中单独安装)
+# ============================================================
+# install.packages("devtools")
+# install.packages("arrow")
+# install.packages("SNFtool")
+# install.packages("survival")
+# install.packages("gtsummary")
+# install.packages("broom")
+# devtools::install_github("Shamir-Lab/NEMO/NEMO")
+# devtools::install_github("DXCODEE/MOSD")
+# devtools::install_github("mpierrejean/pintmf")
+# install.packages("BiocManager")
+# BiocManager::install("clusterProfiler")
+# BiocManager::install("limma")
