@@ -150,7 +150,7 @@ export function useDataState() {
     uploadStatus.value = '正在上传组学数据...'
     try {
       const res = await uploadOmics(formData)
-      uploadStatus.value = `✅ 组学数据就绪: ${omicsFileConfigs.value.map(c => c.originalName).join(' + ')}\n⚠️ 提示：这些数据有 ${res.data.lost_samples} 个病人无法对齐，计算时会忽略这些病人`
+      uploadStatus.value = `✅ 组学数据就绪: ${omicsFileConfigs.value.map(c => c.originalName).join(' + ')}\n这些数据有 ${res.data.lost_samples} 个病人无法对齐，计算时会忽略这些病人`
       isOmicsUploaded.value = true
     } catch (error: any) {
       uploadStatus.value = `❌ 数据不合规: ${error.response?.data?.detail || '上传失败'}`
