@@ -70,12 +70,12 @@ export function computeAwaMetrics(params: {
 }
 
 /** 绘制聚类散点图 */
-export function renderClusterScatter(params: {
+export function renderPredClusterScatter(params: {
   session_id: string
   reduction: string
   random_state: number
 }) {
-  return http.post('/plots/cluster_scatter', params)
+  return http.post('/plots/pred_cluster_scatter', params)
 }
 
 /** 绘制聚类前的输入空间散点图 */
@@ -109,6 +109,7 @@ export function runEnrichment(params: {
   session_id?: string
   cluster_genes?: Record<string, string[]>
   database: string
+  dataset?: string
 }) {
   return http.post('/enrichment_analysis', params)
 }
@@ -139,10 +140,15 @@ export function renderDifferentialVolcano(params: {
   return http.post('/plots/differential_volcano', params)
 }
 
+export function renderBiomarkerClusterScatter(params: { session_id: string; cluster_id: number }) {
+  return http.post('/plots/biomarker_cluster_scatter', params)
+}
+
 export function renderEnrichmentBar(params: {
   session_id: string
   database: string
   cluster_id: number
+  dataset?: string
 }) {
   return http.post('/plots/enrichment_bar', params)
 }
@@ -151,6 +157,7 @@ export function renderEnrichmentBubble(params: {
   session_id: string
   database: string
   mode: 'combined' | 'by_gene'
+  cluster_id?: number
 }) {
   return http.post('/plots/enrichment_bubble', params)
 }
@@ -161,6 +168,13 @@ export function renderParameterSurface(params: {
   y_param?: string
 }) {
   return http.post('/plots/parameter_surface', params)
+}
+
+/** 上传 .mat 生成参数敏感性图 */
+export function uploadParameterMat(formData: FormData) {
+  return http.post('/parameter_search_mat', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
 }
 
 /** 会话清理 (使用 beacon，不走 axios) */
@@ -183,8 +197,39 @@ export type DownloadPlotParams = {
   mode?: 'combined' | 'by_gene'
   x_param?: string
   y_param?: string
+  dataset?: string
 }
 
 export function downloadPlot(params: DownloadPlotParams) {
   return http.post('/plots/download', params, { responseType: 'blob' })
+}
+
+/** 工具页面：渲染箱线图（无状态，直接传文本） */
+export function renderToolBoxplot(params: { data: string; variant: string; xlabel?: string; ylabel?: string }) {
+  return http.post('/tools/boxplot', params)
+}
+
+/** 工具页面：下载箱线图（PNG/SVG/PDF） */
+export function downloadToolBoxplot(params: { data: string; variant: string; format: PlotFormat; xlabel?: string; ylabel?: string }) {
+  return http.post('/tools/boxplot/download', params, { responseType: 'blob' })
+}
+
+/** 工具页面：渲染热力图（无状态，直接传带表头的矩阵文本） */
+export function renderToolHeatmap(params: { data: string; xlabel?: string; ylabel?: string; legend?: string }) {
+  return http.post('/tools/heatmap', params)
+}
+
+/** 工具页面：下载热力图（PNG/SVG/PDF） */
+export function downloadToolHeatmap(params: { data: string; format: PlotFormat; xlabel?: string; ylabel?: string; legend?: string }) {
+  return http.post('/tools/heatmap/download', params, { responseType: 'blob' })
+}
+
+/** 工具页面：拼接图表预览（multipart 上传多个同格式图表） */
+export function renderToolStitch(formData: FormData) {
+  return http.post('/tools/stitch', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+}
+
+/** 工具页面：下载拼接结果（PNG/SVG/PDF） */
+export function downloadToolStitch(formData: FormData) {
+  return http.post('/tools/stitch/download', formData, { responseType: 'blob', headers: { 'Content-Type': 'multipart/form-data' } })
 }

@@ -55,8 +55,6 @@ def _coords(embeddings: np.ndarray, reduction: str, random_state: int | None) ->
         return coords
 
     if reduction == "t-SNE":
-        if n_samples < 4:
-            return _coords(embeddings, "PCA", random_state)
         return TSNE(**_tsne_kwargs(n_samples)).fit_transform(embeddings)
 
     if umap is None:
@@ -71,7 +69,7 @@ def build_figure(cluster_result_path: str, reduction: str = "PCA", random_state:
 
     emb_cols = [col for col in df.columns if col.startswith("emb_")]
     if len(emb_cols) == 0:
-        return empty_figure("No feature matrix columns found in cluster_result.parquet.", "Cluster Scatter")
+        return empty_figure("未检测到融合后的特征矩阵，无法绘制聚类后散点图。", "Cluster Scatter")
 
     labels = df["label"].to_numpy()
     embeddings = df[emb_cols].to_numpy(dtype=float)
@@ -79,6 +77,7 @@ def build_figure(cluster_result_path: str, reduction: str = "PCA", random_state:
 
     configure_matplotlib()
     fig, ax = plt.subplots(figsize=(12, 10))
+    ax.set_box_aspect(0.75)
     unique_labels = sorted(pd.Series(labels).dropna().unique())
     palette = _scatter_palette(max(len(unique_labels), 1))
     label_font = reference_font_dict()
@@ -120,7 +119,7 @@ def build_figure(cluster_result_path: str, reduction: str = "PCA", random_state:
         fontweight=tick_font["weight"],
     )
 
-    ax.set_title(f"{reduction} Clustering", fontdict=label_font)
+    ax.set_title(f"Prediction {reduction}", fontdict=label_font)
     ax.grid(False)
     legend = ax.legend(
         title="Clusters",

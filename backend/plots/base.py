@@ -181,13 +181,6 @@ def empty_svg(message: str, title: str | None = None) -> str:
     return figure_to_svg(fig)
 
 
-def set_2d_plot_box(ax: plt.Axes) -> None:
-    try:
-        ax.set_box_aspect(0.75)
-    except Exception:
-        pass
-
-
 def finite_max(values: Iterable[float], default: float = 1.0) -> float:
     arr = np.asarray(list(values), dtype=float)
     arr = arr[np.isfinite(arr)]

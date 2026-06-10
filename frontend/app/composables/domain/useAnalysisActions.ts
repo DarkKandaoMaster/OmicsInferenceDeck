@@ -1,4 +1,4 @@
-import { computeAwaMetrics, computeBiologyMetrics, computeClinicalMetrics, computeMetrics, evaluateCustom, renderClusterScatter, renderInputClusterScatter, runAlgorithm, runParameterSearch } from '~/utils/api'
+import { computeAwaMetrics, computeBiologyMetrics, computeClinicalMetrics, computeMetrics, evaluateCustom, renderPredClusterScatter, renderInputClusterScatter, runAlgorithm, runParameterSearch, uploadParameterMat } from '~/utils/api'
 import { useSession } from '~/composables/core/useSession'
 import { useUIState } from '~/composables/core/useUIState'
 import { useDataState } from '~/composables/domain/useDataState'
@@ -27,6 +27,13 @@ export function useAnalysisActions() {
     isExpressionMatrixUploaded,
     isCustomEvalMode,
     customEvalFile,
+    isCustomEvalTestMode,
+    customEvalMatFile,
+    matXCol,
+    matYCol,
+    matScoreCol,
+    matXLabel,
+    matYLabel,
   } = useDataState()
   const {
     selectedAlgorithm,
@@ -67,7 +74,7 @@ export function useAnalysisActions() {
 
   async function runDownstreamAnalyses() {
     const { runDifferentialAnalysis, diffResult } = useDifferential()
-    const { runEnrichmentAnalysis, enrichmentResult } = useEnrichment()
+    const { runEnrichmentAnalysis } = useEnrichment()
     const { runSurvivalAnalysis } = useSurvival()
 
     if (runDifferential.value) {
@@ -77,44 +84,60 @@ export function useAnalysisActions() {
 
     if (runEnrichment.value && diffResult.value?.clusters) {
       analysisStatus.value = '正在运行功能富集分析...'
-      await runEnrichmentAnalysis('GO', { silent: true })
+      await runEnrichmentAnalysis({ silent: true })
     }
+
+    const databases: Array<'GO' | 'KEGG'> = ['GO', 'KEGG']
 
     if (enabledMetrics.biology) {
       analysisStatus.value = '正在计算生物学机制指标...'
-      let biologyMetrics: any = null
-      try {
-        const biologyMetricsRes = await computeBiologyMetrics({
-          session_id: sessionId.value,
-          database: enrichmentResult.value?.database || 'GO',
-        })
-        biologyMetrics = biologyMetricsRes.data?.data?.biology_metrics || null
-      } catch (error: any) {
-        biologyMetrics = {
-          error: error.response?.data?.detail || '生物学机制指标计算失败',
+      const results = await Promise.allSettled(
+        databases.map(db =>
+          computeBiologyMetrics({ session_id: sessionId.value, database: db }),
+        ),
+      )
+      const biologyMetricsByDb: Record<string, any> = {}
+      databases.forEach((db, idx) => {
+        const r = results[idx]!
+        if (r.status === 'fulfilled') {
+          biologyMetricsByDb[db] = r.value.data?.data?.biology_metrics || null
+        } else {
+          const err: any = r.reason
+          biologyMetricsByDb[db] = {
+            error: err?.response?.data?.detail || '生物学机制指标计算失败',
+          }
         }
-      }
-      mergeIntoBackendResponse({ biology_metrics: biologyMetrics })
+      })
+      mergeIntoBackendResponse({ biology_metrics_by_db: biologyMetricsByDb })
     }
 
     if (enabledMetrics.awa) {
       analysisStatus.value = '正在计算 AWA / 3D-AWA 指标...'
-      let awaMetrics: any = null
-      try {
-        const awaMetricsRes = await computeAwaMetrics({
-          session_id: sessionId.value,
-          database: enrichmentResult.value?.database || 'GO',
-          metrics: backendResponse.value?.data?.metrics || {},
-          clinical_metrics: backendResponse.value?.data?.clinical_metrics || {},
-          biology_metrics: backendResponse.value?.data?.biology_metrics || {},
-        })
-        awaMetrics = awaMetricsRes.data?.data?.awa_metrics || null
-      } catch (error: any) {
-        awaMetrics = {
-          error: error.response?.data?.detail || 'AWA / 3D-AWA 指标计算失败',
+      const biologyByDb = backendResponse.value?.data?.biology_metrics_by_db || {}
+      const results = await Promise.allSettled(
+        databases.map(db =>
+          computeAwaMetrics({
+            session_id: sessionId.value,
+            database: db,
+            metrics: backendResponse.value?.data?.metrics || {},
+            clinical_metrics: backendResponse.value?.data?.clinical_metrics || {},
+            biology_metrics: biologyByDb[db] || {},
+          }),
+        ),
+      )
+      const awaMetricsByDb: Record<string, any> = {}
+      databases.forEach((db, idx) => {
+        const r = results[idx]!
+        if (r.status === 'fulfilled') {
+          awaMetricsByDb[db] = r.value.data?.data?.awa_metrics || null
+        } else {
+          const err: any = r.reason
+          awaMetricsByDb[db] = {
+            error: err?.response?.data?.detail || 'AWA / 3D-AWA 指标计算失败',
+          }
         }
-      }
-      mergeIntoBackendResponse({ awa_metrics: awaMetrics })
+      })
+      mergeIntoBackendResponse({ awa_metrics_by_db: awaMetricsByDb })
     }
 
     if (clinicalFile.value && enabledCharts.survival) {
@@ -128,11 +151,16 @@ export function useAnalysisActions() {
 
     if (enabledMetrics.cluster) {
       analysisStatus.value = '正在计算聚类评估指标...'
-      const metricsRes = await computeMetrics({
-        session_id: sessionId.value,
-      })
-      const { data: nestedData = {}, ...topLevel } = metricsRes.data || {}
-      mergeIntoBackendResponse(nestedData, topLevel)
+      try {
+        const metricsRes = await computeMetrics({
+          session_id: sessionId.value,
+        })
+        const { data: nestedData = {}, ...topLevel } = metricsRes.data || {}
+        mergeIntoBackendResponse(nestedData, topLevel)
+      } catch (_error) {
+        // 缺失融合特征矩阵等情况下不让异常冒泡，避免中断后续分析
+        mergeIntoBackendResponse({ metrics: null, feature_matrix_available: false })
+      }
     }
 
     if (clinicalFile.value && enabledMetrics.clinical) {
@@ -149,22 +177,6 @@ export function useAnalysisActions() {
         }
       }
       mergeIntoBackendResponse({ clinical_metrics: clinicalMetrics })
-    }
-
-    if (enabledCharts.clusterScatter) {
-      analysisStatus.value = '正在绘制聚类散点图...'
-      const plotRes = await renderClusterScatter({
-        session_id: sessionId.value,
-        reduction: currentReduction.value,
-        random_state: randomSeed.value,
-      })
-      mergeIntoBackendResponse({
-        reduction: currentReduction.value,
-        plots: {
-          ...(backendResponse.value?.data?.plots || {}),
-          cluster_scatter: plotRes.data.svg,
-        },
-      })
     }
 
     if (enabledCharts.inputClusterScatter) {
@@ -185,10 +197,62 @@ export function useAnalysisActions() {
         // 失败不阻塞主流程
       }
     }
+
+    if (enabledCharts.predClusterScatter) {
+      analysisStatus.value = '正在绘制聚类散点图...'
+      try {
+        const plotRes = await renderPredClusterScatter({
+          session_id: sessionId.value,
+          reduction: currentReduction.value,
+          random_state: randomSeed.value,
+        })
+        mergeIntoBackendResponse({
+          reduction: currentReduction.value,
+          plots: {
+            ...(backendResponse.value?.data?.plots || {}),
+            pred_cluster_scatter: plotRes.data.svg,
+          },
+        })
+      } catch (_error) {
+        // 失败不阻塞主流程
+      }
+    }
   }
 
   async function runAnalysisFlow() {
     if (isCustomEvalMode.value) {
+      // 参数敏感性分析（.mat 上传）：不依赖任何原始组学/临床文件，直接读 .mat 现成列绘图
+      if (isCustomEvalTestMode.value) {
+        if (!customEvalMatFile.value) { alert('请先选择 .mat 结果文件。'); return }
+
+        isLoading.value = true   // 驱动运行按钮的禁用/转圈，避免重复提交
+        isPsLoading.value = true
+        psResult.value = null
+
+        try {
+          const formData = new FormData()
+          formData.append('file', customEvalMatFile.value)
+          formData.append('session_id', sessionId.value)
+          formData.append('x_col', String(matXCol.value))
+          formData.append('score_col', String(matScoreCol.value))
+          formData.append('x_label', matXLabel.value)
+          // Y 列号留空（null）则传空字符串 → 后端画 2D 曲线
+          formData.append('y_col', matYCol.value == null ? '' : String(matYCol.value))
+          formData.append('y_label', matYLabel.value)
+
+          const res = await uploadParameterMat(formData)
+          psResult.value = res.data
+          psParam1.value = res.data.x_param || matXLabel.value
+          psParam2.value = res.data.y_param || ''
+        } catch (error: any) {
+          alert('参数敏感性分析失败: ' + (error.response?.data?.detail || error.message))
+        } finally {
+          isPsLoading.value = false
+          isLoading.value = false
+        }
+        return
+      }
+
       if (!customEvalFile.value) { alert('请先选择结果数据文件。'); return }
 
       isLoading.value = true
@@ -261,7 +325,7 @@ export function useAnalysisActions() {
 
     isLoading.value = true
     try {
-      const res = await renderClusterScatter({
+      const res = await renderPredClusterScatter({
         session_id: sessionId.value,
         reduction: currentReduction.value,
         random_state: randomSeed.value,
@@ -270,7 +334,7 @@ export function useAnalysisActions() {
         reduction: currentReduction.value,
         plots: {
           ...(backendResponse.value?.data?.plots || {}),
-          cluster_scatter: res.data.svg,
+          pred_cluster_scatter: res.data.svg,
         },
       })
 

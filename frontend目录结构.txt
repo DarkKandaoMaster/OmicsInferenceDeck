@@ -46,7 +46,7 @@ OmicsInferenceDeck/frontend/
 │   ├── pages/                       # 基于文件系统的真实路由 (利用 Nuxt 文件路由替代 activeTab 变量)
 │   │   ├── index.vue                    # 对应 "Home" 页面 (Hero 区域)
 │   │   ├── analysis.vue                 # 对应 "Analysis" 页面 (核心工作台)
-│   │   ├── resources.vue                # 对应 "Resources" 页面
+│   │   ├── tools.vue                    # 对应 "Tools" 页面
 │   │   └── help.vue                     # 对应 "Help" 页面
 │   │
 │   └── app.vue                          # 极简的系统入口

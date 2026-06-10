@@ -28,11 +28,11 @@ from plots.base import (
     run_r_svg,
     session_dir,
 )
-from plots.cluster_scatter import build_figure as build_cluster_scatter_figure
+from plots.biomarker_cluster_scatter import build_figure as build_biomarker_scatter_figure
+from plots.biomarker_cluster_scatter import render_svg as render_biomarker_scatter_svg
+from plots.pred_cluster_scatter import build_figure as build_pred_cluster_scatter_figure
 from plots.input_cluster_scatter import build_figure as build_input_cluster_scatter_figure
 from routers.upload import OMICS_DATA_FILE
-from plots.differential_volcano import build_figure as build_volcano_figure
-from plots.differential_volcano import render_svg as render_volcano_svg
 from plots.parameter_surface import build_figure as build_parameter_figure
 from plots.parameter_surface import render_svg as render_parameter_svg
 from plots.survival_curve import build_figure as build_survival_figure
@@ -55,12 +55,15 @@ class EnrichmentBarRequest(BaseModel):
     session_id: str
     database: str
     cluster_id: int
+    dataset: str | None = None
 
 
 class EnrichmentBubbleRequest(BaseModel):
     session_id: str
     database: str
     mode: str = "combined"
+    cluster_id: int | None = None
+    dataset: str | None = None
 
 
 class ParameterPlotRequest(BaseModel):
@@ -80,6 +83,7 @@ class PlotDownloadRequest(BaseModel):
     mode: str = "combined"
     x_param: str | None = None
     y_param: str | None = None
+    dataset: str | None = None
 
 
 def _seed_or_none(random_state: int) -> int | None:
@@ -113,10 +117,10 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
     plot_type = request.plot_type.strip().lower()
     file_format = request.format.strip().lower()
 
-    if plot_type == "cluster_scatter":
+    if plot_type == "pred_cluster_scatter":
         path = plot_path(request.session_id, CLUSTER_RESULT_FILE)
-        fig = build_cluster_scatter_figure(str(path), request.reduction, _seed_or_none(request.random_state))
-        return figure_to_bytes(fig, file_format), f"cluster_scatter_{request.reduction}"
+        fig = build_pred_cluster_scatter_figure(str(path), request.reduction, _seed_or_none(request.random_state))
+        return figure_to_bytes(fig, file_format, dpi=600), f"pred_cluster_scatter_{request.reduction}"
 
     if plot_type == "input_cluster_scatter":
         omics_path = plot_path(request.session_id, OMICS_DATA_FILE)
@@ -127,27 +131,43 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
             request.reduction,
             _seed_or_none(request.random_state),
         )
-        return figure_to_bytes(fig, file_format), f"input_cluster_scatter_{request.reduction}"
+        return figure_to_bytes(fig, file_format, dpi=600), f"input_cluster_scatter_{request.reduction}"
+
+    if plot_type == "biomarker_cluster_scatter":
+        cluster_id = _require_cluster_id(request)
+        fig, gene = build_biomarker_scatter_figure(
+            str(plot_path(request.session_id, CLUSTER_RESULT_FILE)),
+            str(plot_path(request.session_id, DIFFERENTIAL_HEATMAP_FILE)),
+            str(plot_path(request.session_id, DIFFERENTIAL_VOLCANO_FILE)),
+            cluster_id,
+        )
+        stem = f"biomarker_cluster_scatter_cluster_{cluster_id}" + (f"_{gene}" if gene else "")
+        return figure_to_bytes(fig, file_format, dpi=600), stem
 
     if plot_type == "differential_volcano":
         cluster_id = _require_cluster_id(request)
         path = plot_path(request.session_id, DIFFERENTIAL_VOLCANO_FILE)
-        fig = build_volcano_figure(str(path), cluster_id)
-        return figure_to_bytes(fig, file_format), f"differential_volcano_cluster_{cluster_id}"
+        payload = run_r_plot_bytes(
+            "differential_volcano.R",
+            [path, cluster_id],
+            file_format,
+            session_dir(request.session_id),
+        )
+        return payload, f"differential_volcano_cluster_{cluster_id}"
 
     if plot_type == "survival_curve":
         path = plot_path(request.session_id, SURVIVAL_DATA_FILE)
         meta_path = plot_path(request.session_id, "survival_meta.json")
         p_value = read_json(meta_path).get("p_value") if meta_path.exists() else None
         fig = build_survival_figure(str(path), p_value)
-        return figure_to_bytes(fig, file_format), "survival_curve"
+        return figure_to_bytes(fig, file_format, dpi=600), "survival_curve"
 
     if plot_type == "parameter_surface":
         x_param = _require_x_param(request)
         path = plot_path(request.session_id, PARAMETER_SEARCH_FILE)
         fig = build_parameter_figure(str(path), x_param, request.y_param)
         y_suffix = f"_{request.y_param}" if request.y_param else ""
-        return figure_to_bytes(fig, file_format), f"parameter_surface_{x_param}{y_suffix}"
+        return figure_to_bytes(fig, file_format, dpi=600), f"parameter_surface_{x_param}{y_suffix}"
 
     if plot_type == "differential_heatmap":
         path = plot_path(request.session_id, DIFFERENTIAL_HEATMAP_FILE)
@@ -160,7 +180,7 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
         path = plot_path(request.session_id, enrichment_file(database))
         payload = run_r_plot_bytes(
             "enrichment_bar.R",
-            [path, cluster_id, database.upper()],
+            [path, cluster_id, database.upper(), request.dataset or ""],
             file_format,
             session_dir(request.session_id),
         )
@@ -169,23 +189,41 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
     if plot_type == "enrichment_bubble":
         database = _require_database(request)
         mode = request.mode if request.mode in {"combined", "by_gene"} else "combined"
+        cluster_id = request.cluster_id if request.cluster_id is not None else 0
         path = plot_path(request.session_id, enrichment_file(database))
         payload = run_r_plot_bytes(
             "enrichment_bubble.R",
-            [path, mode, database.upper()],
+            [path, mode, database.upper(), cluster_id, request.dataset or ""],
             file_format,
             session_dir(request.session_id),
         )
-        return payload, f"enrichment_{database.upper()}_bubble_{mode}"
+        stem = f"enrichment_{database.upper()}_bubble_{mode}"
+        if mode == "by_gene":
+            stem = f"{stem}_cluster_{cluster_id}"
+        return payload, stem
 
     raise ValueError(f"Unsupported plot_type: {request.plot_type}")
+
+
+@router.post("/api/plots/biomarker_cluster_scatter")
+async def biomarker_cluster_scatter(request: ClusterSpecificPlotRequest):
+    try:
+        svg, gene = render_biomarker_scatter_svg(
+            str(plot_path(request.session_id, CLUSTER_RESULT_FILE)),
+            str(plot_path(request.session_id, DIFFERENTIAL_HEATMAP_FILE)),
+            str(plot_path(request.session_id, DIFFERENTIAL_VOLCANO_FILE)),
+            request.cluster_id,
+        )
+        return {"status": "success", "svg": svg, "gene": gene}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/api/plots/differential_volcano")
 async def differential_volcano(request: ClusterSpecificPlotRequest):
     try:
         path = plot_path(request.session_id, DIFFERENTIAL_VOLCANO_FILE)
-        return {"status": "success", "svg": render_volcano_svg(str(path), request.cluster_id)}
+        return {"status": "success", "svg": run_r_svg("differential_volcano.R", [path, request.cluster_id])}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -207,7 +245,7 @@ async def enrichment_bar(request: EnrichmentBarRequest):
             "status": "success",
             "svg": run_r_svg(
                 "enrichment_bar.R",
-                [path, request.cluster_id, request.database.upper()],
+                [path, request.cluster_id, request.database.upper(), request.dataset or ""],
             ),
         }
     except Exception as e:
@@ -218,12 +256,13 @@ async def enrichment_bar(request: EnrichmentBarRequest):
 async def enrichment_bubble(request: EnrichmentBubbleRequest):
     try:
         mode = request.mode if request.mode in {"combined", "by_gene"} else "combined"
+        cluster_id = request.cluster_id if request.cluster_id is not None else 0
         path = plot_path(request.session_id, enrichment_file(request.database))
         return {
             "status": "success",
             "svg": run_r_svg(
                 "enrichment_bubble.R",
-                [path, mode, request.database.upper()],
+                [path, mode, request.database.upper(), cluster_id, request.dataset or ""],
             ),
         }
     except Exception as e:

@@ -1,0 +1,25 @@
+install.packages("devtools")
+install.packages("arrow")
+install.packages("SNFtool")
+install.packages("survival")
+install.packages("gtsummary")
+install.packages("broom")
+devtools::install_github("Shamir-Lab/NEMO/NEMO")
+devtools::install_github("DXCODEE/MOSD")
+devtools::install_github("mpierrejean/pintmf")
+install.packages("BiocManager")
+BiocManager::install("clusterProfiler")
+BiocManager::install("limma")
+
+install.packages("ggplot2")
+install.packages("dplyr")
+install.packages("stringr")
+install.packages("ggrepel")
+install.packages("svglite")
+install.packages("pheatmap")
+install.packages("clusterCrit")
+install.packages("cluster")     # R 自带,通常已装,显式列出更保险
+
+BiocManager::install("edgeR")
+BiocManager::install("org.Hs.eg.db")
+BiocManager::install("AnnotationDbi")   # org.Hs.eg.db 的依赖,但代码里显式 library() 了

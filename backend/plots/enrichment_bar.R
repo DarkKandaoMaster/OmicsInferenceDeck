@@ -15,14 +15,15 @@ if (length(args) < 3) {
 data_path <- args[[1]]
 cluster_id <- args[[2]]
 database <- toupper(args[[3]])
-output_format <- if (length(args) >= 4) tolower(args[[4]]) else ""
-output_path <- if (length(args) >= 5) args[[5]] else ""
+dataset <- if (length(args) >= 4) trimws(args[[4]]) else ""
+output_format <- if (length(args) >= 5) tolower(args[[5]]) else ""
+output_path <- if (length(args) >= 6) args[[6]] else ""
 is_download <- output_format %in% c("png", "svg", "pdf") && nzchar(output_path)
 FONT_FAMILY <- "serif"
 
 open_plot_device <- function(width, height) {
   if (output_format == "png") {
-    grDevices::png(output_path, width = width, height = height, units = "in", res = 300, bg = "white")
+    grDevices::png(output_path, width = width, height = height, units = "in", res = 600, bg = "white")
   } else if (output_format == "svg") {
     svglite::svglite(output_path, width = width, height = height, bg = "white")
   } else if (output_format == "pdf") {
@@ -83,6 +84,12 @@ df <- df %>%
 
 palette <- c(BP = "#66C3A5", CC = "#8DA1CB", MF = "#FD8D62", KEGG = "#3498DB", Enrichment = "#3498DB")
 
+title <- if (nzchar(dataset)) {
+  paste0(database, " Enrichment - ", dataset, " Cluster ", cluster_id)
+} else {
+  paste0(database, " Enrichment - Cluster ", cluster_id)
+}
+
 p <- ggplot(df, aes(x = TermShort, y = Gene_Count, fill = Category)) +
   geom_col(width = 0.6) +
   geom_text(aes(label = Gene_Count), hjust = -0.2, size = 4.5, family = FONT_FAMILY) +
@@ -90,7 +97,7 @@ p <- ggplot(df, aes(x = TermShort, y = Gene_Count, fill = Category)) +
   scale_fill_manual(values = palette, drop = FALSE) +
   scale_y_continuous(limits = c(0, max(df$Gene_Count) + 1)) +
   labs(
-    title = paste0(database, " Enrichment - Cluster ", cluster_id),
+    title = title,
     x = "Terms",
     y = "Gene Number"
   ) +

@@ -24,13 +24,13 @@ from plots.base import (
     plot_path,
     run_r_svg,
 )
-from plots.differential_volcano import render_svg as render_volcano_svg
 
 
 router = APIRouter()
 DIFFERENTIAL_SCRIPT = Path(__file__).with_name("differential.R")
 DIFFERENTIAL_INPUT_FILE = "differential_input.parquet"
 EXPRESSION_MATRIX_SOURCE = "mRNA Expression Matrix"
+RNA_FEATURE_OMICS_TYPE = "mRNA"  # 必须与用户在前端为 RNA 组学选择的类型标签一致
 
 
 class DifferentialAnalysisRequest(BaseModel):
@@ -66,6 +66,29 @@ def _load_expression_frame(session_id: str) -> pd.DataFrame | None:
     if not data_dict:
         raise ValueError("Uploaded mRNA expression matrix is empty.")
     return next(iter(data_dict.values())).copy()
+
+
+def _load_rna_feature_symbols(session_id: str) -> set[str] | None:
+    """取 omics_data.parquet 中 'mRNA' 视图的特征基因符号（与学长 rna.fea 等价）。
+
+    列名形如 'A2BP1|54715_mRNA' → 去 '_mRNA' 后缀 → 按 '|' 取符号 → 'A2BP1'。
+    无 omics 数据或无 mRNA 视图时返回 None（调用方据此跳过过滤）。
+    """
+    omics_path = plot_path(session_id, OMICS_DATA_FILE)
+    if not omics_path.exists():
+        return None
+    data_dict = load_frame_dict(omics_path)
+    rna_view = data_dict.get(RNA_FEATURE_OMICS_TYPE)
+    if rna_view is None or rna_view.shape[1] < 1:
+        return None
+    suffix = f"_{RNA_FEATURE_OMICS_TYPE}"
+    symbols = set()
+    for col in rna_view.columns:
+        name = str(col)
+        if name.endswith(suffix):
+            name = name[: -len(suffix)]
+        symbols.add(name.split("|", 1)[0])
+    return symbols or None
 
 
 def _sample_prefix(sample_name: str) -> str:
@@ -114,7 +137,11 @@ def _load_cluster_info(session_id: str) -> pd.DataFrame:
     return cluster_df
 
 
-def _prepare_expression_input(expression_df: pd.DataFrame, cluster_info: pd.DataFrame) -> pd.DataFrame:
+def _prepare_expression_input(
+    expression_df: pd.DataFrame,
+    cluster_info: pd.DataFrame,
+    rna_symbols: set[str] | None = None,
+) -> pd.DataFrame:
     expression_df = expression_df.copy()
     expression_df.index = expression_df.index.astype(str)
     expression_df.columns = [str(column) for column in expression_df.columns]
@@ -124,6 +151,17 @@ def _prepare_expression_input(expression_df: pd.DataFrame, cluster_info: pd.Data
     expression_df = expression_df.dropna(axis=1, how="all")
     if expression_df.empty or expression_df.shape[1] < 1:
         raise ValueError("Uploaded mRNA expression matrix contains no analyzable genes.")
+
+    # 复刻学长 get_diff.R 第88/92行：把表达矩阵基因过滤到 rna.fea ∩ 矩阵，
+    # 使 edgeR 全集 ≈2940，TMM/离散度/BH 校正分母与学长对齐。
+    if rna_symbols:
+        keep = [c for c in expression_df.columns if c in rna_symbols]
+        if len(keep) < 1:
+            raise ValueError(
+                "mRNA 特征过滤后无可用基因：表达矩阵基因符号与 mRNA 组学视图无交集，"
+                "请检查 rna.fea 的 gene_id 符号与表达矩阵行名是否一致。"
+            )
+        expression_df = expression_df[keep]
 
     cluster_map_df = cluster_info.reset_index().copy()
     cluster_map_df["prefix"] = cluster_map_df["sample_name"].map(_sample_prefix)
@@ -213,7 +251,8 @@ async def run_differential_analysis(request: DifferentialAnalysisRequest):
         )
 
         if use_expression_matrix:
-            r_input_df = _prepare_expression_input(expression_df, cluster_info)
+            rna_symbols = _load_rna_feature_symbols(request.session_id)
+            r_input_df = _prepare_expression_input(expression_df, cluster_info, rna_symbols)
             source_type = EXPRESSION_MATRIX_SOURCE
         else:
             if not request.omics_type:
@@ -248,7 +287,7 @@ async def run_differential_analysis(request: DifferentialAnalysisRequest):
         )
 
         try:
-            volcano_svg = render_volcano_svg(str(volcano_path), selected_cluster)
+            volcano_svg = run_r_svg("differential_volcano.R", [volcano_path, selected_cluster])
         except Exception as exc:
             volcano_svg = empty_svg(f"Volcano plot failed: {exc}", "Differential Volcano")
 

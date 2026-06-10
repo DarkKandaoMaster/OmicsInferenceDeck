@@ -15,7 +15,11 @@ const {
   nNeighbors,
 } = useAlgorithmState()
 
-const { isCustomEvalMode, customEvalUploadStatus, handleCustomEvalFileChange } = useDataState()
+const {
+  isCustomEvalMode, customEvalFile, isCustomEvalTestMode, handleCustomEvalFileChange, clearCustomEvalFile,
+  customEvalMatFile, matXCol, matYCol, matScoreCol, matXLabel, matYLabel,
+  handleCustomEvalMatFileChange, clearCustomEvalMatFile,
+} = useDataState()
 
 const algorithmsWithK = ['K-means', 'Spectral Clustering', 'NEMO', 'SNF', 'Hclust', 'PIntMF', 'MOSD', 'Parea']
 const algorithmsWithSeed = ['K-means', 'Spectral Clustering', 'Hclust', 'PIntMF', 'MOSD', 'Parea']
@@ -26,18 +30,29 @@ const hasSelectedAlgorithm = computed(() => selectedAlgorithm.value.length > 0)
 
 <template>
   <section v-if="isCustomEvalMode" class="mx-auto w-full max-w-5xl rounded-lg border border-slate-200 bg-white shadow-sm">
-    <div class="border-b border-slate-200 bg-slate-50 px-5 py-4">
+    <div class="flex flex-col gap-4 border-b border-slate-200 bg-slate-50 px-5 py-4 md:flex-row md:items-center md:justify-between">
       <h3 class="m-0 text-base font-semibold text-slate-900">2. 上传自己算法生成的结果文件</h3>
+      <label class="flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border px-4 py-3 md:w-[280px]" :class="isCustomEvalTestMode ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-white'">
+        <span>
+          <span class="block text-sm font-semibold" :class="isCustomEvalTestMode ? 'text-amber-700' : 'text-slate-900'">参数敏感性分析</span>
+          <span class="block text-xs text-slate-500">按参数范围运行搜索</span>
+        </span>
+        <span class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors" :class="isCustomEvalTestMode ? 'bg-amber-500' : 'bg-slate-300'">
+          <input v-model="isCustomEvalTestMode" type="checkbox" class="sr-only" />
+          <span class="h-[18px] w-[18px] rounded-full bg-white transition-transform" :class="isCustomEvalTestMode ? 'translate-x-5' : 'translate-x-[3px]'" />
+        </span>
+      </label>
     </div>
-    <div class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <!-- 默认：上传自定义聚类结果（CSV/XLSX） -->
+    <div v-if="!isCustomEvalTestMode" class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div>
         <p class="mb-4 text-[13px] leading-relaxed text-slate-500">
-          请把你上传的组学数据作为输入，用你自己的算法，生成一个CSV/Excel文件：<br>
-          1.从左到右分别是<br>
+          请把您上传的组学数据作为输入，用您自己的算法，生成一个CSV/Excel文件：<br>
+          1. 从左到右分别是<br>
           <strong>病人名称</strong>（索引列）、<br>
           <strong>聚类结果</strong>（第2列）、<br>
-          <strong>融合后的特征矩阵</strong>（第3列及之后）。<br>
-          2.行代表病人，列代表特征。有表头行、索引列。
+          <strong>融合后的特征矩阵</strong>（第3列及之后）（可选）。<br>
+          2. 有表头行。
         </p>
         <div class="relative rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 text-center transition-all hover:border-primary hover:bg-indigo-50">
           <input type="file" accept=".csv,.xlsx,.xls" class="absolute inset-0 h-full w-full cursor-pointer opacity-0" @change="handleCustomEvalFileChange($event)" />
@@ -46,8 +61,11 @@ const hasSelectedAlgorithm = computed(() => selectedAlgorithm.value.length > 0)
             <span class="mt-1 text-xs text-slate-500">CSV / XLSX / XLS</span>
           </div>
         </div>
-        <div v-show="customEvalUploadStatus" class="mt-3 rounded-lg border border-green-200 bg-green-50 p-2 text-xs text-green-800">
-          {{ customEvalUploadStatus }}
+        <div v-if="customEvalFile" class="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+          <span class="truncate text-[13px] text-slate-900" :title="customEvalFile.name">{{ customEvalFile.name }}</span>
+          <button type="button" aria-label="移除" title="移除" class="flex h-7 w-7 items-center justify-center text-slate-500 hover:text-red-600" @click="clearCustomEvalFile()">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </button>
         </div>
       </div>
 
@@ -57,6 +75,65 @@ const hasSelectedAlgorithm = computed(() => selectedAlgorithm.value.length > 0)
 TCGA-01,1,0.42,0.18,...
 TCGA-02,2,0.31,0.66,...
 TCGA-03,1,0.58,0.21,...</pre>
+      </div>
+    </div>
+
+    <!-- 参数敏感性分析：上传结果 .mat，直接读取指定列绘制敏感性曲面图 -->
+    <div v-else class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div>
+        <p class="mb-4 text-[13px] leading-relaxed text-slate-500">
+          请把您参数扫描产生的 <strong>.mat</strong> 结果文件作为输入，平台直接读取其中现成的列绘制参数敏感性图：<br>
+          1. 平台自动取文件中的<strong>首个数据变量</strong>。<br>
+          2. <strong>无需</strong>再上传组学/临床数据。<br>
+        </p>
+
+        <div class="mt-4 flex flex-col gap-2">
+          <label class="flex items-center gap-2 text-[13px] text-slate-700">
+            <span class="shrink-0">X轴标签:</span>
+            <input v-model="matXLabel" type="text" placeholder="gamma"
+              class="w-48 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+            <span class="shrink-0">X列号:</span>
+            <input v-model.number="matXCol" type="number" min="1"
+              class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none w-20 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+          </label>
+          <label class="flex items-center gap-2 text-[13px] text-slate-700">
+            <span class="shrink-0">Y轴标签:</span>
+            <input v-model="matYLabel" type="text" placeholder="delta"
+              class="w-48 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+            <span class="shrink-0">Y列号:</span>
+            <input v-model.number="matYCol" type="number" min="1" placeholder="留空画 2D"
+              class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none w-20 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+          </label>
+          <label class="flex items-center gap-2 text-[13px] text-slate-700">
+            <span class="shrink-0">−log10(p)列号:</span>
+            <input v-model.number="matScoreCol" type="number" min="1"
+              class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none w-20 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+          </label>
+          <p class="mt-1 text-xs text-slate-500">Y 轴列号留空 → 仅按 X 绘制 2D 敏感性曲线。列号均为 1 起始。</p>
+        </div>
+
+        <div class="relative mt-4 rounded-lg border-2 border-dashed border-amber-200 bg-amber-50/60 text-center transition-all hover:border-amber-400 hover:bg-amber-50">
+          <input type="file" accept=".mat" class="absolute inset-0 h-full w-full cursor-pointer opacity-0" @change="handleCustomEvalMatFileChange($event)" />
+          <div class="flex min-h-[116px] flex-col items-center justify-center px-4 py-5 pointer-events-none">
+            <span class="text-sm font-semibold text-slate-900">点击选择 .mat 结果文件</span>
+            <span class="mt-1 text-xs text-slate-500">MATLAB .mat</span>
+          </div>
+        </div>
+        <div v-if="customEvalMatFile" class="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+          <span class="truncate text-[13px] text-slate-900" :title="customEvalMatFile.name">{{ customEvalMatFile.name }}</span>
+          <button type="button" aria-label="移除" title="移除" class="flex h-7 w-7 items-center justify-center text-slate-500 hover:text-red-600" @click="clearCustomEvalMatFile()">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="rounded-lg bg-slate-900 p-4">
+        <div class="mb-2 text-[11px] font-semibold uppercase text-slate-400">.mat 列语义（MLMOSC 默认）</div>
+        <pre class="m-0 overflow-x-auto whitespace-pre text-xs leading-relaxed text-slate-100">results = N×18 矩阵
+ 第15列  gamma        → X 轴
+ 第16列  delta        → Y 轴
+ 第17列  -log10(p)    → 高度(Z)
+ 第18列  enrichment   (本图不用)</pre>
       </div>
     </div>
   </section>

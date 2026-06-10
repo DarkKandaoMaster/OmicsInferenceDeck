@@ -23,7 +23,7 @@ from .base import (
     plot_path,
     reference_font_dict,
 )
-from .cluster_scatter import _coords, _scatter_palette
+from .pred_cluster_scatter import _coords, _scatter_palette
 
 
 PLOT_TITLE = "Input Cluster Scatter"
@@ -86,6 +86,7 @@ def build_figure(
 
     configure_matplotlib()
     fig, ax = plt.subplots(figsize=(12, 10))
+    ax.set_box_aspect(0.75)
     unique_labels = sorted(pd.Series(labels).dropna().unique())
     palette = _scatter_palette(max(len(unique_labels), 1))
     label_font = reference_font_dict()
@@ -127,7 +128,7 @@ def build_figure(
         fontweight=tick_font["weight"],
     )
 
-    ax.set_title(PLOT_TITLE, fontdict=label_font)
+    ax.set_title(f"Input Data {reduction}", fontdict=label_font)
     ax.grid(False)
     legend = ax.legend(
         title="Clusters",

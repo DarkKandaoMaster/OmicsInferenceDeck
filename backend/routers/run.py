@@ -2,10 +2,11 @@
 
 本文件读取 upload.py 保存的组学数据，根据前端传来的算法名称和参数加载算法，
 执行聚类并生成每个样本的标签和特征矩阵。结果会保存为 cluster_result.parquet，
-供 metrics.py、cluster_scatter.py、survival.py、differential.py 等后续接口使用。
+供 metrics.py、pred_cluster_scatter.py、survival.py、differential.py 等后续接口使用。
 """
 
 import os
+import io
 import datetime
 import pandas as pd
 from fastapi import APIRouter, HTTPException, File, UploadFile, Form
@@ -16,6 +17,7 @@ import shutil
 from cleanup import cleanup_temp_files
 import itertools
 import numpy as np
+from scipy.io import loadmat
 import pandas as pd
 from lifelines.statistics import multivariate_logrank_test
 from plots.base import PARAMETER_SEARCH_FILE, PARAMETER_SEARCH_META_FILE, empty_svg, plot_path, write_json
@@ -95,7 +97,7 @@ async def run_analysis(request:AnalysisRequest): #指定record的类型为Analys
         #   sample_names — 长度 n_samples 的列表，样本名称
         labels, embeddings, sample_names = algo_instance.fit_predict(data_dict)
 
-        # 4. 将中间结果持久化到 cluster_result.parquet，供 /api/metrics 和 /api/plots/cluster_scatter 读取
+        # 4. 将中间结果持久化到 cluster_result.parquet，供 /api/metrics 和 /api/plots/pred_cluster_scatter 读取
         n_features = embeddings.shape[1]
         df_result = pd.DataFrame(
             embeddings,
@@ -109,7 +111,7 @@ async def run_analysis(request:AnalysisRequest): #指定record的类型为Analys
         # 5. 返回基础聚类信息（不含指标和散点图，由独立指标/绘图接口负责）
         return {
             "status": "success",
-            "message": f"算法 {request.algorithm} 运行成功，请调用 /api/metrics 获取指标，并调用 /api/plots/cluster_scatter 获取散点图",
+            "message": f"算法 {request.algorithm} 运行成功，请调用 /api/metrics 获取指标，并调用 /api/plots/pred_cluster_scatter 获取散点图",
             "server_time": datetime.datetime.now().isoformat(),
             "data": {
                 "method": request.algorithm,
@@ -130,7 +132,7 @@ async def run_analysis(request:AnalysisRequest): #指定record的类型为Analys
 
 本文件用于用户已经在外部完成聚类的情况。它接收用户上传的结果文件，检查样本是否
 能和 upload.py 保存的组学数据、临床数据对应上，然后保存成和 /api/run 相同格式的
-cluster_result.parquet。这样 metrics.py、cluster_scatter.py 等后续接口可以继续使用。
+cluster_result.parquet。这样 metrics.py、pred_cluster_scatter.py 等后续接口可以继续使用。
 """
 
 @router.post("/api/evaluate_custom")
@@ -160,10 +162,10 @@ async def evaluate_custom(
             except Exception as e:
                 raise ValueError(f"结果文件解析失败，请确保格式正确: {str(e)}")
 
-        if df.shape[1] < 2:
+        if df.shape[1] < 1:
             raise ValueError(
                 "结果数据格式不符：除样本名称（索引列）外，"
-                "至少应包含一列聚类标签和一列特征数据。"
+                "至少应包含一列聚类标签。"
             )
 
         sample_names = df.index.astype(str).tolist()
@@ -200,7 +202,7 @@ async def evaluate_custom(
         labels = df_filtered.iloc[:, 0].values
         embeddings = df_filtered.iloc[:, 1:].values
 
-        # 5. 持久化中间结果，供 /api/metrics 和 /api/plots/cluster_scatter 读取（Parquet 格式）
+        # 5. 持久化中间结果，供 /api/metrics 和 /api/plots/pred_cluster_scatter 读取（Parquet 格式）
         n_features = embeddings.shape[1]
         df_result = pd.DataFrame(
             embeddings,
@@ -217,7 +219,7 @@ async def evaluate_custom(
         # 6. 返回基础聚类信息（不含指标和散点图，由独立指标/绘图接口负责）
         return {
             "status": "success",
-            "message": "自定义结果解析成功，请调用 /api/metrics 获取指标，并调用 /api/plots/cluster_scatter 获取散点图",
+            "message": "自定义结果解析成功，请调用 /api/metrics 获取指标，并调用 /api/plots/pred_cluster_scatter 获取散点图",
             "server_time": datetime.datetime.now().isoformat(),
             "data": {
                 "method": "Custom Evaluation",
@@ -323,3 +325,117 @@ async def run_parameter_search(request: ParameterSearchRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+
+"""从上传的 .mat 直接绘制参数敏感性图（薄适配层）。
+
+本端点用于读取学长算法（默认 MLMOSC 格式：X/Y/score = 第 15/16/17 列）已固化好的
+结果矩阵——自动取 .mat 中首个非 __ 变量为数据数组，挑出 X/Y/score 三列写入与
+parameter_search 同名的 parquet，复用 plots.parameter_surface 渲染、复用
+/api/plots/download 下载，无需重跑任何算法、也不依赖任何原始组学/临床文件。
+列号/轴标签可配置以适配其它 .mat。
+"""
+
+
+@router.post("/api/parameter_search_mat")
+async def run_parameter_search_mat(
+    file: UploadFile = File(...),
+    session_id: str = Form(...),
+    x_col: int = Form(15),       # 1-indexed
+    score_col: int = Form(17),   # 1-indexed
+    x_label: str = Form("gamma"),
+    y_col: str = Form("16"),     # 1-indexed；留空则画 2D 曲线
+    y_label: str = Form("delta"),
+):
+    try:
+        # 提前校验 session_id 并准备会话目录（plot_path 内部会校验 session_id 合法性）
+        result_path = plot_path(session_id, PARAMETER_SEARCH_FILE)
+        result_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # 1. 不落盘：直接用 BytesIO 把上传内容交给 scipy 读取，避免任何临时目录
+        raw = await file.read()
+        try:
+            mat = loadmat(io.BytesIO(raw))
+        except Exception as exc:
+            raise ValueError(f"无法解析 .mat 文件：{exc}")
+
+        # 自动取首个非 __ 变量作为数据数组（照搬学长 parameter_sensitivity.py 的取法）
+        data_keys = [k for k in mat.keys() if not k.startswith("__")]
+        if not data_keys:
+            raise ValueError("在 .mat 中找不到可用的数据变量（仅含元信息）。")
+
+        arr = np.asarray(mat[data_keys[0]])
+        if arr.ndim != 2:
+            raise ValueError(f"变量 '{data_keys[0]}' 不是二维矩阵（当前形状 {arr.shape}）。")
+
+        n_cols = arr.shape[1]
+
+        def pick_col(col_1indexed: int, name: str) -> np.ndarray:
+            idx = col_1indexed - 1
+            if idx < 0 or idx >= n_cols:
+                raise ValueError(f"{name} 列号 {col_1indexed} 越界（矩阵共 {n_cols} 列）。")
+            return np.asarray(arr[:, idx], dtype=float)
+
+        # 2. 取出 X / score；Y 仅在填写时取（留空即画 2D）
+        x = pick_col(x_col, "X")
+        z = pick_col(score_col, "−log10(p) / score")
+
+        y_col_str = (y_col or "").strip()
+        has_y = y_col_str != ""
+        if has_y:
+            try:
+                y_index = int(y_col_str)
+            except ValueError:
+                raise ValueError(f"Y 列号 '{y_col_str}' 不是有效整数。")
+            y = pick_col(y_index, "Y")
+
+        # 3. 组装为现有渲染器认识的 DataFrame（列 = 参数名 + 一个 score 列）
+        if has_y:
+            data = {x_label: x, y_label: y, "score": z}
+        else:
+            data = {x_label: x, "score": z}
+        result_df = pd.DataFrame(data).dropna()
+        if result_df.empty:
+            raise ValueError("解析后没有有效数据行（指定列可能全为 NaN）。")
+
+        # 刻意复用同名 parquet，让下载接口 parameter_surface 分支零改动直接可用
+        result_df.to_parquet(result_path, index=False)
+
+        # 4. 计算最优行（score 最大）
+        z_valid = result_df["score"].to_numpy()
+        best_idx = int(np.argmax(z_valid))
+        best_score = float(z_valid[best_idx])
+        if has_y:
+            best_params = {
+                x_label: float(result_df[x_label].iloc[best_idx]),
+                y_label: float(result_df[y_label].iloc[best_idx]),
+            }
+            param_names = [x_label, y_label]
+        else:
+            best_params = {x_label: float(result_df[x_label].iloc[best_idx])}
+            param_names = [x_label]
+
+        meta = {"best_params": best_params, "best_score": best_score, "param_names": param_names}
+        write_json(plot_path(session_id, PARAMETER_SEARCH_META_FILE), meta)
+
+        # 5. 渲染 SVG（无 Y → 现有渲染器自动画 2D 曲线）
+        eff_y = y_label if has_y else ""
+        try:
+            plot_svg = render_parameter_svg(str(result_path), x_label, eff_y or None)
+        except Exception as exc:
+            plot_svg = empty_svg(f"Parameter plot failed: {exc}", "Parameter Sensitivity")
+
+        return {
+            "status": "success",
+            "best_params": best_params,
+            "best_score": best_score,
+            "param_names": param_names,
+            "x_param": x_label,
+            "y_param": eff_y,
+            "plot_svg": plot_svg,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"参数敏感性分析失败：{e}")

@@ -7,8 +7,8 @@ import { useResultSelection } from '~/composables/domain/useResultSelection'
 import { renderDifferentialVolcano } from '~/utils/api'
 
 const {
-  diffResult, isDiffLoading, selectedVolcanoCluster,
-  selectedDiffOmicsType, diffErrorMessage,
+  diffResult, selectedVolcanoCluster,
+  selectedDiffOmicsType,
   runDifferentialAnalysis,
 } = useDifferential()
 const { differentialOmicsTypes } = useDataState()
@@ -35,23 +35,15 @@ async function handleVolcanoClusterChange() {
 
 async function handleOmicsTypeChange() {
   await runDifferentialAnalysis({ silent: true })
-  if (diffResult.value?.clusters) await runEnrichmentAnalysis('GO', { silent: true })
+  if (diffResult.value?.clusters) await runEnrichmentAnalysis({ silent: true })
 }
 </script>
 
 <template>
-  <div v-if="isDiffLoading" class="result-card col-span-2">
-    <div class="p-5 text-sm text-slate-600">Calculating differential expression results...</div>
-  </div>
-
-  <div v-if="diffErrorMessage" class="result-card col-span-2">
-    <div class="p-5 text-sm text-red-700">{{ diffErrorMessage }}</div>
-  </div>
-
   <template v-if="diffResult">
     <div v-if="enabledCharts.diffVolcano" class="result-card">
       <div class="result-card-header">
-        <div class="result-card-title">Differential Volcano</div>
+        <div class="result-card-title">差异火山图</div>
         <div class="flex items-center gap-3">
           <select v-model="selectedDiffOmicsType" @change="handleOmicsTypeChange" class="chart-select">
             <option value="" disabled>Select omics layer</option>
@@ -68,7 +60,7 @@ async function handleOmicsTypeChange() {
 
     <div v-if="enabledCharts.diffHeatmap" class="result-card">
       <div class="result-card-header">
-        <div class="result-card-title">Differential Heatmap</div>
+        <div class="result-card-title">差异热图</div>
         <div class="flex items-center gap-3">
           <select v-if="!enabledCharts.diffVolcano" v-model="selectedDiffOmicsType" @change="handleOmicsTypeChange" class="chart-select">
             <option value="" disabled>Select omics layer</option>

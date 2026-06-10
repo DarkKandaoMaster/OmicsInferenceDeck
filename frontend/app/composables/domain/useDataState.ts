@@ -21,6 +21,16 @@ const expressionMatrixUploadStatus = ref('')
 const isCustomEvalMode = ref(true)
 const customEvalFile = ref<File | null>(null)
 const customEvalUploadStatus = ref('')
+const isCustomEvalTestMode = ref(false)
+
+// =================== 参数敏感性 .mat 上传状态 ===================
+const customEvalMatFile = ref<File | null>(null)
+const customEvalMatUploadStatus = ref('')
+const matXCol = ref(15)
+const matYCol = ref<number | null>(16)
+const matScoreCol = ref(17)
+const matXLabel = ref('gamma')
+const matYLabel = ref('delta')
 
 // =================== 组学数据格式 ===================
 const omicsIsRowSample = ref(true)
@@ -192,21 +202,41 @@ export function useDataState() {
     }
   }
 
+  /* 根据文件名推断默认组学类型，未命中则返回 Unknown */
+  function inferOmicsType(fileName: string) {
+    const defaultTypeByName: Record<string, string> = {
+      'cn.fea': 'CopyNumber',
+      'meth.fea': 'Methylation',
+      'mirna.fea': 'miRNA',
+      'rna.fea': 'mRNA',
+    }
+    return defaultTypeByName[fileName.toLowerCase()] ?? 'Unknown'
+  }
+
   function handleFileChange(event: Event) {
-    const files = Array.from((event.target as HTMLInputElement).files || [])
+    const input = event.target as HTMLInputElement
+    const files = Array.from(input.files || [])
     if (files.length > 0) {
-      omicsFileConfigs.value = files.map(f => ({
+      const added = files.map(f => ({
         id: uuidv4(),
         file: f,
         originalName: f.name,
-        type: 'Unknown',
+        type: inferOmicsType(f.name),
       }))
+      omicsFileConfigs.value = [...omicsFileConfigs.value, ...added]
       uploadStatus.value = '文件已选择，将在运行时自动上传。'
       isOmicsUploaded.value = false
-    } else {
-      omicsFileConfigs.value = []
-      uploadStatus.value = ''
     }
+    input.value = ''
+  }
+
+  /* 移除单个组学文件 */
+  function removeOmicsFile(id: string) {
+    omicsFileConfigs.value = omicsFileConfigs.value.filter(c => c.id !== id)
+    isOmicsUploaded.value = false
+    uploadStatus.value = omicsFileConfigs.value.length > 0
+      ? '文件已移除，将在运行时重新校验数据。'
+      : ''
   }
 
   /** 组学格式变更标记 */
@@ -219,16 +249,14 @@ export function useDataState() {
 
   /** 处理临床文件选择 */
   function handleExpressionMatrixFileChange(event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0]
+    const input = event.target as HTMLInputElement
+    const file = input.files?.[0]
     if (file) {
       expressionMatrixFile.value = file
       expressionMatrixUploadStatus.value = 'mRNA 表达矩阵已选择，将在运行分析时自动上传。'
       isExpressionMatrixUploaded.value = false
-    } else {
-      expressionMatrixFile.value = null
-      expressionMatrixUploadStatus.value = ''
-      isExpressionMatrixUploaded.value = false
     }
+    input.value = ''
   }
 
   function handleExpressionMatrixFormatChange() {
@@ -239,12 +267,14 @@ export function useDataState() {
   }
 
   function handleClinicalFileChange(event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0]
+    const input = event.target as HTMLInputElement
+    const file = input.files?.[0]
     if (file) {
       clinicalFile.value = file
       clinicalUploadStatus.value = '文件已选择，将在运行时自动上传。'
       isClinicalUploaded.value = false
     }
+    input.value = ''
   }
 
   /** 临床格式变更标记 */
@@ -255,16 +285,52 @@ export function useDataState() {
     }
   }
 
+  /** 清除 mRNA 表达矩阵文件 */
+  function clearExpressionMatrixFile() {
+    expressionMatrixFile.value = null
+    expressionMatrixUploadStatus.value = ''
+    isExpressionMatrixUploaded.value = false
+  }
+
+  /** 清除临床文件 */
+  function clearClinicalFile() {
+    clinicalFile.value = null
+    clinicalUploadStatus.value = ''
+    isClinicalUploaded.value = false
+  }
+
+  /** 清除自定义评估文件 */
+  function clearCustomEvalFile() {
+    customEvalFile.value = null
+    customEvalUploadStatus.value = ''
+  }
+
   /** 处理自定义评估文件选择 */
   function handleCustomEvalFileChange(event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0]
+    const input = event.target as HTMLInputElement
+    const file = input.files?.[0]
     if (file) {
       customEvalFile.value = file
       customEvalUploadStatus.value = '结果文件已选择，将在运行时自动提交评估。'
-    } else {
-      customEvalFile.value = null
-      customEvalUploadStatus.value = ''
     }
+    input.value = ''
+  }
+
+  /** 处理参数敏感性 .mat 文件选择 */
+  function handleCustomEvalMatFileChange(event: Event) {
+    const input = event.target as HTMLInputElement
+    const file = input.files?.[0]
+    if (file) {
+      customEvalMatFile.value = file
+      customEvalMatUploadStatus.value = '.mat 文件已选择，将在运行时自动绘制参数敏感性图。'
+    }
+    input.value = ''
+  }
+
+  /** 清除参数敏感性 .mat 文件 */
+  function clearCustomEvalMatFile() {
+    customEvalMatFile.value = null
+    customEvalMatUploadStatus.value = ''
   }
 
   return {
@@ -274,7 +340,11 @@ export function useDataState() {
     clinicalFile, isClinicalUploaded, clinicalUploadStatus,
     expressionMatrixFile, isExpressionMatrixUploaded, expressionMatrixUploadStatus,
     // 自定义评估
-    isCustomEvalMode, customEvalFile, customEvalUploadStatus,
+    isCustomEvalMode, customEvalFile, customEvalUploadStatus, isCustomEvalTestMode,
+    // 参数敏感性 .mat
+    customEvalMatFile, customEvalMatUploadStatus,
+    matXCol, matYCol, matScoreCol, matXLabel, matYLabel,
+    handleCustomEvalMatFileChange, clearCustomEvalMatFile,
     // 格式状态
     omicsIsRowSample, omicsHasHeader, omicsHasIndex,
     clinicalIsRowSample, clinicalHasHeader, clinicalHasIndex,
@@ -285,9 +355,10 @@ export function useDataState() {
     uploadedOmicsTypes, expressionMatrixType, differentialOmicsTypes,
     // 操作
     doUploadOmics, doUploadClinical, doUploadExpressionMatrix,
-    handleFileChange, handleFormatChange,
+    handleFileChange, handleFormatChange, removeOmicsFile,
     handleExpressionMatrixFileChange, handleExpressionMatrixFormatChange,
     handleClinicalFileChange, handleClinicalFormatChange,
     handleCustomEvalFileChange,
+    clearExpressionMatrixFile, clearClinicalFile, clearCustomEvalFile,
   }
 }

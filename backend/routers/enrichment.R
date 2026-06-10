@@ -1,9 +1,14 @@
-# Core GO/KEGG enrichment statistics from local GMT files.
+# Core GO/KEGG enrichment statistics, aligned with the Subtype-MLMOSC pipeline:
+# enrichGO / enrichKEGG against org.Hs.eg.db (ENTREZID), not local GMT files.
 # Usage: Rscript enrichment.R <database> <input.parquet> <output.parquet> <gmt_base_dir> [genes|volcano]
+# NOTE: <gmt_base_dir> is retained for call-signature compatibility but ignored;
+# enrichGO/enrichKEGG use org.Hs.eg.db and the online KEGG service instead.
 
 suppressPackageStartupMessages({
   library(arrow)
   library(clusterProfiler)
+  library(org.Hs.eg.db)
+  library(AnnotationDbi)
 })
 
 RESULT_COLUMNS <- c(
@@ -82,33 +87,6 @@ empty_result <- function() {
   result[, RESULT_COLUMNS, drop = FALSE]
 }
 
-gmt_files <- function(database, base_dir) {
-  database <- toupper(database)
-  if (database == "GO") {
-    return(list(
-      BP = file.path(base_dir, "GO_Biological_Process_2025.gmt"),
-      CC = file.path(base_dir, "GO_Cellular_Component_2025.gmt"),
-      MF = file.path(base_dir, "GO_Molecular_Function_2025.gmt")
-    ))
-  }
-  if (database == "KEGG") {
-    return(list(KEGG = file.path(base_dir, "KEGG_2026.gmt")))
-  }
-  stop("database must be GO or KEGG")
-}
-
-read_term2gene <- function(path) {
-  if (!file.exists(path)) {
-    stop(paste0("GMT file not found: ", path))
-  }
-  term2gene <- clusterProfiler::read.gmt(path)
-  if (ncol(term2gene) < 2) {
-    stop(paste0("invalid GMT file: ", path))
-  }
-  names(term2gene)[1:2] <- c("term", "gene")
-  term2gene[, c("term", "gene"), drop = FALSE]
-}
-
 ratio_numerator <- function(value) {
   parts <- strsplit(as.character(value), "/", fixed = TRUE)[[1]]
   if (length(parts) != 2) {
@@ -117,17 +95,22 @@ ratio_numerator <- function(value) {
   suppressWarnings(as.numeric(parts[[1]]))
 }
 
-format_clusterprofiler_result <- function(cluster_id, category, result_df) {
+# Shape an enrichGO/enrichKEGG result frame into the stable parquet schema.
+# Significance filtering is already applied by the enrichment engine cutoffs
+# (enrichGO pvalueCutoff = 0.1; enrichKEGG p/q cutoff = 0.05); here we only order
+# by p-value and optionally keep the top `top_n` rows (NULL keeps all of them).
+format_clusterprofiler_result <- function(cluster_id, category, result_df, top_n = NULL) {
   if (is.null(result_df) || nrow(result_df) == 0) {
     return(empty_result())
   }
 
-  result_df <- result_df[result_df$pvalue < 0.05, , drop = FALSE]
+  result_df <- result_df[order(result_df$pvalue), , drop = FALSE]
+  if (!is.null(top_n)) {
+    result_df <- head(result_df, top_n)
+  }
   if (nrow(result_df) == 0) {
     return(empty_result())
   }
-  result_df <- result_df[order(result_df$pvalue), , drop = FALSE]
-  result_df <- head(result_df, 5)
 
   term_sizes <- vapply(result_df$BgRatio, ratio_numerator, numeric(1))
   hit_counts <- as.numeric(result_df$Count)
@@ -148,24 +131,66 @@ format_clusterprofiler_result <- function(cluster_id, category, result_df) {
   )[, RESULT_COLUMNS, drop = FALSE]
 }
 
-enrich_one_category <- function(cluster_id, query_genes, category, term2gene) {
-  universe <- unique(as.character(term2gene$gene))
-  query <- unique(intersect(as.character(query_genes), universe))
-  if (length(query) < 3 || length(universe) < 1) {
+# Map gene SYMBOLs to ENTREZIDs via org.Hs.eg.db (bitr drops unmapped symbols).
+map_symbols_to_entrez <- function(gene_symbols) {
+  gene_symbols <- unique(as.character(gene_symbols))
+  if (length(gene_symbols) < 1) {
+    return(character(0))
+  }
+  mapped <- tryCatch(
+    suppressWarnings(suppressMessages(
+      clusterProfiler::bitr(
+        gene_symbols,
+        fromType = "SYMBOL",
+        toType = "ENTREZID",
+        OrgDb = org.Hs.eg.db
+      )
+    )),
+    error = function(e) NULL
+  )
+  if (is.null(mapped) || nrow(mapped) == 0) {
+    return(character(0))
+  }
+  unique(as.character(mapped$ENTREZID))
+}
+
+# GO enrichment for one ontology (BP/CC/MF), top 5 terms per category.
+enrich_go_category <- function(cluster_id, entrez_ids, ont) {
+  if (length(entrez_ids) < 3) {
     return(empty_result())
   }
-
-  enrichment <- clusterProfiler::enricher(
-    gene = query,
-    universe = universe,
-    TERM2GENE = term2gene,
-    pvalueCutoff = 1,
-    pAdjustMethod = "BH",
-    qvalueCutoff = 1,
-    minGSSize = 1,
-    maxGSSize = 5000
+  ego <- tryCatch(
+    clusterProfiler::enrichGO(
+      gene = entrez_ids,
+      OrgDb = org.Hs.eg.db,
+      keyType = "ENTREZID",
+      ont = ont,
+      pAdjustMethod = "BH",
+      minGSSize = 1,
+      pvalueCutoff = 0.1,
+      readable = TRUE
+    ),
+    error = function(e) NULL
   )
-  format_clusterprofiler_result(cluster_id, category, as.data.frame(enrichment))
+  format_clusterprofiler_result(cluster_id, ont, as.data.frame(ego), top_n = 5)
+}
+
+# KEGG enrichment (online, organism = "human"); keep all significant pathways.
+enrich_kegg <- function(cluster_id, entrez_ids) {
+  if (length(entrez_ids) < 3) {
+    return(empty_result())
+  }
+  kk <- tryCatch(
+    clusterProfiler::enrichKEGG(
+      gene = entrez_ids,
+      keyType = "kegg",
+      organism = "human",
+      pvalueCutoff = 0.05,
+      qvalueCutoff = 0.05
+    ),
+    error = function(e) NULL
+  )
+  format_clusterprofiler_result(cluster_id, "KEGG", as.data.frame(kk), top_n = NULL)
 }
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -213,9 +238,11 @@ tryCatch(
     cluster_gene_df$gene <- as.character(cluster_gene_df$gene)
     cluster_gene_df <- cluster_gene_df[!is.na(cluster_gene_df$cluster) & nzchar(cluster_gene_df$gene), , drop = FALSE]
 
+    if (!(database %in% c("GO", "KEGG"))) {
+      stop("database must be GO or KEGG")
+    }
+
     clusters <- sort(unique(cluster_gene_df$cluster))
-    files <- gmt_files(database, gmt_base_dir)
-    term_sets <- lapply(files, read_term2gene)
 
     rows <- list()
     for (cluster_id in clusters) {
@@ -223,8 +250,19 @@ tryCatch(
       if (length(gene_list) < 3) {
         next
       }
-      for (category in names(term_sets)) {
-        result <- enrich_one_category(cluster_id, gene_list, category, term_sets[[category]])
+      entrez_ids <- map_symbols_to_entrez(gene_list)
+      if (length(entrez_ids) < 3) {
+        next
+      }
+      if (database == "GO") {
+        for (ont in c("BP", "CC", "MF")) {
+          result <- enrich_go_category(cluster_id, entrez_ids, ont)
+          if (nrow(result) > 0) {
+            rows[[length(rows) + 1]] <- result
+          }
+        }
+      } else {
+        result <- enrich_kegg(cluster_id, entrez_ids)
         if (nrow(result) > 0) {
           rows[[length(rows) + 1]] <- result
         }

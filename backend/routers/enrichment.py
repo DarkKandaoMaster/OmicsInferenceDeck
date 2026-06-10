@@ -1,8 +1,11 @@
 """对差异分析得到的基因做 GO 或 KEGG 富集分析。
 
 本文件通常读取 differential.py 保存的 differential_volcano.parquet，从每个聚类中
-挑出显著基因，再用本地 GO/KEGG 参考文件做富集分析。结果会保存为 enrichment
-文件，并返回前端可显示的柱状图和气泡图 SVG。
+挑出显著基因，再调用 enrichment.R（基于 org.Hs.eg.db 的 enrichGO/enrichKEGG）做
+富集分析。结果会保存为 enrichment 文件，并返回前端可显示的柱状图和气泡图 SVG。
+
+注意：富集引擎已改为 enrichGO/enrichKEGG，不再读取本地 GMT 文件。下方传给 R 的
+gmt_base 路径仅为保持调用签名兼容，R 端会忽略该参数（KEGG 走在线 rest.kegg.jp）。
 """
 
 from pathlib import Path
@@ -32,6 +35,7 @@ class EnrichmentRequest(BaseModel):
     database: str
     session_id: str | None = None
     cluster_genes: dict[str, list[str]] | None = None
+    dataset: str | None = None
 
 
 RESULT_COLUMNS = [
@@ -71,6 +75,8 @@ def _run_enrichment_r(database: str, input_path: Path, output_path: Path, input_
     if not ENRICHMENT_SCRIPT.exists():
         raise FileNotFoundError(f"R enrichment script not found: {ENRICHMENT_SCRIPT}")
 
+    # Retained only for call-signature compatibility; enrichment.R ignores it now
+    # (enrichGO/enrichKEGG use org.Hs.eg.db + the online KEGG service).
     gmt_base = Path(__file__).resolve().parents[1] / "references" / "GO_KEGG"
     result = subprocess.run(
         [
@@ -141,17 +147,23 @@ async def run_enrichment_analysis(request: EnrichmentRequest):
 
         if request.session_id:
             render_path = plot_path(request.session_id, enrichment_file(database))
+            dataset = request.dataset or ""
             try:
-                bar_svg = run_r_svg("enrichment_bar.R", [render_path, selected_cluster, database])
+                bar_svg = run_r_svg("enrichment_bar.R", [render_path, selected_cluster, database, dataset])
             except Exception as exc:
                 bar_svg = empty_svg(f"Enrichment bar plot failed: {exc}", "Enrichment Bar")
             try:
-                bubble_svg = run_r_svg("enrichment_bubble.R", [render_path, "combined", database])
+                bubble_cluster_svg = run_r_svg("enrichment_bubble.R", [render_path, "combined", database, 0, dataset])
             except Exception as exc:
-                bubble_svg = empty_svg(f"Enrichment bubble plot failed: {exc}", "Enrichment Bubble")
+                bubble_cluster_svg = empty_svg(f"Enrichment bubble plot failed: {exc}", "Enrichment Bubble - Cluster")
+            try:
+                bubble_gene_svg = run_r_svg("enrichment_bubble.R", [render_path, "by_gene", database, selected_cluster, dataset])
+            except Exception as exc:
+                bubble_gene_svg = empty_svg(f"Enrichment bubble plot failed: {exc}", "Enrichment Bubble - Gene Count")
         else:
             bar_svg = empty_svg("Run session-based enrichment to render SVG.", "Enrichment Bar")
-            bubble_svg = empty_svg("Run session-based enrichment to render SVG.", "Enrichment Bubble")
+            bubble_cluster_svg = empty_svg("Run session-based enrichment to render SVG.", "Enrichment Bubble - Cluster")
+            bubble_gene_svg = empty_svg("Run session-based enrichment to render SVG.", "Enrichment Bubble - Gene Count")
 
         return {
             "status": "success",
@@ -159,7 +171,8 @@ async def run_enrichment_analysis(request: EnrichmentRequest):
             "clusters": clusters,
             "selected_cluster": selected_cluster,
             "bar_svg": bar_svg,
-            "bubble_svg": bubble_svg,
+            "bubble_cluster_svg": bubble_cluster_svg,
+            "bubble_gene_svg": bubble_gene_svg,
             "n_terms": int(payload.get("n_terms", 0)),
         }
     except Exception as e:

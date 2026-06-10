@@ -9,20 +9,22 @@ suppressPackageStartupMessages({
 
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 3) {
-  stop("Usage: Rscript enrichment_bubble.R <enrichment.parquet> <mode> <database>")
+  stop("Usage: Rscript enrichment_bubble.R <enrichment.parquet> <mode> <database> [cluster_id] [dataset] [format] [output_path]")
 }
 
 data_path <- args[[1]]
 mode <- args[[2]]
 database <- toupper(args[[3]])
-output_format <- if (length(args) >= 4) tolower(args[[4]]) else ""
-output_path <- if (length(args) >= 5) args[[5]] else ""
+cluster_arg <- if (length(args) >= 4) as.character(args[[4]]) else "0"
+dataset <- if (length(args) >= 5) trimws(args[[5]]) else ""
+output_format <- if (length(args) >= 6) tolower(args[[6]]) else ""
+output_path <- if (length(args) >= 7) args[[7]] else ""
 is_download <- output_format %in% c("png", "svg", "pdf") && nzchar(output_path)
 FONT_FAMILY <- "serif"
 
 open_plot_device <- function(width, height) {
   if (output_format == "png") {
-    grDevices::png(output_path, width = width, height = height, units = "in", res = 300, bg = "white")
+    grDevices::png(output_path, width = width, height = height, units = "in", res = 600, bg = "white")
   } else if (output_format == "svg") {
     svglite::svglite(output_path, width = width, height = height, bg = "white")
   } else if (output_format == "pdf") {
@@ -59,33 +61,53 @@ if (nrow(df) == 0) {
 df <- df %>%
   mutate(
     cluster = factor(cluster, levels = sort(unique(cluster))),
+    cluster_numeric = as.integer(as.character(cluster)),
     Gene_Count = as.numeric(Gene_Count),
     Adjusted_P = as.numeric(Adjusted_P),
     Adjusted_P = ifelse(is.na(Adjusted_P) | Adjusted_P <= 0, as.numeric(P_value), Adjusted_P),
     neg_adjusted_p = -1 * Adjusted_P,
-    TermShort = vapply(strsplit(str_remove(Term, " \\(GO.*$"), " "), function(words) paste(head(words, 6), collapse = " "), character(1)),
-    TermShort = str_wrap(TermShort, width = 40)
+    TermShort = str_remove(Term, " \\(GO.*$")
   ) %>%
-  arrange(Adjusted_P) %>%
-  group_by(cluster) %>%
-  slice_head(n = 5) %>%
-  ungroup()
+  arrange(Adjusted_P)
+
+if (mode == "by_gene") {
+  df <- df %>%
+    filter(cluster == cluster_arg)
+} else {
+  df <- df %>%
+    group_by(cluster) %>%
+    slice_head(n = 3) %>%
+    ungroup()
+}
 
 if (nrow(df) == 0) {
   render_output(draw_blank("No significant enrichment result available."), width = 8, height = 6)
   quit(save = "no", status = 0)
 }
 
-term_levels <- rev(unique(df$TermShort))
+if (mode == "by_gene") {
+  term_levels <- rev(unique(df$TermShort))
+} else {
+  pathway_priority <- df %>%
+    group_by(TermShort) %>%
+    summarise(highest_cluster = min(cluster_numeric), .groups = "drop") %>%
+    arrange(highest_cluster, TermShort)
+  term_levels <- pathway_priority$TermShort
+}
 df$TermShort <- factor(df$TermShort, levels = term_levels)
 
 if (mode == "by_gene") {
+  by_gene_title <- if (nzchar(dataset)) {
+    paste0(database, " Enrichment - ", dataset, " Cluster ", cluster_arg)
+  } else {
+    paste0(database, " Enrichment - Cluster ", cluster_arg)
+  }
   p <- ggplot(df, aes(x = Gene_Count, y = TermShort)) +
-    geom_point(aes(size = Gene_Count, color = neg_adjusted_p), alpha = 0.8) +
+    geom_point(aes(size = Gene_Count, color = neg_adjusted_p)) +
     scale_color_gradient(low = "green", high = "red") +
     geom_text(aes(label = Gene_Count), hjust = -0.7, size = 5.6, color = "black", family = FONT_FAMILY) +
     labs(
-      title = paste0(database, " Enrichment - Pathway by Gene Count"),
+      title = by_gene_title,
       x = "Gene Number",
       y = "Pathways",
       color = expression(p.adjust),
@@ -93,26 +115,34 @@ if (mode == "by_gene") {
     ) +
     theme_bw(base_family = FONT_FAMILY, base_size = 16)
 } else {
+  combined_title <- if (nzchar(dataset)) {
+    paste0(database, " Pathway Enrichment - ", dataset, " All Clusters")
+  } else {
+    paste0(database, " Pathway Enrichment - All Clusters")
+  }
   p <- ggplot(df, aes(x = cluster, y = TermShort)) +
     geom_point(aes(size = Gene_Count, color = neg_adjusted_p), alpha = 0.8) +
     scale_color_gradient(low = "blue", high = "red") +
     labs(
-      title = paste0(database, " Pathway Enrichment - All Clusters"),
+      title = combined_title,
       x = "Cluster",
-      y = "Pathways",
+      y = paste0(database, " Pathways"),
       color = expression(p.adjust),
       size = "Gene Count"
     ) +
     theme_bw(base_family = FONT_FAMILY, base_size = 16)
 }
 
+if (mode != "by_gene") {
+  p <- p + scale_size_continuous(range = c(3, 15))
+}
+
 p <- p +
-  scale_size_continuous(range = c(3, 15)) +
   theme(
     text = element_text(family = FONT_FAMILY, size = 16),
     axis.title = element_text(family = FONT_FAMILY, size = 16, face = "bold"),
     axis.text = element_text(family = FONT_FAMILY, size = 16, face = "bold"),
-    axis.text.y = element_text(family = FONT_FAMILY, size = 16, face = "bold", lineheight = 0.8),
+    axis.text.y = element_text(family = FONT_FAMILY, size = 16, face = "bold", lineheight = 0.8), #听AI说这个参数只对多行文本有意义，现在气泡图不折行了它就不起作用，是无害的残留
     plot.title = element_text(family = FONT_FAMILY, size = 16, face = "bold", hjust = 0.5),
     legend.title = element_text(family = FONT_FAMILY, size = 16, face = "bold"),
     legend.text = element_text(family = FONT_FAMILY, size = 16, face = "bold"),

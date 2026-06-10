@@ -18,7 +18,7 @@ FONT_FAMILY <- "serif"
 
 open_plot_device <- function(width, height) {
   if (output_format == "png") {
-    grDevices::png(output_path, width = width, height = height, units = "in", res = 300, bg = "white")
+    grDevices::png(output_path, width = width, height = height, units = "in", res = 600, bg = "white")
   } else if (output_format == "svg") {
     svglite::svglite(output_path, width = width, height = height, bg = "white")
   } else if (output_format == "pdf") {
@@ -66,6 +66,14 @@ mat[!is.finite(mat)] <- 0
 annotation_col <- data.frame(Cluster = cluster_labels)
 rownames(annotation_col) <- sample_names
 
+# The values are already per-gene z-scored upstream (differential.R). A few highly
+# skewed genes produce extreme z-scores that blow out the default min..max colour
+# mapping, flattening the bulk of the data into one pale band. Clip the colour scale
+# to a symmetric +/- limit so out-of-range outliers saturate at the extremes and the
+# main +/- 2 range (~95% of the data) keeps its contrast.
+limit <- 2
+breaks <- seq(-limit, limit, length.out = 101)
+
 render_output({
   pheatmap(
     mat,
@@ -78,6 +86,7 @@ render_output({
     cluster_cols = FALSE,
     cluster_rows = TRUE,
     color = colorRampPalette(c("#313695", "#74ADD1", "#F7F7F7", "#F46D43", "#A50026"))(100),
+    breaks = breaks,
     main = "Top Differential Genes"
   )
 }, width = 8, height = 6)

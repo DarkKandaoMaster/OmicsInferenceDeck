@@ -4,7 +4,7 @@ import { useSurvival } from '~/composables/domain/useSurvival'
 import { useResultSelection } from '~/composables/domain/useResultSelection'
 import { formatPValue } from '~/utils/formatters'
 
-const { survivalResult, isSurvivalLoading, survivalErrorMessage } = useSurvival()
+const { survivalResult } = useSurvival()
 const { sessionId } = useSession()
 const { enabledCharts } = useResultSelection()
 
@@ -15,17 +15,9 @@ const downloadParams = computed(() => ({
 
 <template>
   <template v-if="enabledCharts.survival">
-    <div v-if="isSurvivalLoading" class="result-card">
-      <div class="p-5 text-sm text-slate-600">Calculating Log-Rank P-value and KM survival curve...</div>
-    </div>
-
-    <div v-else-if="survivalErrorMessage" class="result-card">
-      <div class="p-5 text-sm text-red-700">{{ survivalErrorMessage }}</div>
-    </div>
-
-    <div v-else-if="survivalResult" class="result-card">
+    <div v-if="survivalResult" class="result-card">
       <div class="result-card-header">
-        <div class="result-card-title">Survival Curve</div>
+        <div class="result-card-title">生存曲线</div>
         <div class="flex items-center gap-3 text-sm text-slate-600">
           <span>
             Log-Rank P-value:
@@ -33,9 +25,6 @@ const downloadParams = computed(() => ({
           </span>
           <ResultsPlotDownloadButton plot-type="survival_curve" :params="downloadParams" filename-prefix="survival_curve" />
         </div>
-      </div>
-      <div v-if="survivalResult.lost_samples" class="mx-5 mt-4 bg-amber-50 border border-amber-200 text-amber-700 p-3 rounded-lg text-[13px]">
-        {{ survivalResult.lost_samples }} clustered samples were excluded because clinical data was missing.
       </div>
       <div class="svg-chart" v-html="survivalResult.survival_svg" />
     </div>
