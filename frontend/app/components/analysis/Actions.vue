@@ -1,23 +1,15 @@
 <script setup lang="ts">
+import { useAnalysisLog } from '~/composables/core/useAnalysisLog'
 import { useUIState } from '~/composables/core/useUIState'
 import { useAlgorithmState } from '~/composables/domain/useAlgorithmState'
 import { useAnalysisActions } from '~/composables/domain/useAnalysisActions'
 import { useDataState } from '~/composables/domain/useDataState'
-import { useDifferential } from '~/composables/domain/useDifferential'
-import { useEnrichment } from '~/composables/domain/useEnrichment'
-import { useSurvival } from '~/composables/domain/useSurvival'
 
 const { isLoading } = useUIState()
 const { isTestMode, isPsLoading } = useAlgorithmState()
-const { analysisStatus, runAnalysisFlow, runParameterSearchFlow } = useAnalysisActions()
-const {
-  uploadStatus,
-  expressionMatrixUploadStatus,
-  clinicalUploadStatus,
-  customEvalUploadStatus,
-  isCustomEvalMode,
-  isCustomEvalTestMode,
-} = useDataState()
+const { runAnalysisFlow, runParameterSearchFlow } = useAnalysisActions()
+const { isCustomEvalMode, isCustomEvalTestMode } = useDataState()
+const { logEntries } = useAnalysisLog()
 
 // 两种模式各有一个“参数敏感性分析”开关：内置算法用 isTestMode，自己的算法用 isCustomEvalTestMode。
 // 只要当前模式的开关打开，就展示“运行参数敏感性分析”按钮。
@@ -29,9 +21,6 @@ const isSensitivityMode = computed(() =>
 function runSensitivityFlow() {
   return isCustomEvalMode.value ? runAnalysisFlow() : runParameterSearchFlow()
 }
-const { isDiffLoading, diffErrorMessage } = useDifferential()
-const { isEnrichmentLoading, enrichmentErrorMessage } = useEnrichment()
-const { isSurvivalLoading, survivalErrorMessage, survivalResult } = useSurvival()
 </script>
 
 <template>
@@ -45,7 +34,7 @@ const { isSurvivalLoading, survivalErrorMessage, survivalResult } = useSurvival(
       >
         <span class="flex items-center justify-center gap-2">
           <span v-if="isLoading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          {{ isLoading ? (analysisStatus || '正在运行分析...') : '运行分析' }}
+          {{ isLoading ? '正在运行分析...' : '运行分析' }}
         </span>
       </button>
 
@@ -62,53 +51,27 @@ const { isSurvivalLoading, survivalErrorMessage, survivalResult } = useSurvival(
       </button>
     </div>
 
-    <div class="mx-auto flex w-full max-w-3xl flex-col gap-2">
-      <div v-show="uploadStatus" class="whitespace-pre-wrap break-words rounded-lg p-2 text-xs" :class="uploadStatus.startsWith('❌') ? 'border border-red-200 bg-red-50 text-red-700' : uploadStatus.startsWith('✅') ? 'border border-green-200 bg-green-50 text-green-800' : 'border border-slate-200 bg-slate-50 text-slate-700'">
-        {{ uploadStatus }}
-      </div>
-
-      <div v-show="expressionMatrixUploadStatus" class="whitespace-pre-wrap break-words rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-700">
-        {{ expressionMatrixUploadStatus }}
-      </div>
-
-      <div v-show="clinicalUploadStatus" class="whitespace-pre-wrap break-words rounded-lg p-2 text-xs" :class="clinicalUploadStatus.startsWith('❌') ? 'border border-red-200 bg-red-50 text-red-700' : clinicalUploadStatus.startsWith('✅') ? 'border border-green-200 bg-green-50 text-green-800' : 'border border-slate-200 bg-slate-50 text-slate-700'">
-        {{ clinicalUploadStatus }}
-      </div>
-
-      <div v-show="customEvalUploadStatus" class="rounded-lg border border-green-200 bg-green-50 p-2 text-xs text-green-800">
-        {{ customEvalUploadStatus }}
-      </div>
-
-      <!-- 分析运行状态：差异表达 / 富集 / 生存 -->
-      <div v-if="isDiffLoading" class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-700">
-        <span class="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
-        正在计算差异表达结果...
-      </div>
-      <div v-if="diffErrorMessage" class="whitespace-pre-wrap break-words rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">
-        {{ diffErrorMessage }}
-      </div>
-
-      <div v-if="isEnrichmentLoading" class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-700">
-        <span class="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
-        正在查询 GO + KEGG 富集结果...
-      </div>
-      <div v-if="enrichmentErrorMessage" class="whitespace-pre-wrap break-words rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">
-        {{ enrichmentErrorMessage }}
-      </div>
-
-      <div v-if="isSurvivalLoading" class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-700">
-        <span class="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
-        正在计算 Log-Rank P 值与 KM 生存曲线...
-      </div>
-      <div v-if="survivalErrorMessage" class="whitespace-pre-wrap break-words rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">
-        {{ survivalErrorMessage }}
-      </div>
-
-      <!-- 生存分析：被排除样本提示（始终显示） -->
-      <div class="whitespace-pre-wrap break-words rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-700">
-        {{ survivalResult?.lost_samples
-          ? `${survivalResult.lost_samples} clustered samples were excluded because clinical data was missing.`
-          : 'No clustered samples were excluded.' }}
+    <!-- 累积式运行日志：运行前为空（隐藏），点“运行分析”后逐行追加，已展示的行不清除 -->
+    <div
+      v-if="logEntries.length"
+      class="mx-auto flex max-h-72 w-full max-w-3xl flex-col gap-2 overflow-y-auto"
+    >
+      <div
+        v-for="entry in logEntries"
+        :key="entry.id"
+        class="flex items-start gap-2 whitespace-pre-wrap break-words rounded-lg border p-2 text-xs"
+        :class="{
+          'border-slate-200 bg-slate-50 text-slate-700': entry.level === 'progress',
+          'border-green-200 bg-green-50 text-green-800': entry.level === 'success',
+          'border-red-200 bg-red-50 text-red-700': entry.level === 'error',
+          'border-amber-200 bg-amber-50 text-amber-700': entry.level === 'warning',
+        }"
+      >
+        <span
+          v-if="entry.level === 'progress'"
+          class="mt-0.5 h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600"
+        />
+        <span>{{ entry.text }}</span>
       </div>
     </div>
   </div>
