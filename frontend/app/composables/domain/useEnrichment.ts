@@ -1,5 +1,6 @@
 import { runEnrichment } from '~/utils/api'
 import { useSession } from '~/composables/core/useSession'
+import { useAnalysisLog } from '~/composables/core/useAnalysisLog'
 import { useDifferential } from '~/composables/domain/useDifferential'
 import { useAlgorithmState } from '~/composables/domain/useAlgorithmState'
 
@@ -32,6 +33,7 @@ export function useEnrichment() {
   const { sessionId } = useSession()
   const { diffResult } = useDifferential()
   const { selectedCancerSubtype } = useAlgorithmState()
+  const { startStep, finishStep, failStep } = useAnalysisLog()
 
   async function runEnrichmentAnalysis(options: { silent?: boolean } = {}) {
     if (!diffResult.value || !diffResult.value.clusters) {
@@ -42,6 +44,7 @@ export function useEnrichment() {
     isEnrichmentLoading.value = true
     enrichmentResults.value = { GO: null, KEGG: null }
     enrichmentErrorMessage.value = ''
+    const step = startStep('正在查询 GO + KEGG 富集结果…')
 
     try {
       const settled = await Promise.allSettled(
@@ -77,9 +80,13 @@ export function useEnrichment() {
       if (!anySuccess) {
         const msg = '富集分析失败: ' + errors.join('; ')
         enrichmentErrorMessage.value = msg
+        failStep(step, '❌ 功能富集分析失败: ' + errors.join('; '))
         if (!options.silent) alert(msg)
       } else if (errors.length > 0) {
         enrichmentErrorMessage.value = errors.join('; ')
+        finishStep(step, '⚠️ 功能富集分析部分完成: ' + errors.join('; '), 'warning')
+      } else {
+        finishStep(step, '✅ 功能富集分析完成')
       }
     } finally {
       isEnrichmentLoading.value = false
