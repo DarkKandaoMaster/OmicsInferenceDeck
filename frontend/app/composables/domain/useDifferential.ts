@@ -16,7 +16,7 @@ export function useDifferential() {
   const { clusteringDone } = useAnalysisActions()
   const { startStep, finishStep, failStep, extractError } = useAnalysisLog()
 
-  async function runDifferentialAnalysis(options: { silent?: boolean } = {}) {
+  async function runDifferentialAnalysis(options: { silent?: boolean, isStale?: () => boolean } = {}) {
     const hasDifferentialInput = omicsFileConfigs.value.length > 0 || isExpressionMatrixUploaded.value
     if (!hasDifferentialInput || !clusteringDone.value) {
       if (!options.silent) alert('请先完成算法分析，得到聚类结果。')
@@ -38,6 +38,8 @@ export function useDifferential() {
         : (differentialOmicsTypes.value[0] || '')
     }
 
+    if (options.isStale?.()) return
+
     isDiffLoading.value = true
     diffErrorMessage.value = ''
     diffResult.value = null
@@ -48,6 +50,7 @@ export function useDifferential() {
         session_id: sessionId.value,
         omics_type: selectedDiffOmicsType.value,
       })
+      if (options.isStale?.()) return   // 停止：丢弃结果，不写 result/finishStep
 
       diffResult.value = res.data
       const clusters = res.data.clusters || []

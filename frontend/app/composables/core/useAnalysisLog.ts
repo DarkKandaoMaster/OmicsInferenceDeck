@@ -1,7 +1,9 @@
 // 运行分析的累积式日志：运行前为空（面板隐藏），点“运行分析”后逐行追加。
 // 每个步骤一行随状态演变（进行中 → 成功/失败），同一次运行内已展示的行不清除。
 
-export type LogLevel = 'progress' | 'success' | 'error' | 'warning'
+import { useRunControl } from '~/composables/core/useRunControl'
+
+export type LogLevel = 'progress' | 'success' | 'error' | 'warning' | 'terminated'
 
 export interface LogEntry {
   id: number
@@ -51,18 +53,34 @@ export function useAnalysisLog() {
     entry.level = 'error'
   }
 
+  /** 停止运行时调用：把所有“进行中”的行就地标记为“已停止”，其余行保留。 */
+  function markRunningAsTerminated() {
+    logEntries.value.forEach((entry) => {
+      if (entry.level === 'progress') {
+        entry.level = 'terminated'
+        entry.text = `⏹ 已停止：${basePhrase(entry.text)}`
+      }
+    })
+  }
+
   /**
    * async 包装器：startStep → await fn → 成功改本行为“✅ …完成”，
    * 失败改本行为“❌ …失败: 原因”后继续抛出。用于会抛异常的步骤。
    */
   async function logStep<T>(label: string, fn: () => Promise<T>): Promise<T> {
+    const { runToken } = useRunControl()
+    const token = runToken.value
     const entry = startStep(label)
     const base = basePhrase(label)
     try {
       const result = await fn()
+      // 令牌已过期（运行被停止）：跳过成功标记，保留 markRunningAsTerminated 写的“已停止”，直接返回结果（调用方会自行丢弃）。
+      if (token !== runToken.value) return result
       finishStep(entry, `✅ ${base}完成`)
       return result
     } catch (error: any) {
+      // 停止导致的异常：不写失败标记、吞掉异常，避免上层 setError/alert 误报。
+      if (token !== runToken.value) return undefined as T
       failStep(entry, `❌ ${base}失败: ${extractError(error)}`)
       throw error
     }
@@ -75,6 +93,7 @@ export function useAnalysisLog() {
     startStep,
     finishStep,
     failStep,
+    markRunningAsTerminated,
     logStep,
     extractError,
   }
