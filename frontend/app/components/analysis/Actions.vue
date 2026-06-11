@@ -21,6 +21,17 @@ const isSensitivityMode = computed(() =>
 function runSensitivityFlow() {
   return isCustomEvalMode.value ? runAnalysisFlow() : runParameterSearchFlow()
 }
+
+// 日志滚动容器：每追加一行日志后，等 DOM 更新完再滚动到底部，让最新一行始终可见。
+const logContainer = ref<HTMLElement | null>(null)
+watch(
+  () => logEntries.value.length,
+  async () => {
+    await nextTick()
+    const el = logContainer.value
+    if (el) el.scrollTop = el.scrollHeight
+  },
+)
 </script>
 
 <template>
@@ -54,6 +65,7 @@ function runSensitivityFlow() {
     <!-- 累积式运行日志：运行前为空（隐藏），点“运行分析”后逐行追加，已展示的行不清除 -->
     <div
       v-if="logEntries.length"
+      ref="logContainer"
       class="mx-auto flex max-h-72 w-full max-w-3xl flex-col gap-2 overflow-y-auto"
     >
       <div
