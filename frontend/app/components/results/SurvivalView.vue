@@ -4,7 +4,7 @@ import { useSurvival } from '~/composables/domain/useSurvival'
 import { useResultSelection } from '~/composables/domain/useResultSelection'
 import { formatPValue } from '~/utils/formatters'
 
-const { survivalResult } = useSurvival()
+const { survivalResult, survivalErrorMessage } = useSurvival()
 const { sessionId } = useSession()
 const { enabledCharts } = useResultSelection()
 
@@ -27,6 +27,18 @@ const downloadParams = computed(() => ({
         </div>
       </div>
       <div class="svg-chart" v-html="survivalResult.survival_svg" />
+    </div>
+
+    <div v-else class="result-card">
+      <div class="result-card-header">
+        <div class="result-card-title">生存曲线</div>
+      </div>
+      <div class="result-placeholder min-h-[420px]">
+        <div class="text-sm font-medium text-slate-500">暂无生存曲线</div>
+        <div class="text-xs text-slate-400">
+          {{ survivalErrorMessage || '未能生成生存曲线，请确认已上传临床数据并完成聚类分析。' }}
+        </div>
+      </div>
     </div>
   </template>
 </template>
