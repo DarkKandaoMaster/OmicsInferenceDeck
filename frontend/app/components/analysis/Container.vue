@@ -87,9 +87,11 @@ watch(isCustomEvalMode, (enabled) => {
         </div>
       </section>
     </fieldset>
+  </fieldset>
 
-    <AnalysisActions />
+  <AnalysisActions />
 
+  <fieldset :disabled="isBusy" class="mx-auto flex max-w-7xl flex-col gap-6 min-w-0 border-0 p-0 m-0">
     <div v-if="errorMessage" class="mx-auto mb-2 flex w-full max-w-5xl items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-4 font-medium text-red-700">
       <span>{{ errorMessage }}</span>
     </div>
