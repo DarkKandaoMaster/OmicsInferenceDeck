@@ -3,7 +3,6 @@ import { useAlgorithmState } from '~/composables/domain/useAlgorithmState'
 import { useAnalysisActions } from '~/composables/domain/useAnalysisActions'
 import { useDifferential } from '~/composables/domain/useDifferential'
 import { useEnrichment } from '~/composables/domain/useEnrichment'
-import { useSurvival } from '~/composables/domain/useSurvival'
 import { useResultSelection } from '~/composables/domain/useResultSelection'
 import { useDataState } from '~/composables/domain/useDataState'
 
@@ -12,14 +11,14 @@ const { isCustomEvalMode, isCustomEvalTestMode } = useDataState()
 const { backendResponse } = useAnalysisActions()
 const { diffResult } = useDifferential()
 const { enrichmentResult } = useEnrichment()
-const { survivalResult } = useSurvival()
 const { enabledMetrics, enabledCharts } = useResultSelection()
 
 const hasAnyMetricsVisible = computed(() => {
   const data = backendResponse.value?.data
   if (!data) return false
   if (enabledMetrics.cluster && data.metrics) return true
-  if (enabledMetrics.clinical && data.clinical_metrics) return true
+  // 临床指标即使没产出，也显示占位卡片，因此勾选即算“可见”
+  if (enabledMetrics.clinical) return true
   if (enabledMetrics.biology && data.biology_metrics_by_db) return true
   if (enabledMetrics.awa && data.awa_metrics_by_db) return true
   return false
@@ -33,7 +32,8 @@ const hasAnyChartsVisible = computed(() => {
   if ((enabledCharts.diffVolcano || enabledCharts.diffHeatmap) && diffResult.value) return true
   if (enabledCharts.biomarkerClusterScatter && diffResult.value) return true
   if ((enabledCharts.enrichBarGO || enabledCharts.enrichBarKEGG || enabledCharts.enrichBubbleGO || enabledCharts.enrichBubbleKEGG) && diffResult.value && enrichmentResult.value) return true
-  if (enabledCharts.survival && survivalResult.value) return true
+  // 生存曲线即使没产出，也显示占位卡片，因此勾选即算“可见”
+  if (enabledCharts.survival) return true
   return false
 })
 
