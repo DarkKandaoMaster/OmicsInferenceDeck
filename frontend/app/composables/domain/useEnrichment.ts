@@ -35,11 +35,13 @@ export function useEnrichment() {
   const { selectedCancerSubtype } = useAlgorithmState()
   const { startStep, finishStep, failStep } = useAnalysisLog()
 
-  async function runEnrichmentAnalysis(options: { silent?: boolean } = {}) {
+  async function runEnrichmentAnalysis(options: { silent?: boolean, isStale?: () => boolean } = {}) {
     if (!diffResult.value || !diffResult.value.clusters) {
       if (!options.silent) alert('请先运行差异分析。')
       return
     }
+
+    if (options.isStale?.()) return
 
     isEnrichmentLoading.value = true
     enrichmentResults.value = { GO: null, KEGG: null }
@@ -50,6 +52,7 @@ export function useEnrichment() {
       const settled = await Promise.allSettled(
         DATABASES.map(db => runEnrichment({ session_id: sessionId.value, database: db, dataset: selectedCancerSubtype.value })),
       )
+      if (options.isStale?.()) return   // 停止：丢弃结果，不写 result/finishStep
 
       const errors: string[] = []
       let firstSelected: number | null = null

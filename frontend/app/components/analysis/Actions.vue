@@ -4,12 +4,29 @@ import { useUIState } from '~/composables/core/useUIState'
 import { useAlgorithmState } from '~/composables/domain/useAlgorithmState'
 import { useAnalysisActions } from '~/composables/domain/useAnalysisActions'
 import { useDataState } from '~/composables/domain/useDataState'
+import { useDifferential } from '~/composables/domain/useDifferential'
+import { useEnrichment } from '~/composables/domain/useEnrichment'
+import { useSurvival } from '~/composables/domain/useSurvival'
 
 const { isLoading } = useUIState()
 const { isTestMode, isPsLoading } = useAlgorithmState()
-const { runAnalysisFlow, runParameterSearchFlow } = useAnalysisActions()
+const { runAnalysisFlow, runParameterSearchFlow, abortRun } = useAnalysisActions()
 const { isCustomEvalMode, isCustomEvalTestMode } = useDataState()
 const { logEntries } = useAnalysisLog()
+const { isDiffLoading } = useDifferential()
+const { isEnrichmentLoading } = useEnrichment()
+const { isSurvivalLoading } = useSurvival()
+
+// 运行中（标准分析或参数敏感性分析任一在跑）：按钮显示为红色「停止运行」。
+const isRunning = computed(() => isLoading.value || isPsLoading.value)
+
+// 停止：作废当前运行 + 标记日志，并立刻把结果面板里各下游分析的转圈也停掉。
+function onTerminate() {
+  abortRun()
+  isDiffLoading.value = false
+  isEnrichmentLoading.value = false
+  isSurvivalLoading.value = false
+}
 
 // 两种模式各有一个“参数敏感性分析”开关：内置算法用 isTestMode，自己的算法用 isCustomEvalTestMode。
 // 只要当前模式的开关打开，就展示“运行参数敏感性分析”按钮。
@@ -37,28 +54,29 @@ watch(
 <template>
   <div class="mx-auto flex w-full max-w-5xl flex-col items-center gap-3 py-4">
     <div class="flex justify-center">
+      <!-- 运行中：统一显示红色「停止运行」按钮（可点击，立即复位） -->
       <button
-        v-if="!isSensitivityMode"
-        @click="runAnalysisFlow"
-        :disabled="isLoading"
-        class="min-w-[220px] cursor-pointer rounded-full border-none bg-gradient-to-r from-blue-500 to-indigo-600 px-10 py-3.5 text-base font-semibold text-white shadow-lg shadow-indigo-500/30 transition-all hover:from-blue-600 hover:to-indigo-700 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
+        v-if="isRunning"
+        @click="onTerminate"
+        class="min-w-[220px] cursor-pointer rounded-full border-none bg-gradient-to-r from-red-500 to-red-600 px-10 py-3.5 text-base font-semibold text-white shadow-lg shadow-red-500/30 transition-all hover:from-red-600 hover:to-red-700"
       >
-        <span class="flex items-center justify-center gap-2">
-          <span v-if="isLoading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          {{ isLoading ? '正在运行分析...' : '运行分析' }}
-        </span>
+        <span class="flex items-center justify-center gap-2">⏹ 停止运行</span>
+      </button>
+
+      <button
+        v-else-if="!isSensitivityMode"
+        @click="runAnalysisFlow"
+        class="min-w-[220px] cursor-pointer rounded-full border-none bg-gradient-to-r from-blue-500 to-indigo-600 px-10 py-3.5 text-base font-semibold text-white shadow-lg shadow-indigo-500/30 transition-all hover:from-blue-600 hover:to-indigo-700"
+      >
+        <span class="flex items-center justify-center gap-2">运行分析</span>
       </button>
 
       <button
         v-else
         @click="runSensitivityFlow"
-        :disabled="isPsLoading"
-        class="min-w-[220px] cursor-pointer rounded-full border-none bg-gradient-to-r from-amber-500 to-amber-600 px-10 py-3.5 text-base font-semibold text-white shadow-lg shadow-amber-500/30 transition-all hover:from-amber-600 hover:to-amber-700 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
+        class="min-w-[220px] cursor-pointer rounded-full border-none bg-gradient-to-r from-amber-500 to-amber-600 px-10 py-3.5 text-base font-semibold text-white shadow-lg shadow-amber-500/30 transition-all hover:from-amber-600 hover:to-amber-700"
       >
-        <span class="flex items-center justify-center gap-2">
-          <span v-if="isPsLoading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          {{ isPsLoading ? '正在搜索...' : '运行参数敏感性分析' }}
-        </span>
+        <span class="flex items-center justify-center gap-2">运行参数敏感性分析</span>
       </button>
     </div>
 
@@ -77,6 +95,7 @@ watch(
           'border-green-200 bg-green-50 text-green-800': entry.level === 'success',
           'border-red-200 bg-red-50 text-red-700': entry.level === 'error',
           'border-amber-200 bg-amber-50 text-amber-700': entry.level === 'warning',
+          'border-rose-200 bg-rose-50 text-rose-700': entry.level === 'terminated',
         }"
       >
         <span

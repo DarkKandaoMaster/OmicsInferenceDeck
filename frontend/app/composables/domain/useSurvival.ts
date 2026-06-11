@@ -14,7 +14,7 @@ export function useSurvival() {
   const { clusteringDone } = useAnalysisActions()
   const { startStep, finishStep, failStep, appendLog, extractError } = useAnalysisLog()
 
-  async function runSurvivalAnalysis(options: { silent?: boolean } = {}) {
+  async function runSurvivalAnalysis(options: { silent?: boolean, isStale?: () => boolean } = {}) {
     if (!clinicalFile.value) {
       survivalResult.value = null
       survivalErrorMessage.value = ''
@@ -26,16 +26,20 @@ export function useSurvival() {
       return
     }
 
+    if (options.isStale?.()) return
+
     isSurvivalLoading.value = true
     survivalErrorMessage.value = ''
     survivalResult.value = null
     const step = startStep('正在计算 Log-Rank P 值与 KM 生存曲线…')
     try {
       if (!isClinicalUploaded.value) await doUploadClinical(sessionId.value)
+      if (options.isStale?.()) return
 
       const res = await runSurvival({
         session_id: sessionId.value,
       })
+      if (options.isStale?.()) return   // 停止：丢弃结果，不写 result/finishStep
 
       survivalResult.value = res.data
       finishStep(step, '✅ 生存分析完成')
