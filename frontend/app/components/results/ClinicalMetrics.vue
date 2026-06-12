@@ -38,7 +38,7 @@ function formatType(value: string) {
     </div>
 
     <div v-else class="p-6">
-      <div class="grid grid-cols-3 gap-5 max-[900px]:grid-cols-2 max-[560px]:grid-cols-1">
+      <div class="grid grid-cols-2 gap-5 max-[560px]:grid-cols-1">
         <div class="metric-card">
           <div class="metric-label">Log-Rank Test P-value</div>
           <div class="metric-value">{{ formatPValue(lrt.p_value) }}</div>
@@ -46,10 +46,6 @@ function formatType(value: string) {
         <div class="metric-card">
           <div class="metric-label">ECP Significant Parameters</div>
           <div class="metric-value">{{ ecp.significant_count ?? 0 }} / {{ ecp.total_parameters ?? 0 }}</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">ECP Min P-value</div>
-          <div class="metric-value">{{ formatPValue(ecp.min_p_value) }}</div>
         </div>
       </div>
 
