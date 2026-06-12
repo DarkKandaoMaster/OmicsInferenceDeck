@@ -10,7 +10,7 @@ import { useSurvival } from '~/composables/domain/useSurvival'
 
 const { isLoading } = useUIState()
 const { isTestMode, isPsLoading } = useAlgorithmState()
-const { runAnalysisFlow, runParameterSearchFlow, abortRun } = useAnalysisActions()
+const { runAnalysisFlow, runParameterSearchFlow, abortRun, resultsVisible } = useAnalysisActions()
 const { isCustomEvalMode, isCustomEvalTestMode } = useDataState()
 const { logEntries } = useAnalysisLog()
 const { isDiffLoading } = useDifferential()
@@ -82,7 +82,7 @@ watch(
 
     <!-- 累积式运行日志：运行前为空（隐藏），点“运行分析”后逐行追加，已展示的行不清除 -->
     <div
-      v-if="logEntries.length"
+      v-if="resultsVisible && logEntries.length"
       ref="logContainer"
       class="mx-auto flex max-h-72 w-full max-w-3xl flex-col gap-2 overflow-y-auto"
     >
