@@ -8,7 +8,7 @@ import { useDataState } from '~/composables/domain/useDataState'
 
 const { isTestMode, psResult } = useAlgorithmState()
 const { isCustomEvalMode, isCustomEvalTestMode } = useDataState()
-const { backendResponse } = useAnalysisActions()
+const { backendResponse, resultsVisible } = useAnalysisActions()
 const { diffResult } = useDifferential()
 const { enrichmentResult } = useEnrichment()
 const { enabledMetrics, enabledCharts } = useResultSelection()
@@ -48,7 +48,7 @@ const hasAnyVisibleResult = computed(() => {
 </script>
 
 <template>
-  <div v-if="hasAnyVisibleResult" class="animate-[fadeIn_0.4s_ease-out_forwards]">
+  <div v-if="resultsVisible && hasAnyVisibleResult" class="animate-[fadeIn_0.4s_ease-out_forwards]">
     <div v-if="isParameterSensitivity && psResult" class="results-grid">
       <ResultsParameterView />
     </div>

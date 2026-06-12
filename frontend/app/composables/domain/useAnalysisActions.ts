@@ -12,6 +12,9 @@ import { useResultSelection } from '~/composables/domain/useResultSelection'
 
 const backendResponse = ref<any>(null)
 const clusteringDone = ref(false)
+// 运行配置签名：运行开始时记录当时的 (模式, 参数敏感性) 配置。仅当“当前配置仍等于该签名”时，
+// 结果区与状态栏才可见——切换模式/PS 即隐藏（修复跨模式残留），切回原配置则恢复。
+const runSignature = ref<string | null>(null)
 // 停止标记：abortRun 置位，下一轮运行启动时清掉“已上传”缓存以强制从头重跑（而非跳过上传从中断处续跑）。
 const wasAborted = ref(false)
 
@@ -55,10 +58,26 @@ export function useAnalysisActions() {
     isPsLoading,
     psParam1,
     psParam2,
+    isTestMode,
   } = useAlgorithmState()
   const { enabledMetrics, enabledCharts, runDifferential, runEnrichment } = useResultSelection()
   const { resetLog, startStep, finishStep, failStep, logStep, markRunningAsTerminated } = useAnalysisLog()
   const { startRun, invalidate, isStale } = useRunControl()
+
+  // 当前 (模式, 参数敏感性) 配置签名。自定义模式看 isCustomEvalTestMode，内置模式看 isTestMode。
+  const currentSignature = computed(
+    () => `${isCustomEvalMode.value ? 'custom' : 'internal'}|${(isCustomEvalMode.value ? isCustomEvalTestMode.value : isTestMode.value) ? 'ps' : 'std'}`,
+  )
+
+  // 结果区与状态栏可见的唯一门控：跑过（runSignature 非空）且当前配置仍等于运行时的配置。
+  const resultsVisible = computed(
+    () => runSignature.value !== null && runSignature.value === currentSignature.value,
+  )
+
+  // 运行真正提交时调用：记录当前配置为签名，使结果区与状态栏在该配置下可见。
+  function markRunStarted() {
+    runSignature.value = currentSignature.value
+  }
 
   function ensureBackendResponseShape() {
     if (!backendResponse.value) {
@@ -294,6 +313,7 @@ export function useAnalysisActions() {
         isPsLoading.value = true
         psResult.value = null
         resetLog()
+        markRunStarted()
 
         try {
           const formData = new FormData()
@@ -335,6 +355,7 @@ export function useAnalysisActions() {
       backendResponse.value = null
       clusteringDone.value = false
       resetLog()
+      markRunStarted()
       resetForFreshRunIfAborted()   // 停止后再次运行：强制从头重新上传
 
       try {
@@ -373,6 +394,7 @@ export function useAnalysisActions() {
     backendResponse.value = null
     clusteringDone.value = false
     resetLog()
+    markRunStarted()
     resetForFreshRunIfAborted()   // 停止后再次运行：强制从头重新上传
 
     try {
@@ -460,6 +482,8 @@ export function useAnalysisActions() {
     const token = startRun()
     isPsLoading.value = true
     psResult.value = null
+    resetLog()                    // 再次运行先清空状态栏，避免残留上一次旧日志
+    markRunStarted()
     resetForFreshRunIfAborted()   // 停止后再次运行：强制从头重新上传
 
     try {
@@ -542,6 +566,7 @@ export function useAnalysisActions() {
   return {
     backendResponse,
     clusteringDone,
+    resultsVisible,
     runAnalysisFlow,
     switchReduction,
     runParameterSearchFlow,
