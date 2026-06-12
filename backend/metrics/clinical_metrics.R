@@ -4,7 +4,6 @@
 suppressPackageStartupMessages({
   library(arrow)
   library(survival)
-  library(gtsummary)
 })
 
 json_escape <- function(value) {
@@ -83,27 +82,6 @@ finite_or_na <- function(value) {
     return(NA_real_)
   }
   value
-}
-
-p_value_or_na <- function(value) {
-  if (is.null(value) || length(value) == 0) {
-    return(NA_real_)
-  }
-
-  if (is.numeric(value) || is.integer(value)) {
-    return(finite_or_na(value))
-  }
-
-  text <- as.character(value[1])
-  if (is.na(text) || trimws(text) == "") {
-    return(NA_real_)
-  }
-
-  text <- trimws(text)
-  text <- sub("^<\\s*", "", text)
-  text <- sub("^<=\\s*", "", text)
-  text <- gsub(",", "", text, fixed = TRUE)
-  finite_or_na(text)
 }
 
 clean_text <- function(values) {
@@ -238,71 +216,86 @@ prepare_ecp_data <- function(df) {
   )
 }
 
-get_gtsummary_table_body <- function(summary_table) {
-  table_body <- tryCatch(summary_table[["table_body"]], error = function(error) NULL)
-  if (is.null(table_body)) {
-    table_body <- tryCatch(summary_table$table_body, error = function(error) NULL)
+# Permutation empirical p-value for a single clinical parameter against the
+# cluster labels. Mirrors the senior reference implementation
+# (Subtype-MVCC analysis.R: get.empirical.clinical):
+#   - discrete parameter -> chisq.test on the contingency table
+#   - numeric parameter  -> kruskal.test of values against cluster groups
+# Permutations shuffle the cluster labels in batches; after each batch a
+# binom.test confidence interval decides whether the empirical p-value is
+# resolved with respect to `alpha`. Returns the binom.test estimate, or NA
+# when the test cannot be evaluated (degenerate contingency table, etc.).
+empirical_clinical_pvalue <- function(cluster_labels, clinical_values, is_discrete,
+                                      alpha = 0.05, batch = 1000, max_iter = 1e5,
+                                      seed = 42) {
+  set.seed(seed)
+  cluster <- as.factor(cluster_labels)
+  valid <- !is.na(clinical_values) & !is.na(cluster)
+  clinical_clean <- clinical_values[valid]
+  cluster_clean <- droplevels(cluster[valid])
+  if (is.factor(clinical_clean)) {
+    clinical_clean <- droplevels(clinical_clean)
   }
-  if (is.null(table_body)) {
-    return(data.frame())
-  }
-  as.data.frame(table_body)
-}
 
-manual_ecp_p_value <- function(data, variable, parameter_type) {
-  variable_df <- data[, c("Cluster", variable), drop = FALSE]
-  variable_df[["Cluster"]] <- droplevels(as.factor(variable_df[["Cluster"]]))
-  variable_df <- variable_df[complete.cases(variable_df), , drop = FALSE]
-
-  if (nrow(variable_df) < 2 || nlevels(variable_df[["Cluster"]]) < 2) {
-    return(list(p_value = NA_real_, test = NA_character_))
-  }
-
-  if (identical(parameter_type, "numerical")) {
-    values <- suppressWarnings(as.numeric(variable_df[[variable]]))
-    valid_mask <- !is.na(values) & !is.na(variable_df[["Cluster"]])
-    values <- values[valid_mask]
-    groups <- droplevels(variable_df[["Cluster"]][valid_mask])
-
-    if (length(values) < 2 || nlevels(groups) < 2 || length(unique(values)) < 2) {
-      return(list(p_value = NA_real_, test = "kruskal.test"))
-    }
-
-    p_value <- tryCatch(
-      stats::kruskal.test(values, groups)$p.value,
+  compute_p <- function(cluster_vec) {
+    tryCatch(
+      {
+        if (is_discrete) {
+          contingency <- table(cluster_vec, clinical_clean)
+          if (nrow(contingency) < 2 || ncol(contingency) < 2) {
+            return(NA_real_)
+          }
+          suppressWarnings(stats::chisq.test(contingency)$p.value)
+        } else {
+          stats::kruskal.test(as.numeric(clinical_clean), cluster_vec)$p.value
+        }
+      },
       error = function(error) NA_real_
     )
-    return(list(p_value = finite_or_na(p_value), test = "kruskal.test"))
   }
 
-  groups <- droplevels(as.factor(variable_df[["Cluster"]]))
-  values <- droplevels(as.factor(variable_df[[variable]]))
-  contingency <- table(values, groups)
-  contingency <- contingency[rowSums(contingency) > 0, colSums(contingency) > 0, drop = FALSE]
-
-  if (nrow(contingency) < 2 || ncol(contingency) < 2) {
-    return(list(p_value = NA_real_, test = "fisher.test"))
+  orig_p <- compute_p(cluster_clean)
+  if (is.na(orig_p) || !is.finite(orig_p)) {
+    return(NA_real_)
   }
 
-  p_value <- tryCatch(
-    stats::fisher.test(contingency)$p.value,
-    error = function(error) {
-      tryCatch(
-        stats::fisher.test(contingency, simulate.p.value = TRUE, B = 10000)$p.value,
-        error = function(error) NA_real_
-      )
+  total_iters <- 0L
+  total_extreme <- 0L
+  estimate <- NA_real_
+  repeat {
+    perm_p <- vapply(seq_len(batch), function(i) compute_p(sample(cluster_clean)), numeric(1))
+    perm_p <- perm_p[!is.na(perm_p)]
+    if (length(perm_p) > 0) {
+      total_iters <- total_iters + length(perm_p)
+      total_extreme <- total_extreme + sum(perm_p <= orig_p)
     }
-  )
-  list(p_value = finite_or_na(p_value), test = "fisher.test")
+    if (total_iters == 0L) {
+      return(NA_real_)
+    }
+
+    bt <- stats::binom.test(total_extreme, total_iters)
+    estimate <- as.numeric(bt$estimate)
+    ci_low <- bt$conf.int[1]
+    ci_high <- bt$conf.int[2]
+
+    if (!(ci_low < alpha && ci_high > alpha) || total_iters > max_iter) {
+      break
+    }
+  }
+
+  estimate
 }
 
 compute_ecp <- function(df, alpha = 0.05) {
+  method_name <- "permutation empirical p-value + Bonferroni (Subtype-MLMOSC)"
+
   prepared <- prepare_ecp_data(df)
   prepared_vars <- prepared$prepared_vars
+  n_total <- nrow(df)
 
   if (length(prepared_vars) == 0) {
     return(list(
-      method = "gtsummary::tbl_summary + add_p",
+      method = method_name,
       total_parameters = 0,
       significant_count = 0,
       significance_level = alpha,
@@ -312,59 +305,49 @@ compute_ecp <- function(df, alpha = 0.05) {
     ))
   }
 
-  table <- gtsummary::tbl_summary(
-    data = prepared$data,
-    by = "Cluster",
-    missing = "no"
-  )
-  table <- tryCatch(
-    suppressWarnings(suppressMessages(gtsummary::add_p(table))),
-    error = function(error) table
-  )
-  table_body <- get_gtsummary_table_body(table)
-  label_rows <- table_body[table_body$row_type == "label", , drop = FALSE]
+  analysis_df <- prepared$data
+  cluster_labels <- analysis_df[["Cluster"]]
 
-  results <- list()
-  for (row_index in seq_len(nrow(label_rows))) {
-    variable <- as.character(label_rows$variable[[row_index]])
-    p_value <- if ("p.value" %in% names(label_rows)) {
-      p_value_or_na(label_rows[["p.value"]][[row_index]])
-    } else if ("p_value" %in% names(label_rows)) {
-      p_value_or_na(label_rows[["p_value"]][[row_index]])
-    } else if ("**p-value**" %in% names(label_rows)) {
-      p_value_or_na(label_rows[["**p-value**"]][[row_index]])
-    } else {
-      NA_real_
-    }
-    parameter_type <- if (variable %in% prepared$discrete_vars) "discrete" else "numerical"
-    test_name <- if ("test_name" %in% names(label_rows)) {
-      as.character(label_rows$test_name[[row_index]])
-    } else if ("test" %in% names(label_rows)) {
-      as.character(label_rows$test[[row_index]])
-    } else {
-      "gtsummary default"
-    }
-    if (is.na(test_name) || trimws(test_name) == "") {
-      test_name <- "gtsummary default"
-    }
-    label <- if ("label" %in% names(label_rows)) as.character(label_rows$label[[row_index]]) else variable
+  # Compute the permutation empirical p-value for every prepared parameter,
+  # applying the senior "skip when more than half the values are missing" rule
+  # and dropping parameters whose test cannot be evaluated.
+  raw_results <- list()
+  for (variable in prepared_vars) {
+    is_discrete <- variable %in% prepared$discrete_vars
+    clinical_values <- analysis_df[[variable]]
 
+    valid_count <- sum(!is.na(clinical_values) & !is.na(cluster_labels))
+    if (valid_count < (n_total / 2)) {
+      next
+    }
+
+    p_value <- empirical_clinical_pvalue(cluster_labels, clinical_values, is_discrete)
     if (is.na(p_value)) {
-      manual_result <- manual_ecp_p_value(prepared$data, variable, parameter_type)
-      p_value <- manual_result$p_value
-      if (!is.na(manual_result$test)) {
-        test_name <- manual_result$test
-      }
+      next
     }
- results[[length(results) + 1]] <- list(
+
+    raw_results[[length(raw_results) + 1]] <- list(
       variable = variable,
-      label = label,
-      parameter_type = parameter_type,
-      test = test_name,
-      p_value = p_value,
-      significant = !is.na(p_value) && p_value < alpha
+      is_discrete = is_discrete,
+      p_value = p_value
     )
   }
+
+  n_tested <- length(raw_results)
+
+  # Bonferroni: a parameter is enriched when p * (number of tests) < alpha,
+  # which is equivalent to the senior sum(p * length(enrichment.value) < 0.05).
+  results <- lapply(raw_results, function(item) {
+    adjusted <- item$p_value * n_tested
+    list(
+      variable = item$variable,
+      label = item$variable,
+      parameter_type = if (item$is_discrete) "discrete" else "numerical",
+      test = if (item$is_discrete) "chisq.test (permutation)" else "kruskal.test (permutation)",
+      p_value = item$p_value,
+      significant = !is.na(adjusted) && adjusted < alpha
+    )
+  })
 
   if (length(results) > 0) {
     order_index <- order(vapply(results, function(item) {
@@ -378,12 +361,12 @@ compute_ecp <- function(df, alpha = 0.05) {
   min_p_value <- if (length(finite_p_values) > 0) min(finite_p_values) else NA_real_
 
   list(
-    method = "gtsummary::tbl_summary + add_p",
-    total_parameters = length(results),
+    method = method_name,
+    total_parameters = n_tested,
     significant_count = sum(vapply(results, function(item) isTRUE(item$significant), logical(1))),
     significance_level = alpha,
     min_p_value = min_p_value,
-    skipped_parameters = max(prepared$candidate_count - length(results), 0),
+    skipped_parameters = max(prepared$candidate_count - n_tested, 0),
     results = results
   )
 }
