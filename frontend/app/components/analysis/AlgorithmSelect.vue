@@ -108,10 +108,8 @@ TCGA-03,1,0.58,0.21,...
     <div v-else class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div>
         <p class="mb-4 text-[13px] leading-relaxed text-slate-500">
-          请把您参数扫描产生的 <strong>.mat</strong> 结果文件作为输入，平台直接读取其中现成的列绘制参数敏感性图：<br>
-          1. 平台自动取文件中的<strong>首个数据变量</strong>。<br>
-          2. <strong>无需</strong>再上传组学/临床数据。<br>
-          允许Y 轴列号留空 → 仅按 X 绘制 2D 敏感性曲线。列号均为 1 起始。
+          请把您参数扫描产生的.mat结果文件作为输入，平台会直接读取其中<strong>首个数据变量</strong>里的列绘制参数敏感性图，而无需上传组学/临床等数据。<br>
+          输入X列号、Y列号时需注意，列号应从1起始。允许Y列号留空，平台将仅按X列号绘制2D敏感性曲线。
         </p>
 
         <div class="mt-4 flex flex-col gap-2">
