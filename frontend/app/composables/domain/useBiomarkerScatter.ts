@@ -1,5 +1,6 @@
 import { renderBiomarkerClusterScatter } from '~/utils/api'
 import { useSession } from '~/composables/core/useSession'
+import { useAnalysisLog } from '~/composables/core/useAnalysisLog'
 import { useDifferential } from '~/composables/domain/useDifferential'
 import { useResultSelection } from '~/composables/domain/useResultSelection'
 
@@ -14,9 +15,12 @@ export function useBiomarkerScatter() {
   const { sessionId } = useSession()
   const { diffResult } = useDifferential()
   const { displayedCharts } = useResultSelection()
+  const { startStep, finishStep } = useAnalysisLog()
 
-  async function renderBiomarkerScatter() {
+  // log=true 时在状态栏记录一行（仅运行流程触发的首次绘制需要）；用户切换降维不记录，与聚类前/后散点图一致。
+  async function renderBiomarkerScatter(options: { log?: boolean } = {}) {
     if (!diffResult.value) return
+    const step = options.log ? startStep('正在绘制生物标志物簇散点图…') : null
     isBiomarkerLoading.value = true
     try {
       const res = await renderBiomarkerClusterScatter({
@@ -26,6 +30,11 @@ export function useBiomarkerScatter() {
       })
       biomarkerSvg.value = res.data.svg
       biomarkerGene.value = res.data.gene
+      if (step) finishStep(step, '✅ 生物标志物簇散点图已绘制')
+    } catch (error) {
+      // 失败不阻塞主流程，与聚类前/后散点图一致
+      if (step) finishStep(step, '⚠️ 生物标志物簇散点图绘制失败（已跳过）', 'warning')
+      else throw error
     } finally {
       isBiomarkerLoading.value = false
     }
@@ -44,7 +53,7 @@ export function useBiomarkerScatter() {
       const clusters = result.clusters || []
       if (clusters.length === 0) return
       selectedBiomarkerCluster.value = result.selected_cluster ?? clusters[0]
-      renderBiomarkerScatter()
+      renderBiomarkerScatter({ log: true })
     }, { immediate: true })
   }
 
