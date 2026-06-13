@@ -397,7 +397,7 @@ async function handleHeatmapDownload(format: PlotFormat) {
                 class="w-64 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
             </label>
             <label class="flex items-center gap-2 text-[13px] text-slate-700">
-              <span class="shrink-0">颜色条标签:</span>
+              <span class="shrink-0">颜色条名称:</span>
               <input v-model="heatmapLegend" type="text" placeholder="允许留空"
                 class="w-64 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
             </label>
