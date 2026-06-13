@@ -69,6 +69,7 @@ def build_figure(
     heatmap_path: str,
     volcano_path: str,
     cluster_id: int,
+    reduction: str = "t-SNE",
     random_state: int | None = None,
 ) -> tuple[plt.Figure, str | None]:
     df = pd.read_parquet(cluster_result_path)
@@ -87,9 +88,9 @@ def build_figure(
     if not lookup:
         return empty_figure(f"差异热图中未找到基因 {gene} 的表达值。", "Biomarker Cluster Scatter"), gene
 
-    # 全局 t-SNE 坐标（全部样本，seed 固定 3407，与 A 图同一景观）。
+    # 全局降维坐标（全部样本，seed 固定 3407，与 A 图同一景观）。
     embeddings = df[emb_cols].to_numpy(dtype=float)
-    coords = _coords(embeddings, "t-SNE", random_state)
+    coords = _coords(embeddings, reduction, random_state)
 
     sample_names = df["sample_name"].astype(str).to_numpy()
     labels = df["label"].to_numpy()
@@ -143,8 +144,9 @@ def build_figure(
             alpha=0.85,
         )
 
-    ax.set_xlabel("t-SNE1", fontproperties=label_font)
-    ax.set_ylabel("t-SNE2", fontproperties=label_font)
+    axis_prefix = {"PCA": "PC", "t-SNE": "t-SNE", "UMAP": "UMAP"}.get(reduction, "Dim")
+    ax.set_xlabel(f"{axis_prefix}1", fontproperties=label_font)
+    ax.set_ylabel(f"{axis_prefix}2", fontproperties=label_font)
     ax.set_title(f"{gene}(cluster{cluster_id})", fontdict=label_font)
     ax.grid(False)
     plt.setp(
@@ -207,7 +209,8 @@ def render_svg(
     heatmap_path: str,
     volcano_path: str,
     cluster_id: int,
+    reduction: str = "t-SNE",
     random_state: int | None = None,
 ) -> tuple[str, str | None]:
-    fig, gene = build_figure(cluster_result_path, heatmap_path, volcano_path, cluster_id, random_state)
+    fig, gene = build_figure(cluster_result_path, heatmap_path, volcano_path, cluster_id, reduction, random_state)
     return figure_to_svg(fig), gene

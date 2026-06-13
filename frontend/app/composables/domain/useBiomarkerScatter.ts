@@ -6,6 +6,7 @@ import { useResultSelection } from '~/composables/domain/useResultSelection'
 const biomarkerSvg = ref('')
 const biomarkerGene = ref<string | null>(null)
 const selectedBiomarkerCluster = ref(0)
+const selectedBiomarkerReduction = ref('t-SNE')
 const isBiomarkerLoading = ref(false)
 let watcherInstalled = false
 
@@ -21,12 +22,19 @@ export function useBiomarkerScatter() {
       const res = await renderBiomarkerClusterScatter({
         session_id: sessionId.value,
         cluster_id: selectedBiomarkerCluster.value,
+        reduction: selectedBiomarkerReduction.value,
       })
       biomarkerSvg.value = res.data.svg
       biomarkerGene.value = res.data.gene
     } finally {
       isBiomarkerLoading.value = false
     }
+  }
+
+  function switchBiomarkerReduction(reduction: string) {
+    if (selectedBiomarkerReduction.value === reduction) return
+    selectedBiomarkerReduction.value = reduction
+    renderBiomarkerScatter()
   }
 
   if (!watcherInstalled) {
@@ -41,7 +49,7 @@ export function useBiomarkerScatter() {
   }
 
   return {
-    biomarkerSvg, biomarkerGene, selectedBiomarkerCluster, isBiomarkerLoading,
-    renderBiomarkerScatter,
+    biomarkerSvg, biomarkerGene, selectedBiomarkerCluster, selectedBiomarkerReduction, isBiomarkerLoading,
+    renderBiomarkerScatter, switchBiomarkerReduction,
   }
 }

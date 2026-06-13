@@ -45,6 +45,7 @@ router = APIRouter()
 class ClusterSpecificPlotRequest(BaseModel):
     session_id: str
     cluster_id: int
+    reduction: str = "t-SNE"
 
 
 class SessionPlotRequest(BaseModel):
@@ -140,8 +141,10 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
             str(plot_path(request.session_id, DIFFERENTIAL_HEATMAP_FILE)),
             str(plot_path(request.session_id, DIFFERENTIAL_VOLCANO_FILE)),
             cluster_id,
+            request.reduction,
+            _seed_or_none(request.random_state),
         )
-        stem = f"biomarker_cluster_scatter_cluster_{cluster_id}" + (f"_{gene}" if gene else "")
+        stem = f"biomarker_cluster_scatter_{request.reduction}_cluster_{cluster_id}" + (f"_{gene}" if gene else "")
         return figure_to_bytes(fig, file_format, dpi=600), stem
 
     if plot_type == "differential_volcano":
@@ -213,8 +216,9 @@ async def biomarker_cluster_scatter(request: ClusterSpecificPlotRequest):
             str(plot_path(request.session_id, DIFFERENTIAL_HEATMAP_FILE)),
             str(plot_path(request.session_id, DIFFERENTIAL_VOLCANO_FILE)),
             request.cluster_id,
+            request.reduction,
         )
-        return {"status": "success", "svg": svg, "gene": gene}
+        return {"status": "success", "svg": svg, "gene": gene, "reduction": request.reduction}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
