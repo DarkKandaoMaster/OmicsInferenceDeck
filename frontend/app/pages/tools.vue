@@ -293,12 +293,12 @@ async function handleHeatmapDownload(format: PlotFormat) {
           </label>
           <div class="mt-4 flex flex-col gap-2">
             <label class="flex items-center gap-2 text-[13px] text-slate-700">
-              <span class="shrink-0">X轴标签:</span>
+              <span class="shrink-0">X轴名称:</span>
               <input v-model="boxXlabel" type="text" placeholder="允许留空" @input="isCustom = true"
                 class="w-64 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
             </label>
             <label class="flex items-center gap-2 text-[13px] text-slate-700">
-              <span class="shrink-0">Y轴标签:</span>
+              <span class="shrink-0">Y轴名称:</span>
               <input v-model="boxYlabel" type="text" placeholder="允许留空" @input="isCustom = true"
                 class="w-64 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
             </label>
@@ -387,12 +387,12 @@ async function handleHeatmapDownload(format: PlotFormat) {
           />
           <div class="mt-4 flex flex-col gap-2">
             <label class="flex items-center gap-2 text-[13px] text-slate-700">
-              <span class="shrink-0">X轴标签:</span>
+              <span class="shrink-0">X轴名称:</span>
               <input v-model="heatmapXlabel" type="text" placeholder="允许留空"
                 class="w-64 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
             </label>
             <label class="flex items-center gap-2 text-[13px] text-slate-700">
-              <span class="shrink-0">Y轴标签:</span>
+              <span class="shrink-0">Y轴名称:</span>
               <input v-model="heatmapYlabel" type="text" placeholder="允许留空"
                 class="w-64 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
             </label>
