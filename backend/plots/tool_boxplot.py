@@ -192,8 +192,8 @@ def build_figure(
         ax=ax,
     )
 
-    ax.set_xlabel(x_label, fontsize=13)
-    ax.set_ylabel(y_label, fontsize=13)
+    ax.set_xlabel(x_label, fontsize=20)
+    ax.set_ylabel(y_label, fontsize=20)
     sns.despine(top=True, right=True, ax=ax)
 
     fig.tight_layout()

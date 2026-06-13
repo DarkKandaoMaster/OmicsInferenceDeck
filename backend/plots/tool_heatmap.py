@@ -136,10 +136,16 @@ def build_figure(df: pd.DataFrame, xlabel: str = "", ylabel: str = "", legend: s
         ax=ax,
     )
 
-    ax.set_xlabel(xlabel, fontsize=11, labelpad=8)
-    ax.set_ylabel(ylabel, fontsize=11, labelpad=8)
+    ax.set_xlabel(xlabel, fontsize=19, labelpad=8)
+    ax.set_ylabel(ylabel, fontsize=19, labelpad=8)
     ax.tick_params(axis="x", labelrotation=0, labelsize=10)
     ax.tick_params(axis="y", labelrotation=0, labelsize=10)
+
+    # 颜色条名称：seaborn 把 colorbar 挂在 mesh 的 .colorbar 上，从这里取回后
+    # 重设标签字体，使其与 X/Y 轴名称一样放大并加粗。
+    cbar = ax.collections[0].colorbar
+    if cbar is not None:
+        cbar.set_label(legend, fontsize=19)
 
     # 红框高亮每列最大值所在单元格
     index_list = list(df.index)
