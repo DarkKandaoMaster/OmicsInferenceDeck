@@ -182,7 +182,7 @@ p <- p +
     panel.background = element_rect(fill = "white", color = NA),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    panel.border = element_rect(color = "#000000", fill = NA, linewidth = 1), #如果这里写成 linewidth = 0.5 ，那么绘图区的边框会因为抗锯齿而显得有点灰，就不是纯黑了。解决方法是把它加粗到 1 ，让它看起来更实
+    panel.border = element_rect(color = "#000000", fill = NA, linewidth = 1), #如果这里写成 linewidth = 0.5 ，那么绘图区边框会因为抗锯齿而显得有点灰，就不是纯黑了。解决方法是把它加粗到 1 ，让它看起来更实
     plot.title = element_text(family = FONT_FAMILY, size = 16, face = "bold", hjust = 0.5),
     axis.title = element_text(family = FONT_FAMILY, size = 16, face = "bold"),
     axis.text = element_text(family = FONT_FAMILY, size = 16, face = "bold", colour = "black"),
