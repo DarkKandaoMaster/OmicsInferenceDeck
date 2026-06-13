@@ -352,24 +352,24 @@ TCGA-03,1,0.58,0.21,...</pre>
                 <input v-model="randomSeed" type="number" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
               </label>
 
-              <!-- 固定参数说明：以下枚举/标量参数取自“普通模式”设置，在本次扫描中作为固定值参与 -->
+              <!-- 固定参数说明：以下枚举/标量参数取自“普通模式”设置，在本次扫描中作为固定值参与。这些固定值直接取自你在「普通模式」里给该算法设置的参数。所以那行说明的作用就是告诉你：“这次扫描中，这些参数会被锁定成普通模式里的当前取值”。如果你想换，就回普通模式改，再回来跑扫描。 -->
               <p v-if="algo === 'K-means'" class="m-0 text-xs leading-relaxed text-slate-500">
-                固定参数（取自普通模式）：n_init={{ kmeansNInit }}、tol={{ kmeansTol }}、init={{ kmeansInit }}
+                固定参数（已锁定为当前普通模式里的值）：n_init={{ kmeansNInit }}、tol={{ kmeansTol }}、init={{ kmeansInit }}
               </p>
               <p v-else-if="algo === 'Spectral Clustering'" class="m-0 text-xs leading-relaxed text-slate-500">
-                固定参数（取自普通模式）：assign_labels={{ spectralAssignLabels }}、n_init={{ spectralNInit }}
+                固定参数（已锁定为当前普通模式里的值）：assign_labels={{ spectralAssignLabels }}、n_init={{ spectralNInit }}
               </p>
               <p v-else-if="algo === 'Hclust'" class="m-0 text-xs leading-relaxed text-slate-500">
-                固定参数（取自普通模式）：method={{ hclustMethod }}、distance={{ hclustDistance }}
+                固定参数（已锁定为当前普通模式里的值）：method={{ hclustMethod }}、distance={{ hclustDistance }}
               </p>
               <p v-else-if="algo === 'SNF'" class="m-0 text-xs leading-relaxed text-slate-500">
-                固定参数（取自普通模式）：alpha={{ snfAlpha }}、T={{ snfIterations }}
+                固定参数（已锁定为当前普通模式里的值）：alpha={{ snfAlpha }}、T={{ snfIterations }}
               </p>
               <p v-else-if="algo === 'PIntMF'" class="m-0 text-xs leading-relaxed text-slate-500">
-                固定参数（取自普通模式）：max_iter={{ pintmfMaxIter }}、max_features={{ pintmfMaxFeatures }}
+                固定参数（已锁定为当前普通模式里的值）：max_iter={{ pintmfMaxIter }}、max_features={{ pintmfMaxFeatures }}
               </p>
               <p v-else-if="algo === 'Parea'" class="m-0 text-xs leading-relaxed text-slate-500">
-                固定参数（取自普通模式）：structure={{ pareaStructure }}
+                固定参数（已锁定为当前普通模式里的值）：structure={{ pareaStructure }}
               </p>
             </div>
           </div>
