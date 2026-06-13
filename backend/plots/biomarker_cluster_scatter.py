@@ -160,10 +160,13 @@ def build_figure(
         fontweight=tick_font["weight"],
     )
 
-    # 颜色条：表达 z-score。
-    colorbar = fig.colorbar(scatter, ax=ax, fraction=0.046, pad=0.04)
+    # 颜色条：表达 z-score。横向放置在右上角图例下方。
+    cax = ax.inset_axes([0.84, 0.69, 0.15, 0.025])
+    colorbar = fig.colorbar(scatter, cax=cax, orientation="horizontal")
     colorbar.set_label("z-score", fontproperties=label_font)
-    for text in colorbar.ax.get_yticklabels():
+    cax.xaxis.set_ticks_position("bottom")
+    cax.xaxis.set_label_position("top")
+    for text in colorbar.ax.get_xticklabels():
         text.set_fontproperties(label_font)
 
     # 形状图例：中性色 proxy handles，仅表达「形状=簇」，避免与颜色语义冲突。
