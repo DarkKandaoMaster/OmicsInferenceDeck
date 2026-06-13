@@ -11,10 +11,10 @@ const {
   selectedDiffOmicsType,
   runDifferentialAnalysis,
 } = useDifferential()
-const { differentialOmicsTypes } = useDataState()
+const { displayedDifferentialOmicsTypes } = useDataState()
 const { sessionId } = useSession()
 const { runEnrichmentAnalysis } = useEnrichment()
-const { enabledCharts } = useResultSelection()
+const { displayedCharts } = useResultSelection()
 
 const volcanoDownloadParams = computed(() => ({
   session_id: sessionId.value,
@@ -41,13 +41,13 @@ async function handleOmicsTypeChange() {
 
 <template>
   <template v-if="diffResult">
-    <div v-if="enabledCharts.diffVolcano" class="result-card">
+    <div v-if="displayedCharts.diffVolcano" class="result-card">
       <div class="result-card-header">
         <div class="result-card-title">差异火山图</div>
         <div class="flex items-center gap-3">
           <select v-model="selectedDiffOmicsType" @change="handleOmicsTypeChange" class="chart-select">
             <option value="" disabled>Select omics layer</option>
-            <option v-for="type in differentialOmicsTypes" :key="type" :value="type">{{ type }}</option>
+            <option v-for="type in displayedDifferentialOmicsTypes" :key="type" :value="type">{{ type }}</option>
           </select>
           <select v-model.number="selectedVolcanoCluster" @change="handleVolcanoClusterChange" class="chart-select">
             <option v-for="cid in diffResult.clusters" :key="cid" :value="cid">Cluster {{ cid }}</option>
@@ -58,13 +58,13 @@ async function handleOmicsTypeChange() {
       <div class="svg-chart" v-html="diffResult.volcano_svg" />
     </div>
 
-    <div v-if="enabledCharts.diffHeatmap" class="result-card">
+    <div v-if="displayedCharts.diffHeatmap" class="result-card">
       <div class="result-card-header">
         <div class="result-card-title">差异热图</div>
         <div class="flex items-center gap-3">
-          <select v-if="!enabledCharts.diffVolcano" v-model="selectedDiffOmicsType" @change="handleOmicsTypeChange" class="chart-select">
+          <select v-if="!displayedCharts.diffVolcano" v-model="selectedDiffOmicsType" @change="handleOmicsTypeChange" class="chart-select">
             <option value="" disabled>Select omics layer</option>
-            <option v-for="type in differentialOmicsTypes" :key="type" :value="type">{{ type }}</option>
+            <option v-for="type in displayedDifferentialOmicsTypes" :key="type" :value="type">{{ type }}</option>
           </select>
           <ResultsPlotDownloadButton plot-type="differential_heatmap" :params="heatmapDownloadParams" filename-prefix="differential_heatmap" />
         </div>

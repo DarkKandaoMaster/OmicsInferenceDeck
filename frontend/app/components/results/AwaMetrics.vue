@@ -3,7 +3,7 @@ import { useAnalysisActions } from '~/composables/domain/useAnalysisActions'
 import { useResultSelection } from '~/composables/domain/useResultSelection'
 
 const { backendResponse } = useAnalysisActions()
-const { enabledMetrics, selectedBiologyDb } = useResultSelection()
+const { displayedMetrics, selectedBiologyDb } = useResultSelection()
 
 const awaMetrics = computed(
   () => backendResponse.value?.data?.awa_metrics_by_db?.[selectedBiologyDb.value],
@@ -28,7 +28,7 @@ function formatNumber(value: unknown, digits = 2) {
 </script>
 
 <template>
-  <div v-if="enabledMetrics.awa && awaMetrics" class="result-card mt-8">
+  <div v-if="displayedMetrics.awa && awaMetrics" class="result-card mt-8">
     <div class="result-card-header">
       <div class="result-card-title">综合得分</div>
     </div>

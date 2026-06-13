@@ -9,7 +9,7 @@ const { isLoading } = useUIState()
 const { currentReduction, randomSeed } = useAlgorithmState()
 const { backendResponse, switchReduction } = useAnalysisActions()
 const { sessionId } = useSession()
-const { enabledCharts } = useResultSelection()
+const { displayedCharts } = useResultSelection()
 
 const inputClusterSvg = computed(() => backendResponse.value?.data?.plots?.input_cluster_scatter || '')
 const downloadParams = computed(() => ({
@@ -20,7 +20,7 @@ const downloadParams = computed(() => ({
 </script>
 
 <template>
-  <div v-if="enabledCharts.inputClusterScatter && inputClusterSvg" class="result-card">
+  <div v-if="displayedCharts.inputClusterScatter && inputClusterSvg" class="result-card">
     <div class="result-card-header">
       <div class="result-card-title">聚类前散点图</div>
       <div class="flex items-center gap-3">

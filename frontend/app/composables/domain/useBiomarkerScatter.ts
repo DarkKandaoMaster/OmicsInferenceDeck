@@ -12,7 +12,7 @@ let watcherInstalled = false
 export function useBiomarkerScatter() {
   const { sessionId } = useSession()
   const { diffResult } = useDifferential()
-  const { enabledCharts } = useResultSelection()
+  const { displayedCharts } = useResultSelection()
 
   async function renderBiomarkerScatter() {
     if (!diffResult.value) return
@@ -32,7 +32,7 @@ export function useBiomarkerScatter() {
   if (!watcherInstalled) {
     watcherInstalled = true
     watch(diffResult, (result) => {
-      if (!result || !enabledCharts.biomarkerClusterScatter) return
+      if (!result || !displayedCharts.biomarkerClusterScatter) return
       const clusters = result.clusters || []
       if (clusters.length === 0) return
       selectedBiomarkerCluster.value = result.selected_cluster ?? clusters[0]

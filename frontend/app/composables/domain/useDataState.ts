@@ -129,6 +129,14 @@ const differentialOmicsTypes = computed(() => {
   return types
 })
 
+// 展示快照：运行开始时冻结差异分析组学层下拉的选项列表，运行后在上传区改组学类型/增删文件
+// 不会改动已展示图表的下拉选项（run logic 仍读 live 的 differentialOmicsTypes）。
+const displayedDifferentialOmicsTypes = ref<string[]>([])
+
+function captureDataDisplaySnapshot() {
+  displayedDifferentialOmicsTypes.value = [...differentialOmicsTypes.value]
+}
+
 export function useDataState() {
   // ---- 组学数据操作 ----
 
@@ -353,6 +361,7 @@ export function useDataState() {
     dataFormat, clinicalDataFormat, expressionMatrixDataFormat,
     exampleText, clinicalExampleText, expressionMatrixExampleText,
     uploadedOmicsTypes, expressionMatrixType, differentialOmicsTypes,
+    displayedDifferentialOmicsTypes, captureDataDisplaySnapshot,
     // 操作
     doUploadOmics, doUploadClinical, doUploadExpressionMatrix,
     handleFileChange, handleFormatChange, removeOmicsFile,

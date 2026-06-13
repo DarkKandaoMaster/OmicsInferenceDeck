@@ -6,7 +6,7 @@ import { useResultSelection } from '~/composables/domain/useResultSelection'
 
 const { diffResult } = useDifferential()
 const { sessionId } = useSession()
-const { enabledCharts } = useResultSelection()
+const { displayedCharts } = useResultSelection()
 const {
   biomarkerSvg, biomarkerGene, selectedBiomarkerCluster,
   renderBiomarkerScatter,
@@ -19,7 +19,7 @@ const downloadParams = computed(() => ({
 </script>
 
 <template>
-  <div v-if="diffResult && enabledCharts.biomarkerClusterScatter" class="result-card">
+  <div v-if="diffResult && displayedCharts.biomarkerClusterScatter" class="result-card">
     <div class="result-card-header">
       <div class="result-card-title">
         生物标志物簇散点图<span v-if="biomarkerGene" class="text-slate-500 font-normal"> - {{ biomarkerGene }}(cluster{{ selectedBiomarkerCluster }})</span>

@@ -3,7 +3,7 @@ import { useAnalysisActions } from '~/composables/domain/useAnalysisActions'
 import { useResultSelection } from '~/composables/domain/useResultSelection'
 
 const { backendResponse } = useAnalysisActions()
-const { enabledMetrics } = useResultSelection()
+const { displayedMetrics } = useResultSelection()
 
 const metrics = computed(() => backendResponse.value?.data?.metrics)
 const featureMatrixAvailable = computed(
@@ -12,7 +12,7 @@ const featureMatrixAvailable = computed(
 </script>
 
 <template>
-  <div v-if="enabledMetrics.cluster && metrics" class="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
+  <div v-if="displayedMetrics.cluster && metrics" class="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
     <div class="px-6 py-4 border-b border-slate-200">
       <h3 class="m-0 text-lg font-semibold">聚类内部质量指标</h3>
     </div>
@@ -50,7 +50,7 @@ const featureMatrixAvailable = computed(
     </div>
   </div>
 
-  <div v-else-if="enabledMetrics.cluster && !metrics && featureMatrixAvailable === false" class="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
+  <div v-else-if="displayedMetrics.cluster && !metrics && featureMatrixAvailable === false" class="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
     <div class="px-6 py-4 border-b border-slate-200">
       <h3 class="m-0 text-lg font-semibold">聚类内部质量指标</h3>
     </div>

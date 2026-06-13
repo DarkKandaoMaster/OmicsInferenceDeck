@@ -35,6 +35,10 @@ const isPsLoading = ref(false)
 const psParam1 = ref('n_clusters')
 const psParam2 = ref('max_iter')
 
+// 展示快照：运行开始时冻结癌症亚型，结果区的富集图下载/簇刷新读这份快照，
+// 运行后在上传区改亚型不会让下载/刷新用上与屏幕上不一致的 dataset（selectedCancerSubtype 仍 live）。
+const displayedCancerSubtype = ref<CancerSubtype>(selectedCancerSubtype.value)
+
 export function useAlgorithmState() {
   function applyCancerSubtypeClusterCount(subtype: CancerSubtype | '') {
     if(subtype){
@@ -43,9 +47,14 @@ export function useAlgorithmState() {
     }
   }
 
+  function captureAlgorithmDisplaySnapshot() {
+    displayedCancerSubtype.value = selectedCancerSubtype.value
+  }
+
   return {
     algorithms, selectedAlgorithm,
     cancerSubtypeClusterMap, cancerSubtypeOptions, selectedCancerSubtype, applyCancerSubtypeClusterCount,
+    displayedCancerSubtype, captureAlgorithmDisplaySnapshot,
     kValue, maxIter, nNeighbors, randomSeed, currentReduction,
     isTestMode, testNClusters, testMaxIter, testNNeighbors,
     psResult, isPsLoading, psParam1, psParam2,

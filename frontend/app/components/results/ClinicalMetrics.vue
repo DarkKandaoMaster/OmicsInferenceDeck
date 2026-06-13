@@ -3,7 +3,7 @@ import { useAnalysisActions } from '~/composables/domain/useAnalysisActions'
 import { useResultSelection } from '~/composables/domain/useResultSelection'
 
 const { backendResponse } = useAnalysisActions()
-const { enabledMetrics } = useResultSelection()
+const { displayedMetrics } = useResultSelection()
 
 const clinicalMetrics = computed(() => backendResponse.value?.data?.clinical_metrics)
 const lrt = computed(() => clinicalMetrics.value?.lrt || {})
@@ -24,7 +24,7 @@ function formatType(value: string) {
 
 <template>
   <!-- 临床步骤跑完才有 clinical_metrics（成功→数据对象，失败→{error}）；未跑到则整卡不渲染，不显示占位 -->
-  <div v-if="enabledMetrics.clinical && clinicalMetrics" class="result-card mt-8">
+  <div v-if="displayedMetrics.clinical && clinicalMetrics" class="result-card mt-8">
     <div class="result-card-header">
       <div class="result-card-title">临床关联指标</div>
     </div>

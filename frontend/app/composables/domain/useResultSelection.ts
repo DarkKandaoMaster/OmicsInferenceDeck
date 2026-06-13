@@ -51,6 +51,33 @@ const enabledCharts = reactive<Record<ChartKey, boolean>>({
   enrichBubbleKEGG: true,
 })
 
+// 展示快照：运行开始时拷贝一份 enabledMetrics/enabledCharts，结果区的显示门控只读这份快照，
+// 因此运行后再勾选/取消 Section 3 复选框不会改变已展示的图表（左侧复选框仍绑定 live 对象）。
+const displayedMetrics = reactive<Record<MetricKey, boolean>>({
+  cluster: true,
+  clinical: true,
+  biology: true,
+  awa: true,
+})
+
+const displayedCharts = reactive<Record<ChartKey, boolean>>({
+  inputClusterScatter: true,
+  predClusterScatter: true,
+  survival: true,
+  diffVolcano: true,
+  diffHeatmap: true,
+  biomarkerClusterScatter: true,
+  enrichBarGO: true,
+  enrichBarKEGG: true,
+  enrichBubbleGO: true,
+  enrichBubbleKEGG: true,
+})
+
+function captureSelectionSnapshot() {
+  Object.assign(displayedMetrics, enabledMetrics)
+  Object.assign(displayedCharts, enabledCharts)
+}
+
 const selectedBiologyDb = ref<'GO' | 'KEGG'>('GO')
 
 const runDifferential = computed(
@@ -174,6 +201,9 @@ export function useResultSelection() {
   return {
     enabledMetrics,
     enabledCharts,
+    displayedMetrics,
+    displayedCharts,
+    captureSelectionSnapshot,
     selectedBiologyDb,
     runDifferential,
     runEnrichment,

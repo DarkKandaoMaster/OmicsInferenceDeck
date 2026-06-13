@@ -6,7 +6,7 @@ import { formatPValue } from '~/utils/formatters'
 
 const { survivalResult, survivalErrorMessage } = useSurvival()
 const { sessionId } = useSession()
-const { enabledCharts } = useResultSelection()
+const { displayedCharts } = useResultSelection()
 
 const downloadParams = computed(() => ({
   session_id: sessionId.value,
@@ -15,7 +15,7 @@ const downloadParams = computed(() => ({
 
 <template>
   <!-- 生存步骤跑完才有 survivalResult/survivalErrorMessage（成功→曲线，失败→占位）；未跑到则不渲染，不显示占位 -->
-  <template v-if="enabledCharts.survival && (survivalResult || survivalErrorMessage)">
+  <template v-if="displayedCharts.survival && (survivalResult || survivalErrorMessage)">
     <div v-if="survivalResult" class="result-card">
       <div class="result-card-header">
         <div class="result-card-title">生存曲线</div>

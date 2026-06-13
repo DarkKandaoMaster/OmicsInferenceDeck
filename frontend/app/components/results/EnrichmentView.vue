@@ -14,8 +14,8 @@ const {
 } = useEnrichment()
 const { diffResult } = useDifferential()
 const { sessionId } = useSession()
-const { enabledCharts } = useResultSelection()
-const { selectedCancerSubtype } = useAlgorithmState()
+const { displayedCharts } = useResultSelection()
+const { displayedCancerSubtype } = useAlgorithmState()
 
 const DATABASES: Database[] = ['GO', 'KEGG']
 
@@ -35,7 +35,7 @@ function barDownloadParams(db: Database) {
     session_id: sessionId.value,
     database: db,
     cluster_id: selectedEnrichmentCluster.value,
-    dataset: selectedCancerSubtype.value,
+    dataset: displayedCancerSubtype.value,
   }
 }
 function bubbleClusterDownloadParams(db: Database) {
@@ -60,7 +60,7 @@ async function refreshBar(db: Database) {
     session_id: sessionId.value,
     database: db,
     cluster_id: selectedEnrichmentCluster.value,
-    dataset: selectedCancerSubtype.value,
+    dataset: displayedCancerSubtype.value,
   })
   enrichmentResults.value[db] = { ...enrichmentResults.value[db]!, bar_svg: res.data.svg }
 }
@@ -90,7 +90,7 @@ async function handleGeneCountChange() {
     <!-- GO/KEGG条形图 -->
     <template v-for="db in DATABASES" :key="`bar-${db}`">
       <div
-        v-if="enrichmentResults[db] && (db === 'GO' ? enabledCharts.enrichBarGO : enabledCharts.enrichBarKEGG)"
+        v-if="enrichmentResults[db] && (db === 'GO' ? displayedCharts.enrichBarGO : displayedCharts.enrichBarKEGG)"
         class="result-card"
       >
         <div class="result-card-header">
@@ -109,7 +109,7 @@ async function handleGeneCountChange() {
     <!-- GO/KEGG气泡图 - Cluster -->
     <template v-for="db in DATABASES" :key="`bubble-cluster-${db}`">
       <div
-        v-if="enrichmentResults[db] && (db === 'GO' ? enabledCharts.enrichBubbleGO : enabledCharts.enrichBubbleKEGG)"
+        v-if="enrichmentResults[db] && (db === 'GO' ? displayedCharts.enrichBubbleGO : displayedCharts.enrichBubbleKEGG)"
         class="result-card"
       >
         <div class="result-card-header">
@@ -123,7 +123,7 @@ async function handleGeneCountChange() {
     <!-- GO/KEGG气泡图 - Gene Count -->
     <template v-for="db in DATABASES" :key="`bubble-gene-${db}`">
       <div
-        v-if="enrichmentResults[db] && (db === 'GO' ? enabledCharts.enrichBubbleGO : enabledCharts.enrichBubbleKEGG)"
+        v-if="enrichmentResults[db] && (db === 'GO' ? displayedCharts.enrichBubbleGO : displayedCharts.enrichBubbleKEGG)"
         class="result-card"
       >
         <div class="result-card-header">

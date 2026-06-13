@@ -29,6 +29,7 @@ export function useAnalysisActions() {
     doUploadOmics,
     doUploadClinical,
     doUploadExpressionMatrix,
+    captureDataDisplaySnapshot,
     uploadStatus,
     clinicalUploadStatus,
     expressionMatrixUploadStatus,
@@ -59,8 +60,9 @@ export function useAnalysisActions() {
     psParam1,
     psParam2,
     isTestMode,
+    captureAlgorithmDisplaySnapshot,
   } = useAlgorithmState()
-  const { enabledMetrics, enabledCharts, runDifferential, runEnrichment } = useResultSelection()
+  const { enabledMetrics, enabledCharts, runDifferential, runEnrichment, captureSelectionSnapshot } = useResultSelection()
   const { resetLog, startStep, finishStep, failStep, logStep, markRunningAsTerminated } = useAnalysisLog()
   const { startRun, invalidate, isStale } = useRunControl()
 
@@ -77,6 +79,11 @@ export function useAnalysisActions() {
   // 运行真正提交时调用：记录当前配置为签名，使结果区与状态栏在该配置下可见。
   function markRunStarted() {
     runSignature.value = currentSignature.value
+    // 冻结展示快照：结果区的显示门控（图表选择、组学层下拉选项、富集图癌症亚型）只读这份快照，
+    // 之后左侧 Section 1/2/3 的编辑不再改动已展示的结果。run logic 仍读 live 状态（此刻 live==快照）。
+    captureSelectionSnapshot()
+    captureDataDisplaySnapshot()
+    captureAlgorithmDisplaySnapshot()
   }
 
   function ensureBackendResponseShape() {

@@ -13,28 +13,28 @@ const { backendResponse, resultsVisible } = useAnalysisActions()
 const { diffResult } = useDifferential()
 const { enrichmentResult } = useEnrichment()
 const { survivalResult, survivalErrorMessage } = useSurvival()
-const { enabledMetrics, enabledCharts } = useResultSelection()
+const { displayedMetrics, displayedCharts } = useResultSelection()
 
 const hasAnyMetricsVisible = computed(() => {
   const data = backendResponse.value?.data
   if (!data) return false
-  if (enabledMetrics.cluster && data.metrics) return true
+  if (displayedMetrics.cluster && data.metrics) return true
   // 临床指标：仅当该步已产出数据（成功→图表，失败→{error} 占位）才算“可见”；未跑到则不显示占位
-  if (enabledMetrics.clinical && data.clinical_metrics) return true
-  if (enabledMetrics.biology && data.biology_metrics_by_db) return true
-  if (enabledMetrics.awa && data.awa_metrics_by_db) return true
+  if (displayedMetrics.clinical && data.clinical_metrics) return true
+  if (displayedMetrics.biology && data.biology_metrics_by_db) return true
+  if (displayedMetrics.awa && data.awa_metrics_by_db) return true
   return false
 })
 
 const hasAnyChartsVisible = computed(() => {
   const data = backendResponse.value?.data
   if (!data) return false
-  if (enabledCharts.inputClusterScatter && data.plots?.input_cluster_scatter) return true
-  if (enabledCharts.predClusterScatter && data.plots?.pred_cluster_scatter) return true
-  if (enabledCharts.survival && (survivalResult || survivalErrorMessage)) return true
-  if ((enabledCharts.diffVolcano || enabledCharts.diffHeatmap) && diffResult.value) return true
-  if (enabledCharts.biomarkerClusterScatter && diffResult.value) return true
-  if ((enabledCharts.enrichBarGO || enabledCharts.enrichBarKEGG || enabledCharts.enrichBubbleGO || enabledCharts.enrichBubbleKEGG) && diffResult.value && enrichmentResult.value) return true
+  if (displayedCharts.inputClusterScatter && data.plots?.input_cluster_scatter) return true
+  if (displayedCharts.predClusterScatter && data.plots?.pred_cluster_scatter) return true
+  if (displayedCharts.survival && (survivalResult || survivalErrorMessage)) return true
+  if ((displayedCharts.diffVolcano || displayedCharts.diffHeatmap) && diffResult.value) return true
+  if (displayedCharts.biomarkerClusterScatter && diffResult.value) return true
+  if ((displayedCharts.enrichBarGO || displayedCharts.enrichBarKEGG || displayedCharts.enrichBubbleGO || displayedCharts.enrichBubbleKEGG) && diffResult.value && enrichmentResult.value) return true
   return false
 })
 
