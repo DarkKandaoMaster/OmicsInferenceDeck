@@ -45,7 +45,7 @@ export function useBiomarkerScatter() {
       if (clusters.length === 0) return
       selectedBiomarkerCluster.value = result.selected_cluster ?? clusters[0]
       renderBiomarkerScatter()
-    })
+    }, { immediate: true })
   }
 
   return {
