@@ -51,6 +51,20 @@ export function useAnalysisActions() {
     maxIter,
     nNeighbors,
     randomSeed,
+    kmeansNInit,
+    kmeansTol,
+    kmeansInit,
+    spectralAssignLabels,
+    spectralNInit,
+    hclustMethod,
+    hclustDistance,
+    snfAlpha,
+    snfIterations,
+    pintmfLatentDim,
+    pintmfMaxIter,
+    pintmfMaxFeatures,
+    nemoNNeighbors,
+    pareaStructure,
     inputReduction,
     predReduction,
     isInputReductionLoading,
@@ -58,6 +72,7 @@ export function useAnalysisActions() {
     testNClusters,
     testMaxIter,
     testNNeighbors,
+    testLatentDim,
     psResult,
     isPsLoading,
     psParam1,
@@ -421,6 +436,21 @@ export function useAnalysisActions() {
         random_state: randomSeed.value,
         max_iter: maxIter.value,
         n_neighbors: nNeighbors.value,
+        // 各内置算法的可自定义参数（后端按算法名各取所需，多传无副作用）
+        // K-means 与 Spectral 共用后端 n_init 字段，按当前算法取对应的前端 ref
+        n_init: selectedAlgorithm.value[0] === 'Spectral Clustering' ? spectralNInit.value : kmeansNInit.value,
+        tol: kmeansTol.value,
+        init: kmeansInit.value,
+        assign_labels: spectralAssignLabels.value,
+        snf_alpha: snfAlpha.value,
+        snf_iterations: snfIterations.value,
+        hclust_method: hclustMethod.value,
+        hclust_distance: hclustDistance.value,
+        latent_dim: pintmfLatentDim.value,
+        pintmf_max_iter: pintmfMaxIter.value,
+        pintmf_max_features: pintmfMaxFeatures.value,
+        nemo_n_neighbors: nemoNNeighbors.value,
+        parea_structure: pareaStructure.value,
       }))
       if (isStale(token)) return
       clusteringDone.value = true
@@ -507,11 +537,14 @@ export function useAnalysisActions() {
       if (isStale(token)) return
 
       let paramGridObj: Record<string, number[]> = {}
+      // 普通模式里该算法的枚举/标量参数，随扫描一起作为固定参数下发（被扫描的维度会在后端覆盖之）
+      let fixedParams: Record<string, unknown> = {}
       if (selectedAlgorithm.value[0] === 'K-means') {
         paramGridObj = {
           n_clusters: testNClusters.value.split(',').map(Number),
           max_iter: testMaxIter.value.split(',').map(Number),
         }
+        fixedParams = { n_init: kmeansNInit.value, tol: kmeansTol.value, init: kmeansInit.value }
         psParam1.value = 'n_clusters'
         psParam2.value = 'max_iter'
       } else if (selectedAlgorithm.value[0] === 'Spectral Clustering') {
@@ -519,33 +552,46 @@ export function useAnalysisActions() {
           n_clusters: testNClusters.value.split(',').map(Number),
           n_neighbors: testNNeighbors.value.split(',').map(Number),
         }
+        fixedParams = { assign_labels: spectralAssignLabels.value, n_init: spectralNInit.value }
         psParam1.value = 'n_clusters'
         psParam2.value = 'n_neighbors'
       } else if (selectedAlgorithm.value[0] === 'Hclust') {
         paramGridObj = { n_clusters: testNClusters.value.split(',').map(Number) }
+        fixedParams = { hclust_method: hclustMethod.value, hclust_distance: hclustDistance.value }
         psParam1.value = 'n_clusters'
         psParam2.value = ''
       } else if (selectedAlgorithm.value[0] === 'NEMO') {
-        paramGridObj = { n_clusters: testNClusters.value.split(',').map(Number) }
-        psParam1.value = 'n_clusters'
-        psParam2.value = ''
-      } else if (selectedAlgorithm.value[0] === 'SNF') {
+        // 新增第二维：K × n_neighbors（复用邻居数范围输入框）
         paramGridObj = {
           n_clusters: testNClusters.value.split(',').map(Number),
           n_neighbors: testNNeighbors.value.split(',').map(Number),
         }
         psParam1.value = 'n_clusters'
         psParam2.value = 'n_neighbors'
-      } else if (selectedAlgorithm.value[0] === 'PIntMF') {
-        paramGridObj = { n_clusters: testNClusters.value.split(',').map(Number) }
+      } else if (selectedAlgorithm.value[0] === 'SNF') {
+        paramGridObj = {
+          n_clusters: testNClusters.value.split(',').map(Number),
+          n_neighbors: testNNeighbors.value.split(',').map(Number),
+        }
+        fixedParams = { snf_alpha: snfAlpha.value, snf_iterations: snfIterations.value }
         psParam1.value = 'n_clusters'
-        psParam2.value = ''
+        psParam2.value = 'n_neighbors'
+      } else if (selectedAlgorithm.value[0] === 'PIntMF') {
+        // 新增第二维：K × latent_dim
+        paramGridObj = {
+          n_clusters: testNClusters.value.split(',').map(Number),
+          latent_dim: testLatentDim.value.split(',').map(Number),
+        }
+        fixedParams = { pintmf_max_iter: pintmfMaxIter.value, pintmf_max_features: pintmfMaxFeatures.value }
+        psParam1.value = 'n_clusters'
+        psParam2.value = 'latent_dim'
       } else if (selectedAlgorithm.value[0] === 'MOSD') {
         paramGridObj = { n_clusters: testNClusters.value.split(',').map(Number) }
         psParam1.value = 'n_clusters'
         psParam2.value = ''
       } else if (selectedAlgorithm.value[0] === 'Parea') {
         paramGridObj = { n_clusters: testNClusters.value.split(',').map(Number) }
+        fixedParams = { parea_structure: pareaStructure.value }
         psParam1.value = 'n_clusters'
         psParam2.value = ''
       }
@@ -555,6 +601,7 @@ export function useAnalysisActions() {
         session_id: sessionId.value,
         param_grid: paramGridObj,
         random_state: randomSeed.value,
+        fixed_params: fixedParams,
       })
       if (isStale(token)) return   // 停止：丢弃整网格结果，不渲染
 

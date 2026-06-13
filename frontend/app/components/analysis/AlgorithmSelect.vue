@@ -9,11 +9,36 @@ const {
   testNClusters,
   testMaxIter,
   testNNeighbors,
+  testLatentDim,
   randomSeed,
   kValue,
   maxIter,
   nNeighbors,
+  kmeansNInit,
+  kmeansTol,
+  kmeansInit,
+  spectralAssignLabels,
+  spectralNInit,
+  hclustMethod,
+  hclustDistance,
+  snfAlpha,
+  snfIterations,
+  pintmfLatentDim,
+  pintmfMaxIter,
+  pintmfMaxFeatures,
+  nemoNNeighbors,
+  pareaStructure,
 } = useAlgorithmState()
+
+// 下拉选项（合法取值由 sklearn / R 脚本校验）
+const kmeansInitOptions = ['k-means++', 'random']
+const spectralAssignOptions = ['kmeans', 'discretize', 'cluster_qr']
+const hclustMethodOptions = ['ward.D', 'ward.D2', 'single', 'complete', 'average', 'mcquitty', 'median', 'centroid']
+const hclustDistanceOptions = ['euclidean', 'maximum', 'manhattan', 'canberra', 'binary', 'minkowski']
+const pareaStructureOptions = [
+  { value: '2', label: '2 - 双层集成 (默认)' },
+  { value: '1', label: '1 - 单层集成' },
+]
 
 const {
   isCustomEvalMode, customEvalFile, isCustomEvalTestMode, handleCustomEvalFileChange, clearCustomEvalFile,
@@ -194,6 +219,97 @@ TCGA-03,1,0.58,0.21,...</pre>
                 <span class="mb-1.5 block text-xs font-medium text-slate-700">{{ algo === 'SNF' ? '构建 KNN 网络邻居数 (K)' : '邻居数 (n_neighbors)' }}</span>
                 <input v-model="nNeighbors" type="number" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
               </label>
+
+              <!-- K-means 额外参数 -->
+              <template v-if="algo === 'K-means'">
+                <label class="block">
+                  <span class="mb-1.5 block text-xs font-medium text-slate-700">初始化次数 (n_init)</span>
+                  <input v-model.number="kmeansNInit" type="number" min="1" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+                </label>
+                <label class="block">
+                  <span class="mb-1.5 block text-xs font-medium text-slate-700">收敛阈值 (tol)</span>
+                  <input v-model.number="kmeansTol" type="number" step="0.0001" min="0" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+                </label>
+                <label class="block">
+                  <span class="mb-1.5 block text-xs font-medium text-slate-700">初始化方式 (init)</span>
+                  <select v-model="kmeansInit" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
+                    <option v-for="opt in kmeansInitOptions" :key="opt" :value="opt">{{ opt }}</option>
+                  </select>
+                </label>
+              </template>
+
+              <!-- Spectral 额外参数 -->
+              <template v-if="algo === 'Spectral Clustering'">
+                <label class="block">
+                  <span class="mb-1.5 block text-xs font-medium text-slate-700">标签分配方式 (assign_labels)</span>
+                  <select v-model="spectralAssignLabels" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
+                    <option v-for="opt in spectralAssignOptions" :key="opt" :value="opt">{{ opt }}</option>
+                  </select>
+                </label>
+                <label class="block">
+                  <span class="mb-1.5 block text-xs font-medium text-slate-700">初始化次数 (n_init)</span>
+                  <input v-model.number="spectralNInit" type="number" min="1" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+                </label>
+              </template>
+
+              <!-- Hclust 额外参数 -->
+              <template v-if="algo === 'Hclust'">
+                <label class="block">
+                  <span class="mb-1.5 block text-xs font-medium text-slate-700">连接方式 (method)</span>
+                  <select v-model="hclustMethod" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
+                    <option v-for="opt in hclustMethodOptions" :key="opt" :value="opt">{{ opt }}</option>
+                  </select>
+                </label>
+                <label class="block">
+                  <span class="mb-1.5 block text-xs font-medium text-slate-700">距离度量 (distance)</span>
+                  <select v-model="hclustDistance" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
+                    <option v-for="opt in hclustDistanceOptions" :key="opt" :value="opt">{{ opt }}</option>
+                  </select>
+                </label>
+              </template>
+
+              <!-- SNF 额外参数 -->
+              <template v-if="algo === 'SNF'">
+                <label class="block">
+                  <span class="mb-1.5 block text-xs font-medium text-slate-700">高斯核参数 σ (alpha)</span>
+                  <input v-model.number="snfAlpha" type="number" step="0.1" min="0" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+                </label>
+                <label class="block">
+                  <span class="mb-1.5 block text-xs font-medium text-slate-700">扩散迭代次数 (T)</span>
+                  <input v-model.number="snfIterations" type="number" min="1" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+                </label>
+              </template>
+
+              <!-- PIntMF 额外参数 -->
+              <template v-if="algo === 'PIntMF'">
+                <label class="block">
+                  <span class="mb-1.5 block text-xs font-medium text-slate-700">隐变量维度 (latent_dim，≥2，默认随 K)</span>
+                  <input v-model.number="pintmfLatentDim" type="number" min="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+                </label>
+                <label class="block">
+                  <span class="mb-1.5 block text-xs font-medium text-slate-700">最大迭代 (max_iter)</span>
+                  <input v-model.number="pintmfMaxIter" type="number" min="1" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+                </label>
+                <label class="block">
+                  <span class="mb-1.5 block text-xs font-medium text-slate-700">每组学最大特征数 (max_features)</span>
+                  <input v-model.number="pintmfMaxFeatures" type="number" min="1" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+                </label>
+              </template>
+
+              <!-- NEMO 额外参数 -->
+              <label v-if="algo === 'NEMO'" class="block">
+                <span class="mb-1.5 block text-xs font-medium text-slate-700">邻居数 (n_neighbors，0=自动)</span>
+                <input v-model.number="nemoNNeighbors" type="number" min="0" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+              </label>
+
+              <!-- Parea 额外参数 -->
+              <label v-if="algo === 'Parea'" class="block">
+                <span class="mb-1.5 block text-xs font-medium text-slate-700">集成结构 (structure)</span>
+                <select v-model="pareaStructure" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
+                  <option v-for="opt in pareaStructureOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                </select>
+              </label>
+
               <label v-if="algorithmsWithSeed.includes(algo)" class="block">
                 <span class="mb-1.5 block text-xs font-medium text-slate-700">随机种子 (-1 表示 None)</span>
                 <input v-model="randomSeed" type="number" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
@@ -223,14 +339,38 @@ TCGA-03,1,0.58,0.21,...</pre>
                 <span class="mb-1.5 block text-xs font-medium text-slate-700">最大迭代范围 (逗号分隔)</span>
                 <input v-model="testMaxIter" type="text" placeholder="如: 100,200,300" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
               </label>
-              <label v-if="algo === 'Spectral Clustering' || algo === 'SNF'" class="block">
-                <span class="mb-1.5 block text-xs font-medium text-slate-700">邻居数范围 (逗号分隔)</span>
+              <label v-if="algo === 'Spectral Clustering' || algo === 'SNF' || algo === 'NEMO'" class="block">
+                <span class="mb-1.5 block text-xs font-medium text-slate-700">邻居数范围 (逗号分隔){{ algo === 'NEMO' ? '（0=自动）' : '' }}</span>
                 <input v-model="testNNeighbors" type="text" placeholder="如: 5,10,15" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+              </label>
+              <label v-if="algo === 'PIntMF'" class="block">
+                <span class="mb-1.5 block text-xs font-medium text-slate-700">latent_dim 范围 (逗号分隔，≥2)</span>
+                <input v-model="testLatentDim" type="text" placeholder="如: 2,3,4,5" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
               </label>
               <label v-if="algorithmsWithSeed.includes(algo)" class="block">
                 <span class="mb-1.5 block text-xs font-medium text-slate-700">随机种子</span>
                 <input v-model="randomSeed" type="number" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
               </label>
+
+              <!-- 固定参数说明：以下枚举/标量参数取自“普通模式”设置，在本次扫描中作为固定值参与 -->
+              <p v-if="algo === 'K-means'" class="m-0 text-xs leading-relaxed text-slate-500">
+                固定参数（取自普通模式）：n_init={{ kmeansNInit }}、tol={{ kmeansTol }}、init={{ kmeansInit }}
+              </p>
+              <p v-else-if="algo === 'Spectral Clustering'" class="m-0 text-xs leading-relaxed text-slate-500">
+                固定参数（取自普通模式）：assign_labels={{ spectralAssignLabels }}、n_init={{ spectralNInit }}
+              </p>
+              <p v-else-if="algo === 'Hclust'" class="m-0 text-xs leading-relaxed text-slate-500">
+                固定参数（取自普通模式）：method={{ hclustMethod }}、distance={{ hclustDistance }}
+              </p>
+              <p v-else-if="algo === 'SNF'" class="m-0 text-xs leading-relaxed text-slate-500">
+                固定参数（取自普通模式）：alpha={{ snfAlpha }}、T={{ snfIterations }}
+              </p>
+              <p v-else-if="algo === 'PIntMF'" class="m-0 text-xs leading-relaxed text-slate-500">
+                固定参数（取自普通模式）：max_iter={{ pintmfMaxIter }}、max_features={{ pintmfMaxFeatures }}
+              </p>
+              <p v-else-if="algo === 'Parea'" class="m-0 text-xs leading-relaxed text-slate-500">
+                固定参数（取自普通模式）：structure={{ pareaStructure }}
+              </p>
             </div>
           </div>
 

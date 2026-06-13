@@ -30,6 +30,20 @@ export function runAlgorithm(params: {
   random_state: number
   max_iter: number
   n_neighbors: number
+  // 各内置算法的可自定义参数（可选，后端均有默认值）
+  n_init?: number
+  tol?: number
+  init?: string
+  assign_labels?: string
+  hclust_method?: string
+  hclust_distance?: string
+  snf_alpha?: number
+  snf_iterations?: number
+  latent_dim?: number
+  pintmf_max_iter?: number
+  pintmf_max_features?: number
+  nemo_n_neighbors?: number
+  parea_structure?: string
 }) {
   return http.post('/run', params)
 }
@@ -127,6 +141,8 @@ export function runParameterSearch(params: {
   session_id: string
   param_grid: Record<string, number[]>
   random_state: number
+  // 普通模式里该算法的枚举/标量参数，扫描时作为固定参数生效
+  fixed_params?: Record<string, unknown>
 }) {
   return http.post('/parameter_search', params)
 }

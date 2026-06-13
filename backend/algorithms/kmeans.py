@@ -12,12 +12,18 @@ class Algorithm(BaseAlgorithm):
         n_clusters = self.params.get('n_clusters', 3)
         random_state = self.params.get('random_state', 42)
         max_iter = self.params.get('max_iter', 300)
-        
+        n_init = self.params.get('n_init', 10)
+        tol = self.params.get('tol', 1e-4)
+        init = self.params.get('init', 'k-means++')
+
         # 初始化模型并训练
         model = KMeans(
-            n_clusters=n_clusters, 
-            random_state=random_state, 
-            max_iter=max_iter
+            n_clusters=n_clusters,
+            random_state=random_state,
+            max_iter=max_iter,
+            n_init=n_init,
+            tol=tol,
+            init=init
         )
         labels = model.fit_predict(df_concat)
         
