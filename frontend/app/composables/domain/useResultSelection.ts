@@ -103,16 +103,21 @@ type SelectionKey = MetricKey | ChartKey
 const ENRICH_KEYS: ChartKey[] = ['enrichBarGO', 'enrichBarKEGG', 'enrichBubbleGO', 'enrichBubbleKEGG']
 const DIFF_KEYS: ChartKey[] = ['diffVolcano', 'diffHeatmap']
 
-// 勾选某项时需要一并勾选的直接上游依赖（补勾整组全部）。
-const CHECK_DEPENDENCIES: Partial<Record<SelectionKey, SelectionKey[]>> = {
+// 单个依赖：必须勾选；OR 组依赖（anyOf）：任一已勾选即满足，否则补勾首个。
+type Dependency = SelectionKey | { anyOf: SelectionKey[] }
+
+// 勾选某项时需要一并勾选的直接上游依赖。
+//   AND 依赖（综合得分 → 三个指标）：补勾全部。
+//   OR 组依赖（富集图/生物标志物簇散点图 → 任一差异图等）：仅补勾首个。
+const CHECK_DEPENDENCIES: Partial<Record<SelectionKey, Dependency[]>> = {
   awa: ['cluster', 'clinical', 'biology'],
   survival: ['clinical'],
-  biomarkerClusterScatter: [...DIFF_KEYS],
-  biology: [...ENRICH_KEYS],
-  enrichBarGO: [...DIFF_KEYS],
-  enrichBarKEGG: [...DIFF_KEYS],
-  enrichBubbleGO: [...DIFF_KEYS],
-  enrichBubbleKEGG: [...DIFF_KEYS],
+  biomarkerClusterScatter: [{ anyOf: DIFF_KEYS }],
+  biology: [{ anyOf: ENRICH_KEYS }],
+  enrichBarGO: [{ anyOf: DIFF_KEYS }],
+  enrichBarKEGG: [{ anyOf: DIFF_KEYS }],
+  enrichBubbleGO: [{ anyOf: DIFF_KEYS }],
+  enrichBubbleKEGG: [{ anyOf: DIFF_KEYS }],
 }
 
 function isMetricKey(key: SelectionKey): key is MetricKey {
@@ -132,14 +137,21 @@ const anyEnrich = () => ENRICH_KEYS.some(key => enabledCharts[key])
 const anyDiff = () => DIFF_KEYS.some(key => enabledCharts[key])
 
 // 勾选方向：沿依赖图向下逐层补勾（awa → biology → enrich → diff）。
+// OR 组依赖：已有任一勾选则跳过，否则仅补勾首个成员。
 function cascadeOn(key: SelectionKey): void {
   const queue: SelectionKey[] = [key]
   while (queue.length) {
     const current = queue.shift()!
     for (const dep of CHECK_DEPENDENCIES[current] ?? []) {
-      if (!getEnabled(dep)) {
-        setEnabled(dep, true)
-        queue.push(dep)
+      if (typeof dep === 'string') {
+        if (!getEnabled(dep)) {
+          setEnabled(dep, true)
+          queue.push(dep)
+        }
+      } else if (!dep.anyOf.some(getEnabled)) {
+        const first = dep.anyOf[0]!
+        setEnabled(first, true)
+        queue.push(first)
       }
     }
   }
