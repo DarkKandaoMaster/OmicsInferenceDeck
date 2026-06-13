@@ -164,6 +164,7 @@ def build_figure(
     cax = ax.inset_axes([0.84, 0.69, 0.15, 0.025])
     colorbar = fig.colorbar(scatter, cax=cax, orientation="horizontal")
     colorbar.set_label("z-score", fontproperties=label_font)
+    colorbar.outline.set_visible(False)
     cax.xaxis.set_ticks_position("bottom")
     cax.xaxis.set_label_position("top")
     for text in colorbar.ax.get_xticklabels():
@@ -177,7 +178,7 @@ def build_figure(
             marker=_MARKERS[index % len(_MARKERS)],
             color="#555555",
             linestyle="none",
-            markersize=10,
+            markersize=9,
             markerfacecolor="#555555" if _MARKERS[index % len(_MARKERS)] != "+" else "none",
         )
         for index, label in enumerate(unique_labels)
