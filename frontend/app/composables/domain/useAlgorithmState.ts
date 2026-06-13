@@ -2,10 +2,10 @@ const algorithms = ['K-means', 'Hclust', 'Spectral Clustering', 'PIntMF', /* 'Su
 const selectedAlgorithm = ref<string[]>([])
 
 const cancerSubtypeClusterMap = {
-  BRCA: 5,
   BLCA: 5,
-  KIRC: 4,
+  BRCA: 5,
   GBM: 3,
+  KIRC: 4,
   LUAD: 3,
   PAAD: 2,
   SKCM: 4,
