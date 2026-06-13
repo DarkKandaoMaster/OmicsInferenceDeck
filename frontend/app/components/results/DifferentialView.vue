@@ -30,7 +30,9 @@ async function handleVolcanoClusterChange() {
     session_id: sessionId.value,
     cluster_id: selectedVolcanoCluster.value,
   })
-  diffResult.value = { ...diffResult.value, volcano_svg: res.data.svg }
+  // 原地更新而非整体替换 diffResult：替换会改变引用，触发 useBiomarkerScatter 中
+  // watch(diffResult) 重绘生物标志物簇散点图（仅切换火山图簇时并不需要）。
+  diffResult.value.volcano_svg = res.data.svg
 }
 
 async function handleOmicsTypeChange() {
