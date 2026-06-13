@@ -25,7 +25,7 @@ UP_COLOR <- "#D7263D"
 DOWN_COLOR <- "#1B98E0"
 NS_COLOR <- "#BFC5CC"
 GUIDE_COLOR <- "#6B6F76"
-LABEL_COLOR <- "#1F2329"
+LABEL_COLOR <- "#000000"
 
 open_plot_device <- function(width, height) {
   if (output_format == "png") {
@@ -180,9 +180,9 @@ p <- p +
   theme(
     aspect.ratio = 3 / 4,
     panel.background = element_rect(fill = "white", color = NA),
-    panel.grid.major = element_line(color = "#E5E7EB", linewidth = 0.21),
+    panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    panel.border = element_rect(color = "#2B2F36", fill = NA, linewidth = 0.5),
+    panel.border = element_rect(color = "#000000", fill = NA, linewidth = 1), #如果这里写成 linewidth = 0.5 ，那么绘图区的边框会因为抗锯齿而显得有点灰，就不是纯黑了。解决方法是把它加粗到 1 ，让它看起来更实
     plot.title = element_text(family = FONT_FAMILY, size = 16, face = "bold", hjust = 0.5),
     axis.title = element_text(family = FONT_FAMILY, size = 16, face = "bold"),
     axis.text = element_text(family = FONT_FAMILY, size = 16, face = "bold", colour = "black"),
