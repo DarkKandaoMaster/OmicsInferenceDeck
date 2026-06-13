@@ -269,7 +269,6 @@ export function useAnalysisActions() {
         const inputRes = await renderInputClusterScatter({
           session_id: sessionId.value,
           reduction: inputReduction.value,
-          random_state: randomSeed.value,
         })
         if (isStale(token)) return
         mergeIntoBackendResponse({
@@ -293,7 +292,6 @@ export function useAnalysisActions() {
         const plotRes = await renderPredClusterScatter({
           session_id: sessionId.value,
           reduction: predReduction.value,
-          random_state: randomSeed.value,
         })
         if (isStale(token)) return
         mergeIntoBackendResponse({
@@ -448,7 +446,6 @@ export function useAnalysisActions() {
       const inputRes = await renderInputClusterScatter({
         session_id: sessionId.value,
         reduction: inputReduction.value,
-        random_state: randomSeed.value,
       })
       mergeIntoBackendResponse({
         plots: {
@@ -473,7 +470,6 @@ export function useAnalysisActions() {
       const res = await renderPredClusterScatter({
         session_id: sessionId.value,
         reduction: predReduction.value,
-        random_state: randomSeed.value,
       })
       mergeIntoBackendResponse({
         reduction: predReduction.value,

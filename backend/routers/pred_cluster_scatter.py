@@ -18,11 +18,6 @@ router = APIRouter()
 class PredClusterScatterRequest(BaseModel):
     session_id: str
     reduction: str = "PCA"
-    random_state: int = 42
-
-
-def _seed_or_none(random_state: int) -> int | None:
-    return None if random_state == -1 else random_state
 
 
 @router.post("/api/plots/pred_cluster_scatter")
@@ -32,7 +27,7 @@ async def pred_cluster_scatter(request: PredClusterScatterRequest):
         if not path.exists():
             raise FileNotFoundError("cluster_result.parquet not found. Please run clustering first.")
 
-        svg = render_pred_cluster_scatter_svg(str(path), request.reduction, _seed_or_none(request.random_state))
+        svg = render_pred_cluster_scatter_svg(str(path), request.reduction)
         return {"status": "success", "svg": svg, "reduction": request.reduction}
     except FileNotFoundError as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -70,7 +70,6 @@ def build_figure(
     volcano_path: str,
     cluster_id: int,
     reduction: str = "t-SNE",
-    random_state: int | None = None,
 ) -> tuple[plt.Figure, str | None]:
     df = pd.read_parquet(cluster_result_path)
     if df.empty:
@@ -90,7 +89,7 @@ def build_figure(
 
     # 全局降维坐标（全部样本，seed 固定 3407，与 A 图同一景观）。
     embeddings = df[emb_cols].to_numpy(dtype=float)
-    coords = _coords(embeddings, reduction, random_state)
+    coords = _coords(embeddings, reduction)
 
     sample_names = df["sample_name"].astype(str).to_numpy()
     labels = df["label"].to_numpy()
@@ -210,7 +209,6 @@ def render_svg(
     volcano_path: str,
     cluster_id: int,
     reduction: str = "t-SNE",
-    random_state: int | None = None,
 ) -> tuple[str, str | None]:
-    fig, gene = build_figure(cluster_result_path, heatmap_path, volcano_path, cluster_id, reduction, random_state)
+    fig, gene = build_figure(cluster_result_path, heatmap_path, volcano_path, cluster_id, reduction)
     return figure_to_svg(fig), gene

@@ -40,7 +40,7 @@ def _tsne_kwargs(n_samples: int) -> dict:
     return kwargs
 
 
-def _coords(embeddings: np.ndarray, reduction: str, random_state: int | None = None) -> np.ndarray:
+def _coords(embeddings: np.ndarray, reduction: str) -> np.ndarray:
     n_samples = embeddings.shape[0]
     if n_samples == 0:
         return np.empty((0, 2))
@@ -60,7 +60,7 @@ def _coords(embeddings: np.ndarray, reduction: str, random_state: int | None = N
     return umap.UMAP(n_components=2, random_state=CANAKO_TSNE_RANDOM_STATE).fit_transform(embeddings)
 
 
-def build_figure(cluster_result_path: str, reduction: str = "PCA", random_state: int | None = 42) -> plt.Figure:
+def build_figure(cluster_result_path: str, reduction: str = "PCA") -> plt.Figure:
     df = pd.read_parquet(cluster_result_path)
     if df.empty:
         return empty_figure("No clustering result available.", "Cluster Scatter")
@@ -71,7 +71,7 @@ def build_figure(cluster_result_path: str, reduction: str = "PCA", random_state:
 
     labels = df["label"].to_numpy()
     embeddings = df[emb_cols].to_numpy(dtype=float)
-    coords = _coords(embeddings, reduction, random_state)
+    coords = _coords(embeddings, reduction)
 
     configure_matplotlib()
     fig, ax = plt.subplots(figsize=(12, 10))
@@ -135,5 +135,5 @@ def build_figure(cluster_result_path: str, reduction: str = "PCA", random_state:
     return fig
 
 
-def render_svg(cluster_result_path: str, reduction: str = "PCA", random_state: int | None = 42) -> str:
-    return figure_to_svg(build_figure(cluster_result_path, reduction, random_state))
+def render_svg(cluster_result_path: str, reduction: str = "PCA") -> str:
+    return figure_to_svg(build_figure(cluster_result_path, reduction))

@@ -4,7 +4,7 @@ import { useAlgorithmState } from '~/composables/domain/useAlgorithmState'
 import { useAnalysisActions } from '~/composables/domain/useAnalysisActions'
 import { useResultSelection } from '~/composables/domain/useResultSelection'
 
-const { inputReduction, isInputReductionLoading, randomSeed } = useAlgorithmState()
+const { inputReduction, isInputReductionLoading } = useAlgorithmState()
 const { backendResponse, switchInputReduction } = useAnalysisActions()
 const { sessionId } = useSession()
 const { displayedCharts } = useResultSelection()
@@ -13,7 +13,6 @@ const inputClusterSvg = computed(() => backendResponse.value?.data?.plots?.input
 const downloadParams = computed(() => ({
   session_id: sessionId.value,
   reduction: inputReduction.value,
-  random_state: randomSeed.value,
 }))
 </script>
 

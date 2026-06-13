@@ -78,17 +78,12 @@ class PlotDownloadRequest(BaseModel):
     plot_type: str
     format: str
     reduction: str = "PCA"
-    random_state: int = 42
     cluster_id: int | None = None
     database: str | None = None
     mode: str = "combined"
     x_param: str | None = None
     y_param: str | None = None
     dataset: str | None = None
-
-
-def _seed_or_none(random_state: int) -> int | None:
-    return None if random_state == -1 else random_state
 
 
 def _require_cluster_id(request: PlotDownloadRequest) -> int:
@@ -120,7 +115,7 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
 
     if plot_type == "pred_cluster_scatter":
         path = plot_path(request.session_id, CLUSTER_RESULT_FILE)
-        fig = build_pred_cluster_scatter_figure(str(path), request.reduction, _seed_or_none(request.random_state))
+        fig = build_pred_cluster_scatter_figure(str(path), request.reduction)
         return figure_to_bytes(fig, file_format, dpi=600), f"pred_cluster_scatter_{request.reduction}"
 
     if plot_type == "input_cluster_scatter":
@@ -130,7 +125,6 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
             str(omics_path),
             str(cluster_path),
             request.reduction,
-            _seed_or_none(request.random_state),
         )
         return figure_to_bytes(fig, file_format, dpi=600), f"input_cluster_scatter_{request.reduction}"
 
@@ -142,7 +136,6 @@ def _render_download_payload(request: PlotDownloadRequest) -> tuple[bytes, str]:
             str(plot_path(request.session_id, DIFFERENTIAL_VOLCANO_FILE)),
             cluster_id,
             request.reduction,
-            _seed_or_none(request.random_state),
         )
         stem = f"biomarker_cluster_scatter_{request.reduction}_cluster_{cluster_id}" + (f"_{gene}" if gene else "")
         return figure_to_bytes(fig, file_format, dpi=600), stem

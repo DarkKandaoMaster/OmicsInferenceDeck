@@ -59,7 +59,6 @@ def build_figure(
     omics_path: str,
     cluster_result_path: str,
     reduction: str = "t-SNE",
-    random_state: int | None = 42,
 ) -> plt.Figure:
     if not Path(cluster_result_path).exists():
         return empty_figure("cluster_result.parquet not found.", PLOT_TITLE)
@@ -82,7 +81,7 @@ def build_figure(
     if X.shape[0] != len(labels):
         return empty_figure("Omics samples and cluster labels are not aligned.", PLOT_TITLE)
 
-    coords = _coords(X, reduction, random_state)
+    coords = _coords(X, reduction)
 
     configure_matplotlib()
     fig, ax = plt.subplots(figsize=(12, 10))
@@ -150,6 +149,5 @@ def render_svg(
     omics_path: str,
     cluster_result_path: str,
     reduction: str = "t-SNE",
-    random_state: int | None = 42,
 ) -> str:
-    return figure_to_svg(build_figure(omics_path, cluster_result_path, reduction, random_state))
+    return figure_to_svg(build_figure(omics_path, cluster_result_path, reduction))

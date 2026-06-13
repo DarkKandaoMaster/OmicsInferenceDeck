@@ -18,11 +18,6 @@ router = APIRouter()
 class InputClusterScatterRequest(BaseModel):
     session_id: str
     reduction: str = "t-SNE"
-    random_state: int = 42
-
-
-def _seed_or_none(random_state: int) -> int | None:
-    return None if random_state == -1 else random_state
 
 
 @router.post("/api/plots/input_cluster_scatter")
@@ -39,7 +34,6 @@ async def input_cluster_scatter(request: InputClusterScatterRequest):
             str(omics_path),
             str(cluster_path),
             request.reduction,
-            _seed_or_none(request.random_state),
         )
         return {"status": "success", "svg": svg, "reduction": request.reduction}
     except FileNotFoundError as e:

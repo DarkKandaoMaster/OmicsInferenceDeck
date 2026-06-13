@@ -4,7 +4,7 @@ import { useAlgorithmState } from '~/composables/domain/useAlgorithmState'
 import { useAnalysisActions } from '~/composables/domain/useAnalysisActions'
 import { useResultSelection } from '~/composables/domain/useResultSelection'
 
-const { predReduction, isPredReductionLoading, randomSeed } = useAlgorithmState()
+const { predReduction, isPredReductionLoading } = useAlgorithmState()
 const { backendResponse, switchPredReduction } = useAnalysisActions()
 const { sessionId } = useSession()
 const { displayedCharts } = useResultSelection()
@@ -13,7 +13,6 @@ const clusterSvg = computed(() => backendResponse.value?.data?.plots?.pred_clust
 const downloadParams = computed(() => ({
   session_id: sessionId.value,
   reduction: predReduction.value,
-  random_state: randomSeed.value,
 }))
 </script>
 

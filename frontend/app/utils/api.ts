@@ -73,7 +73,6 @@ export function computeAwaMetrics(params: {
 export function renderPredClusterScatter(params: {
   session_id: string
   reduction: string
-  random_state: number
 }) {
   return http.post('/plots/pred_cluster_scatter', params)
 }
@@ -82,7 +81,6 @@ export function renderPredClusterScatter(params: {
 export function renderInputClusterScatter(params: {
   session_id: string
   reduction: string
-  random_state: number
 }) {
   return http.post('/plots/input_cluster_scatter', params)
 }
@@ -191,7 +189,6 @@ export type DownloadPlotParams = {
   plot_type: string
   format: PlotFormat
   reduction?: string
-  random_state?: number
   cluster_id?: number
   database?: string
   mode?: 'combined' | 'by_gene'
