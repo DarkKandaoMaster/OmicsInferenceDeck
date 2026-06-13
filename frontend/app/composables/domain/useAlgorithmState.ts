@@ -1,4 +1,4 @@
-const algorithms = ['K-means', 'Hclust', 'Spectral Clustering', 'PIntMF', 'Subtype-GAN', 'NEMO', 'SNF', 'MOSD', 'Parea']
+const algorithms = ['K-means', 'Hclust', 'Spectral Clustering', 'PIntMF', /* 'Subtype-GAN', 后端未实现，暂时注释掉 */ 'NEMO', 'SNF', 'MOSD', 'Parea']
 const selectedAlgorithm = ref<string[]>([])
 
 const cancerSubtypeClusterMap = {

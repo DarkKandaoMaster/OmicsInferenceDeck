@@ -317,10 +317,12 @@ TCGA-03,1,0.58,0.21,...</pre>
             </div>
           </div>
 
+          <!-- Subtype-GAN 后端未实现，暂时注释掉
           <div v-if="selectedAlgorithm.includes('Subtype-GAN')" class="rounded-lg border border-slate-200 bg-white p-4">
             <h4 class="m-0 mb-2 text-sm font-semibold text-slate-900">Subtype-GAN</h4>
             <p class="m-0 text-[13px] leading-relaxed text-slate-500">该算法当前使用平台默认参数。</p>
           </div>
+          -->
         </div>
 
         <div v-else class="grid gap-4 md:grid-cols-2">
@@ -374,10 +376,12 @@ TCGA-03,1,0.58,0.21,...</pre>
             </div>
           </div>
 
+          <!-- Subtype-GAN 后端未实现，暂时注释掉
           <div v-if="selectedAlgorithm.includes('Subtype-GAN')" class="rounded-lg border border-slate-200 bg-white p-4">
             <h4 class="m-0 mb-2 text-sm font-semibold text-slate-900">Subtype-GAN</h4>
             <p class="m-0 text-[13px] leading-relaxed text-slate-500">该算法当前没有可配置的敏感性分析参数。</p>
           </div>
+          -->
         </div>
       </div>
     </div>
