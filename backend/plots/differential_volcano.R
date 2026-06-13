@@ -147,6 +147,7 @@ if (nrow(top) > 0) {
       data = repel_df,
       mapping = aes(x = logFC, y = negLog10P, label = repel_label),
       inherit.aes = FALSE,
+      seed = 3407,  # 固定标签避让的随机过程，保证每次渲染标签位置一致、可复现
       family = FONT_FAMILY,
       fontface = "bold",
       size = 3.2,
