@@ -106,6 +106,8 @@ if (mode == "by_gene") {
     geom_point(aes(size = Gene_Count, color = neg_adjusted_p)) +
     scale_color_gradient(low = "green", high = "red") +
     geom_text(aes(label = Gene_Count), hjust = -0.7, size = 5.6, color = "black", family = FONT_FAMILY) +
+    scale_x_continuous(expand = expansion(mult = c(0.05, 0.15))) +
+    coord_cartesian(clip = "off") +
     labs(
       title = by_gene_title,
       x = "Gene Number",
