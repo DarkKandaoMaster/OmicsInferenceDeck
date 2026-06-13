@@ -31,11 +31,10 @@ const hasAnyChartsVisible = computed(() => {
   if (!data) return false
   if (enabledCharts.inputClusterScatter && data.plots?.input_cluster_scatter) return true
   if (enabledCharts.predClusterScatter && data.plots?.pred_cluster_scatter) return true
+  if (enabledCharts.survival && (survivalResult || survivalErrorMessage)) return true
   if ((enabledCharts.diffVolcano || enabledCharts.diffHeatmap) && diffResult.value) return true
   if (enabledCharts.biomarkerClusterScatter && diffResult.value) return true
   if ((enabledCharts.enrichBarGO || enabledCharts.enrichBarKEGG || enabledCharts.enrichBubbleGO || enabledCharts.enrichBubbleKEGG) && diffResult.value && enrichmentResult.value) return true
-  // 生存曲线：仅当该步已产出结果或报错（成功→曲线，失败→占位）才算“可见”；未跑到则不显示占位
-  if (enabledCharts.survival && (survivalResult || survivalErrorMessage)) return true
   return false
 })
 
@@ -63,9 +62,9 @@ const hasAnyVisibleResult = computed(() => {
       <div v-if="hasAnyChartsVisible" class="results-grid mt-8">
         <ResultsInputClusteringView />
         <ResultsClusteringView />
+        <ResultsSurvivalView />
         <ResultsDifferentialView />
         <ResultsBiomarkerClusterScatterView />
-        <ResultsSurvivalView />
         <ResultsEnrichmentView />
       </div>
     </template>
