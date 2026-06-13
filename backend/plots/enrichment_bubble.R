@@ -137,6 +137,9 @@ if (mode != "by_gene") {
   p <- p + scale_size_continuous(range = c(3, 15))
 }
 
+# 如果Y轴标签超过45个字符，那么就把它截断，显示省略号
+p <- p + scale_y_discrete(labels = function(x) str_trunc(x, 45))
+
 p <- p +
   theme(
     text = element_text(family = FONT_FAMILY, size = 16),
