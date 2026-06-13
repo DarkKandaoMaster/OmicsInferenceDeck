@@ -21,10 +21,10 @@ export const metricOptions: { key: MetricKey; label: string }[] = [
 export const chartOptions: { key: ChartKey; label: string }[] = [
   { key: 'inputClusterScatter', label: '聚类前散点图' },
   { key: 'predClusterScatter', label: '聚类后散点图' },
+  { key: 'survival', label: '生存曲线' },
   { key: 'diffVolcano', label: '差异火山图' },
   { key: 'diffHeatmap', label: '差异热图' },
   { key: 'biomarkerClusterScatter', label: '生物标志物簇散点图' },
-  { key: 'survival', label: '生存曲线' },
   { key: 'enrichBarGO', label: 'GO富集分析条形图' },
   { key: 'enrichBarKEGG', label: 'KEGG富集分析条形图' },
   { key: 'enrichBubbleGO', label: 'GO富集分析气泡图' },
