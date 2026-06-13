@@ -72,7 +72,7 @@ const hasSelectedAlgorithm = computed(() => selectedAlgorithm.value.length > 0)
     <div v-if="!isCustomEvalTestMode" class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div>
         <p class="mb-4 text-[13px] leading-relaxed text-slate-500">
-          请把您上传的组学数据作为输入，用您自己的算法，生成一个CSV/Excel文件：<br>
+          请把您上传的组学数据作为输入，用您自己的算法，生成一个CSV/TSV/XLSX文件：<br>
           1. 从左到右分别是<br>
           <strong>病人名称</strong>（索引列）、<br>
           <strong>聚类结果</strong>（第2列）、<br>
