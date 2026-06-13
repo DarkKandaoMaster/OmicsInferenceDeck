@@ -40,7 +40,7 @@ def _tsne_kwargs(n_samples: int) -> dict:
     return kwargs
 
 
-def _coords(embeddings: np.ndarray, reduction: str, random_state: int | None) -> np.ndarray:
+def _coords(embeddings: np.ndarray, reduction: str, random_state: int | None = None) -> np.ndarray:
     n_samples = embeddings.shape[0]
     if n_samples == 0:
         return np.empty((0, 2))
@@ -49,7 +49,7 @@ def _coords(embeddings: np.ndarray, reduction: str, random_state: int | None) ->
 
     if reduction == "PCA":
         n_components = min(2, embeddings.shape[1], n_samples)
-        coords = PCA(n_components=n_components, random_state=random_state).fit_transform(embeddings)
+        coords = PCA(n_components=n_components, random_state=CANAKO_TSNE_RANDOM_STATE).fit_transform(embeddings)
         if coords.shape[1] == 1:
             coords = np.column_stack([coords[:, 0], np.zeros(n_samples)])
         return coords
@@ -57,9 +57,7 @@ def _coords(embeddings: np.ndarray, reduction: str, random_state: int | None) ->
     if reduction == "t-SNE":
         return TSNE(**_tsne_kwargs(n_samples)).fit_transform(embeddings)
 
-    if umap is None:
-        return _coords(embeddings, "PCA", random_state)
-    return umap.UMAP(n_components=2, random_state=random_state).fit_transform(embeddings)
+    return umap.UMAP(n_components=2, random_state=CANAKO_TSNE_RANDOM_STATE).fit_transform(embeddings)
 
 
 def build_figure(cluster_result_path: str, reduction: str = "PCA", random_state: int | None = 42) -> plt.Figure:
