@@ -94,6 +94,7 @@ const runEnrichment = computed(
 // 选项依赖联动
 // 依赖来自后端读取的中间文件（上游不算，下游会报错或得 0 分）：
 //   awa(综合得分) 依赖 cluster + clinical + biology
+//   survival(生存曲线) 依赖 clinical(临床关联指标)
 //   biology(生物学相关性) 依赖 任一 Enrichment 图（读 enrichment_{GO/KEGG}.parquet）
 //   每个 Enrichment 图 依赖 任一 Differential 图（读 differential_volcano.parquet）
 // Enrichment / Differential 在后端都是“整组触发一次”，因此是 OR 组依赖。
@@ -105,6 +106,7 @@ const DIFF_KEYS: ChartKey[] = ['diffVolcano', 'diffHeatmap']
 // 勾选某项时需要一并勾选的直接上游依赖（补勾整组全部）。
 const CHECK_DEPENDENCIES: Partial<Record<SelectionKey, SelectionKey[]>> = {
   awa: ['cluster', 'clinical', 'biology'],
+  survival: ['clinical'],
   biomarkerClusterScatter: [...DIFF_KEYS],
   biology: [...ENRICH_KEYS],
   enrichBarGO: [...DIFF_KEYS],
@@ -159,6 +161,10 @@ function cascadeOff(): void {
     }
     if (!anyEnrich() && enabledMetrics.biology) {
       enabledMetrics.biology = false
+      changed = true
+    }
+    if (!enabledMetrics.clinical && enabledCharts.survival) {
+      enabledCharts.survival = false
       changed = true
     }
     if ((!enabledMetrics.cluster || !enabledMetrics.clinical || !enabledMetrics.biology) && enabledMetrics.awa) {
