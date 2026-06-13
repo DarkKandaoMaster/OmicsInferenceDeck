@@ -20,10 +20,6 @@ const downloadParams = computed(() => ({
       <div class="result-card-header">
         <div class="result-card-title">生存曲线</div>
         <div class="flex items-center gap-3 text-sm text-slate-600">
-          <span>
-            Log-Rank P-value:
-            <span class="font-bold text-slate-900">{{ survivalResult.p_value ? formatPValue(survivalResult.p_value) : 'N/A' }}</span>
-          </span>
           <ResultsPlotDownloadButton plot-type="survival_curve" :params="downloadParams" filename-prefix="survival_curve" />
         </div>
       </div>
