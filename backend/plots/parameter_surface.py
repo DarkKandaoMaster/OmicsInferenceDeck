@@ -75,8 +75,7 @@ def build_figure(results_path: str, x_param: str, y_param: str | None = None) ->
         fig, ax = plt.subplots(figsize=(8, 6))
         ax.plot(grouped[x_param], grouped["score"], color="#2E86DE", linewidth=2.6, marker="o", markersize=6)
         ax.set_xlabel(x_param, fontweight="bold")
-        ax.set_ylabel("$-\\log_{10}(p)$", fontweight="bold")
-        ax.set_title(f"Parameter Sensitivity ({x_param})", fontweight="bold")
+        ax.set_ylabel("−log10(p)", fontweight="bold")
         ax.set_box_aspect(0.75)
         ax.grid(True, linestyle="--", alpha=0.28)
         fig.tight_layout()
@@ -133,7 +132,7 @@ def build_figure(results_path: str, x_param: str, y_param: str | None = None) ->
 
     ax.set_xlabel(x_param, fontsize=16, labelpad=10, fontweight="bold")
     ax.set_ylabel(y_param, fontsize=16, labelpad=10, fontweight="bold")
-    ax.set_zlabel("$-\\log_{10}(p)$", fontsize=12, labelpad=20, fontweight="bold")
+    ax.set_zlabel("−log10(p)", fontsize=16, labelpad=10, fontweight="bold")
     ax.zaxis.set_rotate_label(True)
     ax.set_box_aspect([1, 1, 0.8])
     ax.view_init(elev=30, azim=60)
@@ -146,18 +145,14 @@ def build_figure(results_path: str, x_param: str, y_param: str | None = None) ->
     ax.zaxis.set_major_formatter(plt.ScalarFormatter(useMathText=True))
     z_ceil = float(np.ceil(np.nanmax(z))) if np.nanmax(z) > 0 else 1.0
     ax.set_zlim(0, z_ceil)
+    z_ticks = [tick for tick in ax.get_zticks() if 0 <= tick <= z_ceil]
+    ax.set_zticks(z_ticks)
     ax.set_zticklabels(
-        [f"{tick:.1f}" for tick in ax.get_zticks()],
+        [f"{tick:.1f}" for tick in z_ticks],
         fontsize=14,
         fontweight="bold",
     )
-    ax.set_title(
-        f"Parameter Sensitivity ({x_param} vs {y_param})",
-        fontsize=16,
-        fontweight="bold",
-    )
     plt.subplots_adjust(left=0.25, right=0.9, bottom=0.1, top=0.9)
-    fig.tight_layout(rect=[0.25, 0, 0.95, 0.95])
     return fig
 
 
