@@ -153,12 +153,11 @@ TCGA-03,1,0.58,0.21,...</pre>
       </div>
 
       <div class="rounded-lg bg-slate-900 p-4">
-        <div class="mb-2 text-[11px] font-semibold uppercase text-slate-400">.mat 列语义（MLMOSC 默认）</div>
+        <div class="mb-2 text-[11px] font-semibold uppercase text-slate-400">.mat 列语义</div>
         <pre class="m-0 overflow-x-auto whitespace-pre text-xs leading-relaxed text-slate-100">results = N×18 矩阵
  第15列  gamma        → X 轴
  第16列  delta        → Y 轴
- 第17列  -log10(p)    → 高度(Z)
- 第18列  enrichment   (本图不用)</pre>
+ 第17列  -log10(p)    → 高度(Z)</pre>
       </div>
     </div>
   </section>
