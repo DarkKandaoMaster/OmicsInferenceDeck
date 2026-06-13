@@ -45,10 +45,11 @@ async function handleOmicsTypeChange() {
       <div class="result-card-header">
         <div class="result-card-title">差异火山图</div>
         <div class="flex items-center gap-3">
-          <select v-model="selectedDiffOmicsType" @change="handleOmicsTypeChange" class="chart-select">
+          <!-- 组学层选择下拉已注释：默认跑 mRNA Expression Matrix，逻辑层 runDifferentialAnalysis 会自动兜底默认组学层 -->
+          <!-- <select v-model="selectedDiffOmicsType" @change="handleOmicsTypeChange" class="chart-select">
             <option value="" disabled>Select omics layer</option>
             <option v-for="type in displayedDifferentialOmicsTypes" :key="type" :value="type">{{ type }}</option>
-          </select>
+          </select> -->
           <select v-model.number="selectedVolcanoCluster" @change="handleVolcanoClusterChange" class="chart-select">
             <option v-for="cid in diffResult.clusters" :key="cid" :value="cid">Cluster {{ cid }}</option>
           </select>
