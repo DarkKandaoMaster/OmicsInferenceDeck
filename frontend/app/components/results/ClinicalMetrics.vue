@@ -23,17 +23,13 @@ function formatType(value: string) {
 </script>
 
 <template>
-  <div v-if="enabledMetrics.clinical" class="result-card mt-8">
+  <!-- 临床步骤跑完才有 clinical_metrics（成功→数据对象，失败→{error}）；未跑到则整卡不渲染，不显示占位 -->
+  <div v-if="enabledMetrics.clinical && clinicalMetrics" class="result-card mt-8">
     <div class="result-card-header">
       <div class="result-card-title">临床关联指标</div>
     </div>
 
-    <div v-if="!clinicalMetrics" class="result-placeholder">
-      <div class="text-sm font-medium text-slate-500">暂无临床关联指标</div>
-      <div class="text-xs text-slate-400">未能生成临床关联指标，请确认已上传临床数据并完成分析。</div>
-    </div>
-
-    <div v-else-if="clinicalMetrics.error" class="p-5 text-sm text-red-700">
+    <div v-if="clinicalMetrics.error" class="p-5 text-sm text-red-700">
       {{ clinicalMetrics.error }}
     </div>
 

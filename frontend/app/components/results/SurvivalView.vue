@@ -14,7 +14,8 @@ const downloadParams = computed(() => ({
 </script>
 
 <template>
-  <template v-if="enabledCharts.survival">
+  <!-- 生存步骤跑完才有 survivalResult/survivalErrorMessage（成功→曲线，失败→占位）；未跑到则不渲染，不显示占位 -->
+  <template v-if="enabledCharts.survival && (survivalResult || survivalErrorMessage)">
     <div v-if="survivalResult" class="result-card">
       <div class="result-card-header">
         <div class="result-card-title">生存曲线</div>
