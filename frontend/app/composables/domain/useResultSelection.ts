@@ -2,6 +2,7 @@ export type MetricKey = 'cluster' | 'clinical' | 'biology' | 'awa'
 export type ChartKey =
   | 'inputClusterScatter'
   | 'predClusterScatter'
+  | 'survival'
   | 'diffVolcano'
   | 'diffHeatmap'
   | 'biomarkerClusterScatter'
@@ -9,7 +10,6 @@ export type ChartKey =
   | 'enrichBarKEGG'
   | 'enrichBubbleGO'
   | 'enrichBubbleKEGG'
-  | 'survival'
 
 export const metricOptions: { key: MetricKey; label: string }[] = [
   { key: 'cluster', label: '聚类内部质量指标' },
@@ -41,6 +41,7 @@ const enabledMetrics = reactive<Record<MetricKey, boolean>>({
 const enabledCharts = reactive<Record<ChartKey, boolean>>({
   inputClusterScatter: true,
   predClusterScatter: true,
+  survival: true,
   diffVolcano: true,
   diffHeatmap: true,
   biomarkerClusterScatter: true,
@@ -48,7 +49,6 @@ const enabledCharts = reactive<Record<ChartKey, boolean>>({
   enrichBarKEGG: true,
   enrichBubbleGO: true,
   enrichBubbleKEGG: true,
-  survival: true,
 })
 
 const selectedBiologyDb = ref<'GO' | 'KEGG'>('GO')

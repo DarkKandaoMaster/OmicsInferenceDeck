@@ -129,6 +129,12 @@ export function useAnalysisActions() {
     const { runSurvivalAnalysis } = useSurvival()
 
     // 差异/富集/生存由各自 composable 自报日志，这里不再额外包一层，避免重复行。
+    // 生存分析独立于差异/富集（仅依赖临床数据），按图表展示顺序先行绘制。
+    if (clinicalFile.value && enabledCharts.survival) {
+      if (isStale(token)) return
+      await runSurvivalAnalysis({ silent: true, isStale: () => isStale(token) })
+    }
+
     if (runDifferential.value) {
       if (isStale(token)) return
       await runDifferentialAnalysis({ silent: true, isStale: () => isStale(token) })
@@ -200,12 +206,6 @@ export function useAnalysisActions() {
       const awaFailed = databases.every(db => awaMetricsByDb[db]?.error)
       if (awaFailed) finishStep(awaStep, '⚠️ AWA / 3D-AWA 指标计算失败（已跳过）', 'warning')
       else finishStep(awaStep, '✅ AWA / 3D-AWA 指标已计算')
-    }
-
-    // 生存分析由 useSurvival 自报日志（含被排除样本的提示行）。
-    if (clinicalFile.value && enabledCharts.survival) {
-      if (isStale(token)) return
-      await runSurvivalAnalysis({ silent: true, isStale: () => isStale(token) })
     }
   }
 
