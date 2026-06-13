@@ -115,7 +115,7 @@ TCGA-03,1,0.58,0.21,...
         <div class="mt-4 flex flex-col gap-2">
           <label class="flex items-center gap-2 text-[13px] text-slate-700">
             <span class="shrink-0">X轴名称:</span>
-            <input v-model="matXLabel" type="text" placeholder="gamma"
+            <input v-model="matXLabel" type="text"
               class="w-48 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
             <span class="shrink-0">X列号:</span>
             <input v-model.number="matXCol" type="number" min="1"
@@ -123,10 +123,10 @@ TCGA-03,1,0.58,0.21,...
           </label>
           <label class="flex items-center gap-2 text-[13px] text-slate-700">
             <span class="shrink-0">Y轴名称:</span>
-            <input v-model="matYLabel" type="text" placeholder="delta"
+            <input v-model="matYLabel" type="text"
               class="w-48 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
             <span class="shrink-0">Y列号:</span>
-            <input v-model.number="matYCol" type="number" min="1" placeholder="留空画 2D"
+            <input v-model.number="matYCol" type="number" min="1"
               class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none w-20 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
           </label>
           <label class="flex items-center gap-2 text-[13px] text-slate-700">
