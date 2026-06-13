@@ -51,7 +51,10 @@ export function useAnalysisActions() {
     maxIter,
     nNeighbors,
     randomSeed,
-    currentReduction,
+    inputReduction,
+    predReduction,
+    isInputReductionLoading,
+    isPredReductionLoading,
     testNClusters,
     testMaxIter,
     testNNeighbors,
@@ -265,7 +268,7 @@ export function useAnalysisActions() {
       try {
         const inputRes = await renderInputClusterScatter({
           session_id: sessionId.value,
-          reduction: currentReduction.value,
+          reduction: inputReduction.value,
           random_state: randomSeed.value,
         })
         if (isStale(token)) return
@@ -289,12 +292,12 @@ export function useAnalysisActions() {
       try {
         const plotRes = await renderPredClusterScatter({
           session_id: sessionId.value,
-          reduction: currentReduction.value,
+          reduction: predReduction.value,
           random_state: randomSeed.value,
         })
         if (isStale(token)) return
         mergeIntoBackendResponse({
-          reduction: currentReduction.value,
+          reduction: predReduction.value,
           plots: {
             ...(backendResponse.value?.data?.plots || {}),
             pred_cluster_scatter: plotRes.data.svg,
@@ -435,46 +438,54 @@ export function useAnalysisActions() {
     }
   }
 
-  async function switchReduction(method: string) {
-    if (currentReduction.value === method) return
-    currentReduction.value = method
+  // 仅切换“聚类前散点图”的降维：用各自的 loading 标记，不碰全局 isLoading，避免触发“运行分析”按钮转圈。
+  async function switchInputReduction(method: string) {
+    if (inputReduction.value === method) return
+    inputReduction.value = method
 
-    isLoading.value = true
+    isInputReductionLoading.value = true
     try {
-      const res = await renderPredClusterScatter({
+      const inputRes = await renderInputClusterScatter({
         session_id: sessionId.value,
-        reduction: currentReduction.value,
+        reduction: inputReduction.value,
         random_state: randomSeed.value,
       })
       mergeIntoBackendResponse({
-        reduction: currentReduction.value,
+        plots: {
+          ...(backendResponse.value?.data?.plots || {}),
+          input_cluster_scatter: inputRes.data.svg,
+        },
+      })
+    } catch (error: any) {
+      setError(error.response?.data?.detail || '降维切换失败。')
+    } finally {
+      isInputReductionLoading.value = false
+    }
+  }
+
+  // 仅切换“聚类后散点图”的降维：同样只动自己的 loading，并 merge reduction（下载/展示读这份）。
+  async function switchPredReduction(method: string) {
+    if (predReduction.value === method) return
+    predReduction.value = method
+
+    isPredReductionLoading.value = true
+    try {
+      const res = await renderPredClusterScatter({
+        session_id: sessionId.value,
+        reduction: predReduction.value,
+        random_state: randomSeed.value,
+      })
+      mergeIntoBackendResponse({
+        reduction: predReduction.value,
         plots: {
           ...(backendResponse.value?.data?.plots || {}),
           pred_cluster_scatter: res.data.svg,
         },
       })
-
-      if (enabledCharts.inputClusterScatter) {
-        try {
-          const inputRes = await renderInputClusterScatter({
-            session_id: sessionId.value,
-            reduction: currentReduction.value,
-            random_state: randomSeed.value,
-          })
-          mergeIntoBackendResponse({
-            plots: {
-              ...(backendResponse.value?.data?.plots || {}),
-              input_cluster_scatter: inputRes.data.svg,
-            },
-          })
-        } catch (_error) {
-          // 失败不阻塞主流程
-        }
-      }
     } catch (error: any) {
       setError(error.response?.data?.detail || '降维切换失败。')
     } finally {
-      isLoading.value = false
+      isPredReductionLoading.value = false
     }
   }
 
@@ -575,7 +586,8 @@ export function useAnalysisActions() {
     clusteringDone,
     resultsVisible,
     runAnalysisFlow,
-    switchReduction,
+    switchInputReduction,
+    switchPredReduction,
     runParameterSearchFlow,
     abortRun,
   }

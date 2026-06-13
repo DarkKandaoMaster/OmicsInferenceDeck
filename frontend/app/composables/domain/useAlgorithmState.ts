@@ -23,7 +23,10 @@ const kValue = ref(5)
 const maxIter = ref(300)
 const nNeighbors = ref(10)
 const randomSeed = ref(42)
-const currentReduction = ref('t-SNE')
+const inputReduction = ref('t-SNE')
+const predReduction = ref('t-SNE')
+const isInputReductionLoading = ref(false)
+const isPredReductionLoading = ref(false)
 
 const isTestMode = ref(false)
 const testNClusters = ref('2,3,4,5')
@@ -55,7 +58,8 @@ export function useAlgorithmState() {
     algorithms, selectedAlgorithm,
     cancerSubtypeClusterMap, cancerSubtypeOptions, selectedCancerSubtype, applyCancerSubtypeClusterCount,
     displayedCancerSubtype, captureAlgorithmDisplaySnapshot,
-    kValue, maxIter, nNeighbors, randomSeed, currentReduction,
+    kValue, maxIter, nNeighbors, randomSeed,
+    inputReduction, predReduction, isInputReductionLoading, isPredReductionLoading,
     isTestMode, testNClusters, testMaxIter, testNNeighbors,
     psResult, isPsLoading, psParam1, psParam2,
   }
