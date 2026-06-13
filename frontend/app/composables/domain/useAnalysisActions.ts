@@ -410,6 +410,7 @@ export function useAnalysisActions() {
 
     if (omicsFileConfigs.value.length === 0) { alert('请先选择组学数据文件。'); return }
     if (selectedAlgorithm.value.length === 0) { alert('请先选择至少一种算法。'); return }
+    if (selectedAlgorithm.value.length > 1) { alert('暂时不支持多选算法。'); return }
 
     const token = startRun()
     isLoading.value = true
@@ -521,7 +522,7 @@ export function useAnalysisActions() {
       return
     }
     if (selectedAlgorithm.value.length === 0) { alert('请先选择至少一种算法。'); return }
-    if (selectedAlgorithm.value.length > 1) { alert('测试模式请只选择一种算法。'); return }
+    if (selectedAlgorithm.value.length > 1) { alert('暂时不支持多选算法。'); return }
 
     const token = startRun()
     isPsLoading.value = true
