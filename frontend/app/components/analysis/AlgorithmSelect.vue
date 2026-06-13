@@ -83,7 +83,7 @@ const hasSelectedAlgorithm = computed(() => selectedAlgorithm.value.length > 0)
           <input type="file" accept=".csv,.xlsx,.xls" class="absolute inset-0 h-full w-full cursor-pointer opacity-0" @change="handleCustomEvalFileChange($event)" />
           <div class="flex min-h-[116px] flex-col items-center justify-center px-4 py-5 pointer-events-none">
             <span class="text-sm font-semibold text-slate-900">点击选择结果数据文件</span>
-            <span class="mt-1 text-xs text-slate-500">CSV / XLSX / XLS</span>
+            <span class="mt-1 text-xs text-slate-500">CSV / TSV / XLSX</span>
           </div>
         </div>
         <div v-if="customEvalFile" class="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
