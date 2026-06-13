@@ -99,7 +99,8 @@ const hasSelectedAlgorithm = computed(() => selectedAlgorithm.value.length > 0)
         <pre class="m-0 overflow-x-auto whitespace-pre text-xs leading-relaxed text-slate-100">patient,cluster,feature_1,feature_2,...
 TCGA-01,1,0.42,0.18,...
 TCGA-02,2,0.31,0.66,...
-TCGA-03,1,0.58,0.21,...</pre>
+TCGA-03,1,0.58,0.21,...
+...</pre>
       </div>
     </div>
 
@@ -110,6 +111,7 @@ TCGA-03,1,0.58,0.21,...</pre>
           请把您参数扫描产生的 <strong>.mat</strong> 结果文件作为输入，平台直接读取其中现成的列绘制参数敏感性图：<br>
           1. 平台自动取文件中的<strong>首个数据变量</strong>。<br>
           2. <strong>无需</strong>再上传组学/临床数据。<br>
+          允许Y 轴列号留空 → 仅按 X 绘制 2D 敏感性曲线。列号均为 1 起始。
         </p>
 
         <div class="mt-4 flex flex-col gap-2">
@@ -134,7 +136,6 @@ TCGA-03,1,0.58,0.21,...</pre>
             <input v-model.number="matScoreCol" type="number" min="1"
               class="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none w-20 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
           </label>
-          <p class="mt-1 text-xs text-slate-500">Y 轴列号留空 → 仅按 X 绘制 2D 敏感性曲线。列号均为 1 起始。</p>
         </div>
 
         <div class="relative mt-4 rounded-lg border-2 border-dashed border-amber-200 bg-amber-50/60 text-center transition-all hover:border-amber-400 hover:bg-amber-50">
