@@ -17,6 +17,12 @@ function formatPValue(value: unknown) {
   return numberValue.toFixed(4)
 }
 
+function formatNegLog10P(value: unknown) {
+  const numberValue = Number(value)
+  if (!Number.isFinite(numberValue) || numberValue <= 0) return 'N/A'
+  return (-Math.log10(numberValue)).toFixed(2)
+}
+
 function formatType(value: string) {
   return value === 'discrete' ? 'Discrete' : 'Numerical'
 }
@@ -34,10 +40,15 @@ function formatType(value: string) {
     </div>
 
     <div v-else class="p-6">
-      <div class="grid grid-cols-2 gap-5 max-[560px]:grid-cols-1">
+      <div class="grid grid-cols-3 gap-5 max-[768px]:grid-cols-1">
         <div class="metric-card">
           <div class="metric-label">Log-Rank Test P-value</div>
           <div class="metric-value">{{ formatPValue(lrt.p_value) }}</div>
+        </div>
+        <!-- 纯前端计算-log10(p) -->
+        <div class="metric-card">
+          <div class="metric-label">Log-Rank -Log10(P)</div>
+          <div class="metric-value">{{ formatNegLog10P(lrt.p_value) }}</div>
         </div>
         <div class="metric-card">
           <div class="metric-label">ECP Significant Parameters</div>
