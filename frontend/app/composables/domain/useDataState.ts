@@ -180,7 +180,9 @@ export function useDataState() {
     clinicalUploadStatus.value = '正在上传临床数据...'
     try {
       const res = await uploadClinical(formData)
-      clinicalUploadStatus.value = `✅ 临床数据就绪: ${res.data.original_filename}`
+      clinicalUploadStatus.value = res.data.omics_available
+        ? `✅ 临床数据就绪: ${res.data.original_filename}\n这些数据有 ${res.data.unaligned_with_omics} 个病人无法和组学对齐，计算时会忽略这些病人`
+        : `✅ 临床数据就绪: ${res.data.original_filename}`
       isClinicalUploaded.value = true
     } catch (error: any) {
       clinicalUploadStatus.value = `❌ 错误: ${error.response?.data?.detail || '上传失败'}`
@@ -201,10 +203,10 @@ export function useDataState() {
     expressionMatrixUploadStatus.value = '正在上传 mRNA 表达矩阵...'
     try {
       const res = await uploadExpressionMatrix(formData)
-      expressionMatrixUploadStatus.value = `mRNA 表达矩阵已就绪: ${res.data.original_filename}\n${res.data.n_samples} 个样本，${res.data.n_features} 个基因`
+      expressionMatrixUploadStatus.value = `✅ mRNA 表达矩阵已就绪: ${res.data.original_filename}\n${res.data.n_samples} 个样本，${res.data.n_features} 个基因`
       isExpressionMatrixUploaded.value = true
     } catch (error: any) {
-      expressionMatrixUploadStatus.value = `mRNA 表达矩阵错误: ${error.response?.data?.detail || '上传失败'}`
+      expressionMatrixUploadStatus.value = `❌ mRNA 表达矩阵错误: ${error.response?.data?.detail || '上传失败'}`
       isExpressionMatrixUploaded.value = false
       throw error
     }

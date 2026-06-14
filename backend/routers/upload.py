@@ -364,7 +364,10 @@ async def upload_file(   files:List[UploadFile]=File(...)   ,   data_format:str=
 
         except Exception as e:
             raise HTTPException(status_code=400,detail=f"数据格式错误: {str(e)}")
-        return{
+
+        # 【新增】临床上传时，现算“临床 ∩ 组学”的对齐情况，供前端日志对称提示。
+        # 运行流程里组学总是先于临床上传，因此此处 omics_data.parquet 通常已存在。
+        result = {
             "status": "success",
             # "filename": final_filename, #合并后的文件名称
             "original_filename": " + ".join([f.filename for f in files]), #用户上传的各个文件的原始名称。用于前端界面展示【【【【【这句代码是什么意思？
@@ -374,6 +377,16 @@ async def upload_file(   files:List[UploadFile]=File(...)   ,   data_format:str=
             "lost_samples": lost_samples, # 👇 【新增】将丢失的样本数发送给前端
             "message": f"成功合并 {len(files)} 个文件"
         }
+        if file_type == "clinical":
+            omics_path = os.path.join(UPLOAD_PATH, OMICS_DATA_FILE)
+            if os.path.exists(omics_path):
+                omics_samples = set(pd.read_parquet(omics_path).index.astype(str))
+                clinical_samples = set(df_concat.index.astype(str))
+                result["omics_available"] = True
+                result["unaligned_with_omics"] = len(clinical_samples - omics_samples)
+            else:
+                result["omics_available"] = False
+        return result
     except HTTPException as he: #捕获到了我们刚才自己抛出的错误，说明虽然读取、合并文件成功，但是文件内容不合规
         cleanup_temp_files(temp_file_paths) #删除用户上传的各个文件
         print(f"[后端日志] 校验不通过，文件已删除: {str(he)}")

@@ -44,13 +44,14 @@ export function useSurvival() {
       survivalResult.value = res.data
       finishStep(step, '✅ 生存分析完成')
       // 被排除样本提示：仅在生存真正跑完时追加一次（琥珀色警告行）。
-      const lost = res.data?.lost_samples
-      appendLog(
-        lost
-          ? `${lost} clustered samples were excluded because clinical data was missing.`
-          : 'No clustered samples were excluded.',
-        'warning',
-      )
+      // 这里显示的是参与聚类的样本里、没有临床数据（或 OS/OS.time 无效）而被生存分析丢弃的数量。另外如果之后要使用这里，最好把它加到Actions.vue？
+      // const lost = res.data?.lost_samples
+      // appendLog(
+      //   lost
+      //     ? `${lost} clustered samples were excluded because clinical data was missing.`
+      //     : 'No clustered samples were excluded.',
+      //   'warning',
+      // )
     } catch (error: any) {
       survivalErrorMessage.value = '生存分析失败: ' + (error.response?.data?.detail || error.message)
       failStep(step, '❌ 生存分析失败: ' + extractError(error))
