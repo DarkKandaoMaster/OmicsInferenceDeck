@@ -19,9 +19,9 @@ const capabilities = [
 const workflow = ['上传数据', '配置算法', '运行分析', '查看报告']
 
 const metrics = [
-  { value: '14', label: '可计算指标' },
-  { value: '6', label: '可生成图表' },
-  { value: '9', label: '已内置算法' },
+  { value: '15', label: '可计算指标' },
+  { value: '15', label: '可生成图表' },
+  { value: '7', label: '已内置算法' },
 ]
 </script>
 
@@ -178,7 +178,7 @@ const metrics = [
           <p class="text-sm font-bold uppercase tracking-wider text-cyan-300">Workflow</p>
           <h2 class="mt-4 text-3xl font-extrabold md:text-4xl">贴合桌面端研究场景的清晰流程</h2>
           <p class="mt-5 text-lg leading-8 text-slate-300">
-            保留必要步骤和结果入口，让 Windows 10/11 环境下的本地分析过程保持稳定、直接、可复查。
+            保留必要步骤和结果入口，让本地分析过程保持稳定、直接、可复查。
           </p>
         </div>
 
