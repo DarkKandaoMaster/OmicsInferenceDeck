@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-export const API_BASE_URL = 'http://127.0.0.1:8000/api'
+export const API_BASE_URL = '/api' //走 Nuxt devProxy 转发到后端 8000，同源访问，外网穿透只需暴露 3000 端口
 
 const http = axios.create({
   baseURL: API_BASE_URL,
