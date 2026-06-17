@@ -12,11 +12,19 @@ export default defineNuxtConfig({
     ]
   },
 
-  devtools: { enabled: true }, //这个就是网页底部那个悬浮图标，是一个调试神器，不过很碍眼。想把它隐藏可以把这句代码改成false
+  devtools: { enabled: false }, //这个就是网页底部那个悬浮图标，是一个调试神器，不过很碍眼。想把它隐藏可以把这句代码改成false
 
   devServer: {
     host: '0.0.0.0', //允许局域网访问。和后端配置监听所有网卡、跨域支持一样，必须在这里写这么一句，别人才能访问我这个平台
     port: 3000 //可以在这里修改端口号
+  },
+
+  nitro: {
+    devProxy: {
+      //把前端发往 /api 的请求转发到本机后端 8000 端口。这样外网只需穿透 3000 一个端口，
+      //访问者浏览器里走的是同源的 /api，不会再去找他自己电脑上的 127.0.0.1:8000，也省掉了跨域
+      '/api': { target: 'http://127.0.0.1:8000/api/', changeOrigin: true }
+    }
   },
 
   ssr: false //关闭SSR，退化成纯SPA模式
