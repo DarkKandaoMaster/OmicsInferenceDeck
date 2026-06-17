@@ -54,7 +54,9 @@ ensure_cran(c(
   "cluster",
   "clusterCrit",
   "survival",
-  "SNFtool"
+  "SNFtool",
+  "gtsummary",
+  "broom"
 ))
 
 # ---- Bioconductor 包 ----
@@ -72,12 +74,6 @@ ensure_bioc(c(
 ensure_github("Shamir-Lab/NEMO/NEMO", "NEMO")  # NEMO 算法
 ensure_github("mpierrejean/pintmf", "PintMF")  # PintMF 算法
 
-# MOSD: 代码中直接调用 MOSD::MOSD()，未声明安装来源（多半已手动装在 R 库中）。
-# 若 MOSD 未安装，请填入正确仓库后取消注释：
-# ensure_github("<owner>/MOSD", "MOSD")
-
-if (!requireNamespace("MOSD", quietly = TRUE)) {
-  message("提示: 未检测到 MOSD 包。MOSD 算法需要它，请自行安装该 R 包。")
-}
+ensure_github("DXCODEE/MOSD", "MOSD")          # MOSD 算法
 
 message("R 依赖安装流程结束。")
