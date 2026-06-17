@@ -77,6 +77,16 @@ const sections = [
       <p class="mt-5 text-lg leading-8 text-slate-600">
         本页面介绍平台的研究背景、系统架构以及完整的使用流程，帮助您快速上手分析工作。
       </p>
+      <a
+        href="/samples/samples.7z"
+        download
+        class="mt-6 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-indigo-500"
+      >
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+        </svg>
+        下载示例输入数据
+      </a>
     </header>
 
     <div class="space-y-12">
