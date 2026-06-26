@@ -3,7 +3,7 @@
 把多个同一格式（png / svg / pdf）的图表，按上传顺序从左到右、从上到下
 填入最多 3 行的网格，再拼接成一张大图。
 
-- PNG：Pillow
+- PNG：Pillow(PIL)
 - PDF：PyMuPDF(fitz)
 - SVG：svgutils
 

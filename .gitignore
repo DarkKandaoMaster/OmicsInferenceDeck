@@ -3,3 +3,5 @@
 .lintr
 __pycache__/
 /README_old.md
+
+/frontend/public/samples/samples.7z
